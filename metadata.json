@@ -1,0 +1,5 @@
+{
+  "name": "Phone Lab POS",
+  "description": "A comprehensive POS and inventory management system for mobile phone shops, featuring IMEI tracking, repair management, and sales invoicing.",
+  "requestFramePermissions": []
+}

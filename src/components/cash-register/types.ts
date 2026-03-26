@@ -1,0 +1,21 @@
+import { Product, Customer } from '../../types';
+
+export interface CartItem extends Product {
+  quantity: number;
+  device_id?: number;
+  imei?: string;
+  customPrice?: number;
+}
+
+export interface PaymentEntry {
+  method: string;
+  amount: number;
+}
+
+export interface Activity {
+  id: string;
+  time: string;
+  action: string;
+  details: string;
+  type: 'sale' | 'customer' | 'stock' | 'system';
+}

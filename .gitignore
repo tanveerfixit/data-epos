@@ -1,0 +1,16 @@
+node_modules/
+build/
+dist/
+coverage/
+.DS_Store
+*.log
+.env*
+!.env.example
+node_modules/
+.env
+pos.db*
+refactor.js
+isolate.js
+check_db.ts
+verify_save.ts
+server_errors.log
