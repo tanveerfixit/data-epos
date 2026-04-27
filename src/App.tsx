@@ -310,12 +310,12 @@ function AppInner() {
               onClick={() => setCurrentView('home')}
               className="transition-transform hover:scale-110 p-2"
             >
-              <Home size={24} className="text-[#000080]" />
+              <Home size={24} className="text-[#000080] dark:text-blue-400" />
             </button>
           </div>
           
           <div className="pl-6 flex flex-col items-start font-sans">
-            <h1 className="text-lg font-bold text-[#000080] tracking-tight leading-none">PHONE LAB</h1>
+            <h1 className="text-lg font-bold text-[#000080] dark:text-blue-400 tracking-tight leading-none">PHONE LAB</h1>
           </div>
         </div>
 
