@@ -25,7 +25,7 @@ async function startServer() {
   }
 
   const app = express();
-  const PORT = 3000;
+  const PORT = process.env.PORT || 3000;
   app.use(express.json({ limit: '10mb' }));
 
   // ─── Import Route Modules ─────────────────────────────────────────────────
@@ -44,7 +44,6 @@ async function startServer() {
   app.use('/api', requireAuthAsync);
 
   // ─── Admin Routes (have requireAdminAsync inside each handler) ────────────
-  // FIXED: separate adminRouter, no bleed-through from authRouter (FINDING-008)
   app.use('/api/admin', adminRouter);
 
   // ─── Resource Routes ──────────────────────────────────────────────────────
@@ -57,9 +56,7 @@ async function startServer() {
   // Settings-style routes (flat /api/settings, /api/company, etc.)
   app.use('/api', settingsRouter);
 
-  // Top-level inventory routes (/api/search, /api/devices, /api/transfers, /api/repairs, /api/purchase-orders)
-  // FIXED: inventoryRouter no longer double-mounted at /api/inventory too (FINDING-011)
-  // Routes that need top-level paths (/api/search, /api/devices, etc.) live here only.
+  // Top-level inventory routes
   app.use('/api', inventoryRouter);
 
   // ─── Import Products ──────────────────────────────────────────────────────
@@ -127,17 +124,29 @@ async function startServer() {
     } finally { conn.release(); }
   });
 
-  // ─── Vite Dev Middleware ──────────────────────────────────────────────────
+  // ─── Vite Dev Middleware / Production Static Files ────────────────────────
   if (process.env.NODE_ENV !== 'production') {
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: 'spa',
     });
     app.use(vite.middlewares);
+  } else {
+    // Serve static files from 'dist' in production
+    const path = await import('path');
+    const { fileURLToPath } = await import('url');
+    const __dirname = path.dirname(fileURLToPath(import.meta.url));
+    
+    app.use(express.static(path.join(__dirname, 'dist')));
+    
+    // Catch-all route for SPA
+    app.get('*', (req, res) => {
+      res.sendFile(path.join(__dirname, 'dist', 'index.html'));
+    });
   }
 
   app.listen(PORT, '0.0.0.0', () => {
-    console.log(`✓ Server running on http://localhost:${PORT}`);
+    console.log(`✓ Server running on port ${PORT}`);
   });
 }
 

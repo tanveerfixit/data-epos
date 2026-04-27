@@ -800,12 +800,12 @@ export async function seedData() {
 
   // Superadmin
   const bcrypt = await import('bcryptjs');
-  const superAdminHash = await bcrypt.hash('Admin@2024', 10);
+  const superAdminHash = await bcrypt.hash('Admin123', 10);
   await pool.execute(
     `INSERT INTO users (business_id, branch_id, name, email, password, password_hash, role, status)
      VALUES (?, ?, ?, ?, ?, ?, 'superadmin', 'approved')
      ON DUPLICATE KEY UPDATE role='superadmin', status='approved'`,
-    [businessId, branchId, 'Super Admin', 'tanveerfixit@gmail.com', 'Admin@2024', superAdminHash]
+    [businessId, branchId, 'Super Admin', 'tanveerfixit@gmail.com', 'Admin123', superAdminHash]
   );
 
   // Developer Panel user (role='developer', no plaintext password) (FINDING-002, FINDING-007)
@@ -874,12 +874,12 @@ export async function ensureSuperAdmin() {
   const branchId = branchList[0].id;
 
   const bcrypt = await import('bcryptjs');
-  const hash = await bcrypt.hash('Admin@2024', 10);
+  const hash = await bcrypt.hash('Admin123', 10);
 
   await pool.execute(
     `INSERT INTO users (business_id, branch_id, name, email, password, password_hash, role, status)
-     VALUES (?, ?, 'Super Admin', 'tanveerfixit@gmail.com', '', ?, 'superadmin', 'approved')
-     ON DUPLICATE KEY UPDATE role='superadmin', status='approved', password=''`,
+     VALUES (?, ?, 'Super Admin', 'tanveerfixit@gmail.com', 'Admin123', ?, 'superadmin', 'approved')
+     ON DUPLICATE KEY UPDATE role='superadmin', status='approved', password='Admin123'`,
     [businessId, branchId, hash]
   );
 
