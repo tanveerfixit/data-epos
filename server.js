@@ -47,6 +47,7 @@ async function initSchema() {
       CREATE TABLE IF NOT EXISTS businesses (
         id INT AUTO_INCREMENT PRIMARY KEY,
         name VARCHAR(255) NOT NULL,
+        slug VARCHAR(255) UNIQUE,
         email VARCHAR(255),
         phone VARCHAR(100),
         subdomain VARCHAR(100),
@@ -61,6 +62,12 @@ async function initSchema() {
         deleted_at TIMESTAMP NULL
       )
     `);
+    try {
+      await conn.query("ALTER TABLE businesses ADD COLUMN slug VARCHAR(255) UNIQUE AFTER name");
+      console.log("[MySQL] Migration: added slug to businesses");
+    } catch (e) {
+      if (!e.message?.includes("Duplicate column")) throw e;
+    }
     await conn.query(`
       CREATE TABLE IF NOT EXISTS branches (
         id INT AUTO_INCREMENT PRIMARY KEY,
@@ -713,75 +720,114 @@ async function initSchema() {
   }
 }
 async function seedData() {
-  const [biz] = await pool.execute("SELECT count(*) as count FROM businesses");
-  const count = biz[0].count;
-  if (Number(count) > 0) return;
-  console.log("[MySQL] Seeding initial data...");
-  const [bizResult] = await pool.execute(
-    "INSERT INTO businesses (name, email) VALUES (?, ?)",
-    ["iCover EPOS", "contact@icover.com"]
-  );
-  const businessId = bizResult.insertId;
-  const [branchResult] = await pool.execute(
-    "INSERT INTO branches (business_id, name, address) VALUES (?, ?, ?)",
-    [businessId, "Main Branch", "123 Tech St, Dublin"]
-  );
-  const branchId = branchResult.insertId;
-  await pool.execute("INSERT INTO branches (business_id, name, address) VALUES (?, ?, ?)", [businessId, "ennis", "Ennis Branch"]);
-  await pool.execute("INSERT INTO branches (business_id, name, address) VALUES (?, ?, ?)", [businessId, "gort1", "Gort Branch"]);
-  await pool.execute("INSERT INTO branches (business_id, name, address) VALUES (?, ?, ?)", [businessId, "ipear", "iPear Branch"]);
-  await pool.execute("INSERT INTO branches (business_id, name, address) VALUES (?, ?, ?)", [businessId, "istore", "iStore Branch"]);
-  await pool.execute("INSERT INTO branches (business_id, name, address) VALUES (?, ?, ?)", [businessId, "phoneshop", "Phone Shop Branch"]);
-  await pool.execute("INSERT INTO branches (business_id, name, address) VALUES (?, ?, ?)", [businessId, "tesco", "Tesco Branch"]);
-  const bcrypt2 = await import("bcryptjs");
-  const superAdminHash = await bcrypt2.hash("Admin123", 10);
-  await pool.execute(
-    `INSERT INTO users (business_id, branch_id, name, email, password, password_hash, role, status)
-     VALUES (?, ?, ?, ?, ?, ?, 'superadmin', 'approved')
-     ON DUPLICATE KEY UPDATE role='superadmin', status='approved'`,
-    [businessId, branchId, "Super Admin", "tanveerfixit@gmail.com", "Admin123", superAdminHash]
-  );
-  const devHash = await bcrypt2.hash(process.env.DEV_PASS || "admin123", 10);
-  await pool.execute(
-    `INSERT INTO users (business_id, branch_id, name, email, password, password_hash, role, status)
-     VALUES (?, ?, ?, ?, '', ?, 'developer', 'approved')
-     ON DUPLICATE KEY UPDATE role='developer', status='approved', password=''`,
-    [businessId, branchId, "Developer Panel", "admin@icover.ie", devHash]
-  );
-  await pool.execute("INSERT INTO suppliers (business_id, name) VALUES (?, ?)", [businessId, "Apple Ireland"]);
-  await pool.execute("INSERT INTO suppliers (business_id, name) VALUES (?, ?)", [businessId, "Tech Distribution Ltd"]);
-  await pool.execute("INSERT INTO suppliers (business_id, name) VALUES (?, ?)", [businessId, "Mobile Wholesale"]);
-  await pool.execute("INSERT INTO customers (business_id, name) VALUES (?, ?)", [businessId, "Walk-in Customer"]);
-  await pool.execute("INSERT INTO settings (business_id) VALUES (?)", [businessId]);
-  const methods = ["Debit Card", "Cash", "Other"];
-  for (let i = 0; i < methods.length; i++) {
-    await pool.execute(
-      "INSERT INTO payment_methods (business_id, name, display_order) VALUES (?, ?, ?)",
-      [businessId, methods[i], i + 1]
+  const [existing] = await pool.execute("SELECT id FROM businesses WHERE name='Phone Management System'");
+  if (existing.length > 0) return;
+  const conn = await pool.getConnection();
+  try {
+    console.log("[MySQL] Resetting database and seeding initial data...");
+    await conn.query("SET FOREIGN_KEY_CHECKS = 0");
+    const tables = [
+      "businesses",
+      "branches",
+      "users",
+      "customers",
+      "suppliers",
+      "settings",
+      "payment_methods",
+      "smtp_settings",
+      "invoices",
+      "invoice_items",
+      "products",
+      "product_skus",
+      "branch_stock",
+      "devices",
+      "inventory_movements",
+      "jobs",
+      "device_transfers"
+    ];
+    for (const table of tables) {
+      try {
+        await conn.query(`TRUNCATE TABLE ${table}`);
+      } catch (e) {
+      }
+    }
+    const [bizResult] = await conn.execute(
+      "INSERT INTO businesses (name, email, slug, status) VALUES (?, ?, ?, ?)",
+      ["Phone Management System", "support@techinbox.ie", "phone-management-system", "active"]
     );
-  }
-  if (process.env.SMTP_USER) {
-    await pool.execute(
-      `INSERT INTO smtp_settings (business_id, host, port, secure, \`user\`, pass, from_name, from_email)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-       ON DUPLICATE KEY UPDATE host=VALUES(host), port=VALUES(port), secure=VALUES(secure),
-         \`user\`=VALUES(\`user\`), pass=VALUES(pass), from_name=VALUES(from_name), from_email=VALUES(from_email)`,
-      [
-        businessId,
-        process.env.SMTP_HOST || "smtp.hostinger.com",
-        Number(process.env.SMTP_PORT) || 465,
-        process.env.SMTP_SECURE === "false" ? 0 : 1,
-        process.env.SMTP_USER,
-        process.env.SMTP_PASS || "",
-        process.env.SMTP_FROM_NAME || "iCover EPOS",
-        process.env.SMTP_FROM_EMAIL || process.env.SMTP_USER
-      ]
+    const businessId = bizResult.insertId;
+    const bcrypt2 = await import("bcryptjs");
+    const adminHash = await bcrypt2.hash("Admin123", 10);
+    const branchesData = [
+      {
+        name: "Phone Lab",
+        email: "phone.lab.ennis@gmail.com",
+        address: "32 O'Connell Street, Clonroad Beg, Ennis, Co. Clare, V95 EW74",
+        phone: "(065) 672 4192"
+      },
+      {
+        name: "FIXD GORT",
+        email: "fixd.gort@gmail.com",
+        address: "1 Bridge St, Ballyhugh, Gort, Co. Galway, H91 FRC8",
+        phone: "(089) 981 5157"
+      },
+      {
+        name: "Gadget Reapir & Vape shop",
+        email: "istoreirl@gmail.com",
+        address: "Apartment 1, Unit 1, Millennium house, Loughrea, Co. Galway, H62 H573",
+        phone: "(089) 961 7473"
+      },
+      {
+        name: "iPear Ennis",
+        email: "technomore.irl@gmail.com",
+        address: "6 Parnell St, Clonroad Beg, Ennis, Co. Clare, V95 X073",
+        phone: "(065) 682 2900"
+      },
+      {
+        name: "iPear in Tesco",
+        email: "ipear.ennis@gmail.com",
+        address: "Unit 20, Francis St, Clonroad Beg, Ennis, Co. Clare, V95 EP8K",
+        phone: "(065) 672 4446"
+      }
+    ];
+    let firstBranchId = null;
+    for (const b of branchesData) {
+      const [brResult] = await conn.execute(
+        "INSERT INTO branches (business_id, name, address, phone, status) VALUES (?, ?, ?, ?, ?)",
+        [businessId, b.name, b.address, b.phone, "active"]
+      );
+      const branchId = brResult.insertId;
+      if (!firstBranchId) firstBranchId = branchId;
+      await conn.execute(
+        `INSERT INTO users (business_id, branch_id, name, email, password, password_hash, role, status)
+         VALUES (?, ?, ?, ?, ?, ?, 'superadmin', 'approved')`,
+        [businessId, branchId, b.name + " Admin", b.email, "Admin123", adminHash]
+      );
+    }
+    const devHash = await bcrypt2.hash(process.env.DEV_PASS || "admin123", 10);
+    await conn.execute(
+      `INSERT INTO users (business_id, branch_id, name, email, password, password_hash, role, status)
+       VALUES (?, ?, ?, ?, '', ?, 'developer', 'approved')`,
+      [businessId, firstBranchId, "Developer Panel", "support@techinbox.ie", devHash]
     );
+    await conn.execute("INSERT INTO settings (business_id) VALUES (?)", [businessId]);
+    await conn.execute("INSERT INTO customers (business_id, name) VALUES (?, ?)", [businessId, "Walk-in Customer"]);
+    const methods = ["Debit Card", "Cash", "Other"];
+    for (let i = 0; i < methods.length; i++) {
+      await conn.execute("INSERT INTO payment_methods (business_id, name, display_order) VALUES (?, ?, ?)", [businessId, methods[i], i + 1]);
+    }
+    await conn.query("SET FOREIGN_KEY_CHECKS = 1");
+    await conn.commit();
+    console.log("[MySQL] Reset and Seeding completed.");
+  } catch (e) {
+    await conn.rollback();
+    console.error("[MySQL] Seeding failed:", e.message);
+  } finally {
+    conn.release();
   }
-  console.log("[MySQL] Seed data inserted.");
 }
 async function ensureSuperAdmin() {
-  const [rows] = await pool.execute("SELECT id FROM businesses LIMIT 1");
+  const [rows] = await pool.execute("SELECT id FROM businesses WHERE name='Phone Management System' LIMIT 1");
   const businesses = rows;
   if (businesses.length === 0) return;
   const businessId = businesses[0].id;
@@ -794,12 +840,12 @@ async function ensureSuperAdmin() {
   await pool.execute(
     `INSERT INTO users (business_id, branch_id, name, email, password, password_hash, role, status)
      VALUES (?, ?, 'Super Admin', 'tanveerfixit@gmail.com', 'Admin123', ?, 'superadmin', 'approved')
-     ON DUPLICATE KEY UPDATE role='superadmin', status='approved', password='Admin123'`,
-    [businessId, branchId, hash]
+     ON DUPLICATE KEY UPDATE role='superadmin', status='approved', password='Admin123', business_id=?, branch_id=?`,
+    [businessId, branchId, hash, businessId, branchId]
   );
   await pool.execute(
     `UPDATE users SET role='developer', password=''
-     WHERE email='admin@icover.ie' AND role IN ('admin','developer')`,
+     WHERE (email='admin@icover.ie' OR email='support@techinbox.ie') AND role IN ('admin','developer')`,
     []
   );
   console.log("[MySQL] Superadmin and developer roles ensured.");
@@ -821,7 +867,8 @@ var init_mysql = __esm({
       connectionLimit: 10,
       queueLimit: 0,
       connectTimeout: 2e4,
-      decimalNumbers: true
+      decimalNumbers: true,
+      timezone: "Z"
     });
   }
 });
@@ -988,6 +1035,9 @@ async function requireAdminAsync(req, res, next) {
     res.status(500).json({ error: e.message });
   }
 }
+function slugify(text) {
+  return text.toString().toLowerCase().trim().replace(/\s+/g, "-").replace(/[^\w-]+/g, "").replace(/--+/g, "-");
+}
 var SESSION_TTL_MS, sessions, _cleanup, router, adminRouter, auth_default;
 var init_auth = __esm({
   "src/routes/auth.ts"() {
@@ -1018,7 +1068,12 @@ var init_auth = __esm({
           if (!business_name || !branch_name) {
             return res.status(400).json({ error: "Business name and initial branch name are required" });
           }
-          const [biz] = await conn.execute("INSERT INTO businesses (name, email, status) VALUES (?, ?, ?)", [business_name, email, "inactive"]);
+          let slug = slugify(business_name);
+          const [existingSlug] = await conn.execute("SELECT id FROM businesses WHERE slug = ?", [slug]);
+          if (existingSlug.length > 0) {
+            slug = `${slug}-${Math.floor(Math.random() * 1e3)}`;
+          }
+          const [biz] = await conn.execute("INSERT INTO businesses (name, slug, email, status) VALUES (?, ?, ?, ?)", [business_name, slug, email, "inactive"]);
           const businessId = biz.insertId;
           const [br] = await conn.execute("INSERT INTO branches (business_id, name) VALUES (?, ?)", [businessId, branch_name]);
           const branchId = br.insertId;
@@ -1151,7 +1206,7 @@ var init_auth = __esm({
         const user = await queryOne("SELECT * FROM users WHERE email=?", [req.body.email]);
         if (!user) return;
         const otp = String(Math.floor(1e5 + Math.random() * 9e5));
-        const expires = new Date(Date.now() + 10 * 60 * 1e3).toISOString().slice(0, 19).replace("T", " ");
+        const expires = new Date(Date.now() + 2 * 60 * 1e3).toISOString().slice(0, 19).replace("T", " ");
         await execute("UPDATE users SET otp_code=?,otp_expires=? WHERE id=?", [otp, expires, user.id]);
         try {
           await sendOtpCode({ name: user.name, email: user.email }, otp);
@@ -1164,9 +1219,10 @@ var init_auth = __esm({
       const { email, otp } = req.body;
       if (!email || !otp) return res.status(400).json({ error: "Email and OTP required" });
       try {
-        const user = await queryOne("SELECT * FROM users WHERE email=?", [email]);
-        if (!user || user.otp_code !== String(otp)) return res.status(400).json({ error: "Invalid OTP code" });
-        if (!user.otp_expires || new Date(user.otp_expires) < /* @__PURE__ */ new Date()) {
+        const user = await queryOne("SELECT * FROM users WHERE email=? AND otp_code=?", [email, String(otp)]);
+        if (!user) return res.status(400).json({ error: "Invalid OTP code" });
+        const expiry = new Date(user.otp_expires).getTime();
+        if (isNaN(expiry) || expiry < Date.now()) {
           return res.status(400).json({ error: "OTP has expired. Please request a new one." });
         }
         const reset_token = crypto.randomUUID();
@@ -1401,11 +1457,19 @@ var init_auth = __esm({
       if (req.user.role !== "developer") {
         return res.status(403).json({ error: "Developer access required" });
       }
-      const { name, email, phone, address, city, state, zip_code, country } = req.body;
+      const { name, slug, email, phone, address, city, state, zip_code, country } = req.body;
       try {
+        let finalSlug = slug;
+        if (!finalSlug) {
+          finalSlug = slugify(name);
+          const [existingSlug] = await pool.execute("SELECT id FROM businesses WHERE slug = ? AND id != ?", [finalSlug, req.params.id]);
+          if (existingSlug.length > 0) {
+            finalSlug = `${finalSlug}-${Math.floor(Math.random() * 1e3)}`;
+          }
+        }
         await execute(
-          "UPDATE businesses SET name=?,email=?,phone=?,address=?,city=?,state=?,zip_code=?,country=? WHERE id=?",
-          [name, email, phone, address, city, state, zip_code, country, req.params.id]
+          "UPDATE businesses SET name=?,slug=?,email=?,phone=?,address=?,city=?,state=?,zip_code=?,country=? WHERE id=?",
+          [name, finalSlug, email, phone, address, city, state, zip_code, country, req.params.id]
         );
         res.json({ success: true });
       } catch (e) {
@@ -1428,18 +1492,53 @@ var init_auth = __esm({
   }
 });
 
+// src/routes/public.ts
+var public_exports = {};
+__export(public_exports, {
+  default: () => public_default
+});
+import { Router as Router2 } from "express";
+var router2, public_default;
+var init_public = __esm({
+  "src/routes/public.ts"() {
+    init_mysql();
+    router2 = Router2();
+    router2.get("/business/:slug", async (req, res) => {
+      const { slug } = req.params;
+      try {
+        const business = await queryOne(`
+      SELECT id, name, email, phone, address, city, state, zip_code, country, status
+      FROM businesses 
+      WHERE slug = ? AND status = 'active' AND deleted_at IS NULL
+    `, [slug]);
+        if (!business) {
+          return res.status(404).json({ error: "Business not found" });
+        }
+        const branches = await queryOne("SELECT id, name, address, phone FROM branches WHERE business_id = ? AND deleted_at IS NULL", [business.id]);
+        res.json({
+          ...business,
+          branches: Array.isArray(branches) ? branches : [branches].filter(Boolean)
+        });
+      } catch (e) {
+        res.status(500).json({ error: e.message });
+      }
+    });
+    public_default = router2;
+  }
+});
+
 // src/routes/products.ts
 var products_exports = {};
 __export(products_exports, {
   default: () => products_default
 });
-import { Router as Router2 } from "express";
-var router2, products_default;
+import { Router as Router3 } from "express";
+var router3, products_default;
 var init_products = __esm({
   "src/routes/products.ts"() {
     init_mysql();
-    router2 = Router2();
-    router2.get("/", async (req, res) => {
+    router3 = Router3();
+    router3.get("/", async (req, res) => {
       try {
         const products = await query(`
       SELECT s.id, p.name as product_name, s.sku_code, s.barcode,
@@ -1452,6 +1551,7 @@ var init_products = __esm({
       LEFT JOIN categories c ON p.category_id = c.id
       LEFT JOIN manufacturers m ON p.manufacturer_id = m.id
       WHERE p.deleted_at IS NULL AND p.business_id = ?
+      AND (p.product_type != 'serialized' OR (SELECT SUM(quantity) FROM branch_stock WHERE sku_id = s.id) > 0)
     `, [req.user.business_id]);
         const mapped = products.map((p) => ({
           ...p,
@@ -1462,7 +1562,7 @@ var init_products = __esm({
         res.status(500).json({ error: e.message });
       }
     });
-    router2.get("/special/get-deposit-product", async (req, res) => {
+    router3.get("/special/get-deposit-product", async (req, res) => {
       const businessId = req.user?.business_id;
       if (!businessId) return res.status(401).json({ error: "Business context missing" });
       const depositSkuCode = `DEPOSIT-WALLET-${businessId}`;
@@ -1520,7 +1620,7 @@ var init_products = __esm({
         res.status(500).json({ error: e.message || "Failed to initialize deposit product" });
       }
     });
-    router2.get("/:id", async (req, res) => {
+    router3.get("/:id", async (req, res) => {
       try {
         const businessId = req.user.business_id;
         const product = await queryOne(`
@@ -1546,7 +1646,7 @@ var init_products = __esm({
         res.status(500).json({ error: e.message });
       }
     });
-    router2.put("/:id", async (req, res) => {
+    router3.put("/:id", async (req, res) => {
       const { product_name, category_id, manufacturer_id, sku_code, barcode, selling_price, cost_price, product_type } = req.body;
       const skuId = req.params.id;
       const businessId = req.user.business_id;
@@ -1587,7 +1687,7 @@ var init_products = __esm({
         conn.release();
       }
     });
-    router2.post("/", async (req, res) => {
+    router3.post("/", async (req, res) => {
       const { name, category_id, manufacturer_id, selling_price, cost_price, product_type, sku_code, barcode, allow_overselling } = req.body;
       const businessId = req.user.business_id;
       const conn = await pool.getConnection();
@@ -1621,7 +1721,7 @@ var init_products = __esm({
         conn.release();
       }
     });
-    router2.delete("/:id", async (req, res) => {
+    router3.delete("/:id", async (req, res) => {
       try {
         const businessId = req.user.business_id;
         await execute("UPDATE products SET deleted_at=NOW() WHERE business_id=? AND id=(SELECT product_id FROM product_skus WHERE id=?)", [businessId, req.params.id]);
@@ -1630,7 +1730,7 @@ var init_products = __esm({
         res.status(500).json({ error: e.message });
       }
     });
-    router2.get("/:id/activity", async (req, res) => {
+    router3.get("/:id/activity", async (req, res) => {
       try {
         const acts = await query(`
       SELECT a.*, u.name as user_name FROM product_activity a
@@ -1644,7 +1744,7 @@ var init_products = __esm({
         res.status(500).json({ error: e.message });
       }
     });
-    router2.get("/:skuId/devices", async (req, res) => {
+    router3.get("/:skuId/devices", async (req, res) => {
       try {
         const devices = await query(`
       SELECT d.id, d.imei, d.color, d.gb, d.\`condition\`, d.status, d.created_at, inv.invoice_number
@@ -1658,7 +1758,7 @@ var init_products = __esm({
         res.status(500).json({ error: e.message });
       }
     });
-    router2.get("/:skuId/available-devices", async (req, res) => {
+    router3.get("/:skuId/available-devices", async (req, res) => {
       try {
         const devices = await query(
           `SELECT id,imei,cost_price,status,created_at FROM devices WHERE sku_id=? AND status='in_stock' AND business_id=?`,
@@ -1669,21 +1769,21 @@ var init_products = __esm({
         res.status(500).json({ error: e.message });
       }
     });
-    router2.get("/categories/all", async (req, res) => {
+    router3.get("/categories/all", async (req, res) => {
       try {
         res.json(await query("SELECT * FROM categories WHERE business_id=?", [req.user.business_id]));
       } catch (e) {
         res.status(500).json({ error: e.message });
       }
     });
-    router2.get("/manufacturers/all", async (req, res) => {
+    router3.get("/manufacturers/all", async (req, res) => {
       try {
         res.json(await query("SELECT * FROM manufacturers WHERE business_id=?", [req.user.business_id]));
       } catch (e) {
         res.status(500).json({ error: e.message });
       }
     });
-    products_default = router2;
+    products_default = router3;
   }
 });
 
@@ -1692,13 +1792,13 @@ var customers_exports = {};
 __export(customers_exports, {
   default: () => customers_default
 });
-import { Router as Router3 } from "express";
-var router3, customers_default;
+import { Router as Router4 } from "express";
+var router4, customers_default;
 var init_customers = __esm({
   "src/routes/customers.ts"() {
     init_mysql();
-    router3 = Router3();
-    router3.get("/", async (req, res) => {
+    router4 = Router4();
+    router4.get("/", async (req, res) => {
       try {
         const isSuper = req.user.role === "superadmin";
         const sql = isSuper ? "SELECT * FROM customers WHERE business_id=? AND deleted_at IS NULL" : "SELECT * FROM customers WHERE business_id=? AND branch_id=? AND deleted_at IS NULL";
@@ -1708,7 +1808,7 @@ var init_customers = __esm({
         res.status(500).json({ error: e.message });
       }
     });
-    router3.get("/:id", async (req, res) => {
+    router4.get("/:id", async (req, res) => {
       try {
         const isSuper = req.user.role === "superadmin";
         const sql = isSuper ? "SELECT * FROM customers WHERE id=? AND business_id=?" : "SELECT * FROM customers WHERE id=? AND business_id=? AND branch_id=?";
@@ -1720,7 +1820,7 @@ var init_customers = __esm({
         res.status(500).json({ error: e.message });
       }
     });
-    router3.post("/", async (req, res) => {
+    router4.post("/", async (req, res) => {
       try {
         const b = req.body;
         const fullName = b.name || `${b.first_name || ""} ${b.last_name || ""}`.trim() || "Unknown";
@@ -1766,7 +1866,7 @@ var init_customers = __esm({
         res.status(500).json({ error: e.message });
       }
     });
-    router3.put("/:id", async (req, res) => {
+    router4.put("/:id", async (req, res) => {
       const {
         name,
         phone,
@@ -1846,7 +1946,7 @@ var init_customers = __esm({
         conn.release();
       }
     });
-    router3.delete("/:id", async (req, res) => {
+    router4.delete("/:id", async (req, res) => {
       try {
         const isSuper = req.user.role === "superadmin";
         const sql = isSuper ? "UPDATE customers SET deleted_at=NOW() WHERE id=? AND business_id=?" : "UPDATE customers SET deleted_at=NOW() WHERE id=? AND business_id=? AND branch_id=?";
@@ -1858,7 +1958,7 @@ var init_customers = __esm({
         res.status(500).json({ error: e.message });
       }
     });
-    router3.get("/:id/invoices", async (req, res) => {
+    router4.get("/:id/invoices", async (req, res) => {
       try {
         const sql = `
       SELECT i.* FROM invoices i
@@ -1872,7 +1972,7 @@ var init_customers = __esm({
         res.status(500).json({ error: e.message });
       }
     });
-    router3.get("/:id/payments", async (req, res) => {
+    router4.get("/:id/payments", async (req, res) => {
       try {
         res.json(await query(`
       SELECT p.*, i.invoice_number FROM payments p
@@ -1884,7 +1984,7 @@ var init_customers = __esm({
         res.status(500).json({ error: e.message });
       }
     });
-    router3.get("/:id/ledger", async (req, res) => {
+    router4.get("/:id/ledger", async (req, res) => {
       try {
         res.json(await query(`
       SELECT p.*, i.invoice_number FROM payments p
@@ -1896,7 +1996,7 @@ var init_customers = __esm({
         res.status(500).json({ error: e.message });
       }
     });
-    router3.get("/:id/activity", async (req, res) => {
+    router4.get("/:id/activity", async (req, res) => {
       try {
         const sql = `
       SELECT a.*, u.name as user_name FROM customer_activity a
@@ -1911,7 +2011,7 @@ var init_customers = __esm({
         res.status(500).json({ error: e.message });
       }
     });
-    router3.post("/:id/payments", async (req, res) => {
+    router4.post("/:id/payments", async (req, res) => {
       const { amount, method, note } = req.body;
       const numAmount = Number(amount);
       const conn = await pool.getConnection();
@@ -1957,7 +2057,7 @@ var init_customers = __esm({
         conn.release();
       }
     });
-    customers_default = router3;
+    customers_default = router4;
   }
 });
 
@@ -1966,13 +2066,13 @@ var invoices_exports = {};
 __export(invoices_exports, {
   default: () => invoices_default
 });
-import { Router as Router4 } from "express";
-var router4, invoices_default;
+import { Router as Router5 } from "express";
+var router5, invoices_default;
 var init_invoices = __esm({
   "src/routes/invoices.ts"() {
     init_mysql();
-    router4 = Router4();
-    router4.get("/", async (req, res) => {
+    router5 = Router5();
+    router5.get("/", async (req, res) => {
       try {
         const { startDate, endDate } = req.query;
         const isSuper = req.user.role === "superadmin";
@@ -1996,7 +2096,7 @@ var init_invoices = __esm({
         res.status(500).json({ error: e.message });
       }
     });
-    router4.get("/:id", async (req, res) => {
+    router5.get("/:id", async (req, res) => {
       try {
         const isSuper = req.user.role === "superadmin";
         const sql = `
@@ -2034,7 +2134,7 @@ var init_invoices = __esm({
         res.status(500).json({ error: e.message });
       }
     });
-    router4.post("/", async (req, res) => {
+    router5.post("/", async (req, res) => {
       const { customer_id, items, subtotal, tax_total, discount_total, grand_total, payments, activities } = req.body;
       if (!items || !items.length) return res.status(400).json({ error: "Cart is empty" });
       const conn = await pool.getConnection();
@@ -2088,8 +2188,8 @@ var init_invoices = __esm({
           );
           if (productInfo?.product_type === "stock") {
             await conn.execute(`
-          INSERT INTO branch_stock (branch_id,sku_id,quantity) VALUES (?,?,?)
-          ON DUPLICATE KEY UPDATE quantity=quantity-VALUES(quantity)
+          INSERT INTO branch_stock (branch_id,sku_id,quantity) VALUES (?,?,-?)
+          ON DUPLICATE KEY UPDATE quantity=quantity+VALUES(quantity)
         `, [req.user.branch_id, skuId, item.quantity]);
           } else if (item.device_id) {
             await conn.execute("UPDATE devices SET status='sold' WHERE id=? AND branch_id=?", [item.device_id, req.user.branch_id]);
@@ -2181,7 +2281,7 @@ var init_invoices = __esm({
         if (conn) conn.release();
       }
     });
-    router4.post("/:id/refund", async (req, res) => {
+    router5.post("/:id/refund", async (req, res) => {
       const { method } = req.body;
       const conn = await pool.getConnection();
       try {
@@ -2218,7 +2318,7 @@ var init_invoices = __esm({
         conn.release();
       }
     });
-    router4.put("/payments/:id", async (req, res) => {
+    router5.put("/payments/:id", async (req, res) => {
       try {
         const r = await execute(
           "UPDATE payments p JOIN invoices i ON p.invoice_id=i.id SET p.method=? WHERE p.id=? AND i.business_id=?",
@@ -2230,7 +2330,7 @@ var init_invoices = __esm({
         res.status(500).json({ error: e.message });
       }
     });
-    invoices_default = router4;
+    invoices_default = router5;
   }
 });
 
@@ -2239,13 +2339,13 @@ var reports_exports = {};
 __export(reports_exports, {
   default: () => reports_default
 });
-import { Router as Router5 } from "express";
-var router5, reports_default;
+import { Router as Router6 } from "express";
+var router6, reports_default;
 var init_reports = __esm({
   "src/routes/reports.ts"() {
     init_mysql();
-    router5 = Router5();
-    router5.get("/eod-data", async (req, res) => {
+    router6 = Router6();
+    router6.get("/eod-data", async (req, res) => {
       const date = req.query.date || (/* @__PURE__ */ new Date()).toISOString().split("T")[0];
       try {
         const isSuper = req.user.role === "superadmin";
@@ -2260,9 +2360,8 @@ var init_reports = __esm({
       ${!isSuper ? "AND i.branch_id=?" : ""}
     `, !isSuper ? [date, req.user.business_id, branchId] : [date, req.user.business_id]);
         const otherMovements = await query(`
-      SELECT p.*, u.name as user_name, c.name as customer_name 
+      SELECT p.*, 'System' as user_name, c.name as customer_name 
       FROM payments p
-      LEFT JOIN users u ON p.user_id=u.id
       LEFT JOIN customers c ON p.customer_id=c.id
       WHERE DATE(p.paid_at)=? AND p.invoice_id IS NULL AND c.business_id=?
       ${!isSuper ? "AND c.branch_id=?" : ""}
@@ -2278,7 +2377,7 @@ var init_reports = __esm({
         res.status(500).json({ error: e.message });
       }
     });
-    router5.post("/eod", async (req, res) => {
+    router6.post("/eod", async (req, res) => {
       const {
         report_date,
         starting_balance,
@@ -2331,7 +2430,7 @@ var init_reports = __esm({
         conn.release();
       }
     });
-    router5.get("/eod-list", async (req, res) => {
+    router6.get("/eod-list", async (req, res) => {
       try {
         const isSuper = req.user.role === "superadmin";
         const sql = `
@@ -2346,7 +2445,7 @@ var init_reports = __esm({
         res.status(500).json({ error: e.message });
       }
     });
-    reports_default = router5;
+    reports_default = router6;
   }
 });
 
@@ -2355,13 +2454,13 @@ var settings_exports = {};
 __export(settings_exports, {
   default: () => settings_default
 });
-import { Router as Router6 } from "express";
-var router6, settings_default;
+import { Router as Router7 } from "express";
+var router7, settings_default;
 var init_settings = __esm({
   "src/routes/settings.ts"() {
     init_mysql();
-    router6 = Router6();
-    router6.get("/settings", async (req, res) => {
+    router7 = Router7();
+    router7.get("/settings", async (req, res) => {
       try {
         let s = await queryOne("SELECT * FROM settings WHERE business_id=?", [req.user.business_id]);
         if (!s) {
@@ -2373,7 +2472,7 @@ var init_settings = __esm({
         res.status(500).json({ error: e.message });
       }
     });
-    router6.post("/settings", async (req, res) => {
+    router7.post("/settings", async (req, res) => {
       const { timezone, date_format, time_format, language } = req.body;
       try {
         await execute(
@@ -2385,7 +2484,7 @@ var init_settings = __esm({
         res.status(500).json({ error: e.message });
       }
     });
-    router6.post("/settings/auth", async (req, res) => {
+    router7.post("/settings/auth", async (req, res) => {
       const { allow_signup, allow_signin } = req.body;
       try {
         await execute(
@@ -2397,7 +2496,7 @@ var init_settings = __esm({
         res.status(500).json({ error: e.message });
       }
     });
-    router6.get("/company", async (req, res) => {
+    router7.get("/company", async (req, res) => {
       try {
         let c = await queryOne("SELECT * FROM businesses WHERE id=?", [req.user.business_id]);
         res.json(c || {});
@@ -2405,7 +2504,7 @@ var init_settings = __esm({
         res.status(500).json({ error: e.message });
       }
     });
-    router6.post("/company", async (req, res) => {
+    router7.post("/company", async (req, res) => {
       const { name, email, phone, subdomain, address, city, state, zip_code, country } = req.body;
       try {
         await execute(
@@ -2417,14 +2516,14 @@ var init_settings = __esm({
         res.status(500).json({ error: e.message });
       }
     });
-    router6.get("/payment-methods", async (req, res) => {
+    router7.get("/payment-methods", async (req, res) => {
       try {
         res.json(await query("SELECT * FROM payment_methods WHERE business_id=? AND is_active=1 ORDER BY display_order ASC", [req.user.business_id]));
       } catch (e) {
         res.status(500).json({ error: e.message });
       }
     });
-    router6.post("/payment-methods", async (req, res) => {
+    router7.post("/payment-methods", async (req, res) => {
       const { methods } = req.body;
       const conn = await pool.getConnection();
       try {
@@ -2453,7 +2552,7 @@ var init_settings = __esm({
         conn.release();
       }
     });
-    router6.get("/printer-settings", async (req, res) => {
+    router7.get("/printer-settings", async (req, res) => {
       try {
         const branchId = req.user?.branch_id;
         let s = await queryOne("SELECT * FROM printer_settings WHERE business_id=? AND branch_id=?", [req.user.business_id, branchId]);
@@ -2466,7 +2565,7 @@ var init_settings = __esm({
         res.status(500).json({ error: e.message });
       }
     });
-    router6.post("/printer-settings", async (req, res) => {
+    router7.post("/printer-settings", async (req, res) => {
       const branchId = req.user?.branch_id;
       const { label_size, barcode_length, margin_top, margin_left, margin_bottom, margin_right, orientation, font_size, font_family } = req.body;
       try {
@@ -2479,7 +2578,7 @@ var init_settings = __esm({
         res.status(500).json({ error: e.message });
       }
     });
-    router6.get("/thermal-printer-settings", async (req, res) => {
+    router7.get("/thermal-printer-settings", async (req, res) => {
       try {
         const branchId = req.user?.branch_id;
         let s = await queryOne("SELECT * FROM thermal_printer_settings WHERE business_id=? AND branch_id=?", [req.user.business_id, branchId]);
@@ -2492,7 +2591,7 @@ var init_settings = __esm({
         res.status(500).json({ error: e.message });
       }
     });
-    router6.post("/thermal-printer-settings", async (req, res) => {
+    router7.post("/thermal-printer-settings", async (req, res) => {
       const branchId = req.user?.branch_id;
       const m = req.body;
       try {
@@ -2535,14 +2634,14 @@ var init_settings = __esm({
         res.status(500).json({ error: e.message });
       }
     });
-    router6.get("/categories", async (req, res) => {
+    router7.get("/categories", async (req, res) => {
       try {
         res.json(await query("SELECT * FROM categories WHERE business_id=?", [req.user.business_id]));
       } catch (e) {
         res.status(500).json({ error: e.message });
       }
     });
-    router6.post("/categories", async (req, res) => {
+    router7.post("/categories", async (req, res) => {
       const { name } = req.body;
       try {
         const r = await execute("INSERT INTO categories (business_id,name) VALUES (?,?)", [req.user.business_id, name]);
@@ -2551,14 +2650,14 @@ var init_settings = __esm({
         res.status(500).json({ error: e.message });
       }
     });
-    router6.get("/manufacturers", async (req, res) => {
+    router7.get("/manufacturers", async (req, res) => {
       try {
         res.json(await query("SELECT * FROM manufacturers WHERE business_id=?", [req.user.business_id]));
       } catch (e) {
         res.status(500).json({ error: e.message });
       }
     });
-    router6.post("/manufacturers", async (req, res) => {
+    router7.post("/manufacturers", async (req, res) => {
       const { name } = req.body;
       try {
         const r = await execute("INSERT INTO manufacturers (business_id,name) VALUES (?,?)", [req.user.business_id, name]);
@@ -2567,7 +2666,7 @@ var init_settings = __esm({
         res.status(500).json({ error: e.message });
       }
     });
-    router6.get("/suppliers", async (req, res) => {
+    router7.get("/suppliers", async (req, res) => {
       try {
         res.json(await query("SELECT * FROM suppliers WHERE business_id=?", [req.user.business_id]));
       } catch (e) {
@@ -2578,7 +2677,7 @@ ${e.stack}
         res.status(500).json({ error: e.message });
       }
     });
-    router6.post("/suppliers", async (req, res) => {
+    router7.post("/suppliers", async (req, res) => {
       const { name, phone, email, contact_person } = req.body;
       try {
         const r = await execute(
@@ -2590,7 +2689,7 @@ ${e.stack}
         res.status(500).json({ error: e.message });
       }
     });
-    router6.delete("/suppliers/:id", async (req, res) => {
+    router7.delete("/suppliers/:id", async (req, res) => {
       try {
         await execute("DELETE FROM suppliers WHERE id=? AND business_id=?", [req.params.id, req.user.business_id]);
         res.json({ success: true });
@@ -2598,14 +2697,14 @@ ${e.stack}
         res.status(500).json({ error: e.message });
       }
     });
-    router6.get("/branches", async (req, res) => {
+    router7.get("/branches", async (req, res) => {
       try {
         res.json(await query("SELECT * FROM branches WHERE business_id=?", [req.user.business_id]));
       } catch (e) {
         res.status(500).json({ error: e.message });
       }
     });
-    settings_default = router6;
+    settings_default = router7;
   }
 });
 
@@ -2614,13 +2713,13 @@ var inventory_exports = {};
 __export(inventory_exports, {
   default: () => inventory_default
 });
-import { Router as Router7 } from "express";
-var router7, inventory_default;
+import { Router as Router8 } from "express";
+var router8, inventory_default;
 var init_inventory = __esm({
   "src/routes/inventory.ts"() {
     init_mysql();
-    router7 = Router7();
-    router7.post("/add", async (req, res) => {
+    router8 = Router8();
+    router8.post("/add", async (req, res) => {
       const { sku_id, branch_id, quantity, cost_price, selling_price, supplier_id, po_number, items } = req.body;
       const activeBranchId = branch_id || req.user.branch_id;
       const conn = await pool.getConnection();
@@ -2706,7 +2805,7 @@ var init_inventory = __esm({
         conn.release();
       }
     });
-    router7.get("/purchase-orders", async (req, res) => {
+    router8.get("/purchase-orders", async (req, res) => {
       try {
         const isSuper = req.user.role === "superadmin";
         const sql = `
@@ -2721,7 +2820,7 @@ var init_inventory = __esm({
         res.status(500).json({ error: e.message });
       }
     });
-    router7.get("/purchase-orders/by-number/:number", async (req, res) => {
+    router8.get("/purchase-orders/by-number/:number", async (req, res) => {
       try {
         const po = await queryOne("SELECT id FROM purchase_orders WHERE po_number=? AND business_id=?", [req.params.number, req.user.business_id]);
         if (!po) return res.status(404).json({ error: "Purchase order not found" });
@@ -2730,7 +2829,7 @@ var init_inventory = __esm({
         res.status(500).json({ error: e.message });
       }
     });
-    router7.get("/purchase-orders/:id", async (req, res) => {
+    router8.get("/purchase-orders/:id", async (req, res) => {
       try {
         const po = await queryOne(`
       SELECT po.*, s.name as supplier_name, s.email as supplier_email FROM purchase_orders po
@@ -2744,7 +2843,7 @@ var init_inventory = __esm({
         res.status(500).json({ error: e.message });
       }
     });
-    router7.get("/devices/:id", async (req, res) => {
+    router8.get("/devices/:id", async (req, res) => {
       try {
         const device = await queryOne(`
       SELECT d.*, p.name as product_name, s.sku_code, s.barcode
@@ -2759,7 +2858,7 @@ var init_inventory = __esm({
         res.status(500).json({ error: e.message });
       }
     });
-    router7.put("/devices/:id", async (req, res) => {
+    router8.put("/devices/:id", async (req, res) => {
       const { color, gb, ram, condition, cost_price, selling_price, unlocked, imei_status, carrier } = req.body;
       try {
         const old = await queryOne("SELECT * FROM devices WHERE id=? AND business_id=?", [req.params.id, req.user.business_id]);
@@ -2804,7 +2903,7 @@ var init_inventory = __esm({
         res.status(500).json({ error: e.message });
       }
     });
-    router7.get("/devices/:id/activity", async (req, res) => {
+    router8.get("/devices/:id/activity", async (req, res) => {
       try {
         const activities = await query(`
       SELECT 'device' as source, a.id, a.user_id, a.activity, a.details, a.created_at, u.name as user_name 
@@ -2828,7 +2927,7 @@ var init_inventory = __esm({
         res.status(500).json({ error: e.message });
       }
     });
-    router7.post("/devices/:id/activity", async (req, res) => {
+    router8.post("/devices/:id/activity", async (req, res) => {
       const { activity, details } = req.body;
       try {
         const device = await queryOne("SELECT id FROM devices WHERE id=? AND business_id=?", [req.params.id, req.user.business_id]);
@@ -2846,7 +2945,7 @@ var init_inventory = __esm({
         res.status(500).json({ error: e.message });
       }
     });
-    router7.delete("/devices/:id", async (req, res) => {
+    router8.delete("/devices/:id", async (req, res) => {
       try {
         const result = await execute("DELETE FROM devices WHERE id=? AND business_id=?", [req.params.id, req.user.business_id]);
         if (result.affectedRows === 0) return res.status(404).json({ error: "Device not found or access denied" });
@@ -2855,7 +2954,7 @@ var init_inventory = __esm({
         res.status(500).json({ error: e.message });
       }
     });
-    router7.get("/devices", async (req, res) => {
+    router8.get("/devices", async (req, res) => {
       const status = req.query.status || "in_stock";
       try {
         const isSuper = req.user.role === "superadmin";
@@ -2876,7 +2975,7 @@ var init_inventory = __esm({
         res.status(500).json({ error: e.message });
       }
     });
-    router7.get("/devices/search", async (req, res) => {
+    router8.get("/devices/search", async (req, res) => {
       const { imei, branch_id } = req.query;
       try {
         let sql = `
@@ -2900,7 +2999,7 @@ var init_inventory = __esm({
         res.status(500).json({ error: e.message });
       }
     });
-    router7.post("/transfers", async (req, res) => {
+    router8.post("/transfers", async (req, res) => {
       const { device_id, sku_id, quantity, to_branch_id, notes } = req.body;
       if (!to_branch_id) return res.status(400).json({ error: "Destination branch is required" });
       const conn = await pool.getConnection();
@@ -2934,7 +3033,7 @@ var init_inventory = __esm({
         conn.release();
       }
     });
-    router7.get("/transfers", async (req, res) => {
+    router8.get("/transfers", async (req, res) => {
       try {
         const isSuper = req.user.role === "superadmin";
         const sql = `
@@ -2957,7 +3056,7 @@ var init_inventory = __esm({
         res.status(500).json({ error: e.message });
       }
     });
-    router7.put("/transfers/:id/complete", async (req, res) => {
+    router8.put("/transfers/:id/complete", async (req, res) => {
       const conn = await pool.getConnection();
       try {
         await conn.beginTransaction();
@@ -2973,7 +3072,7 @@ var init_inventory = __esm({
           await conn.execute("INSERT INTO branch_stock (branch_id,sku_id,quantity) VALUES (?,?,-1) ON DUPLICATE KEY UPDATE quantity=quantity-1", [transfer.from_branch_id, dsku]);
           await conn.execute("INSERT INTO branch_stock (branch_id,sku_id,quantity) VALUES (?,?,1) ON DUPLICATE KEY UPDATE quantity=quantity+1", [transfer.to_branch_id, dsku]);
         } else if (transfer.sku_id) {
-          await conn.execute("INSERT INTO branch_stock (branch_id,sku_id,quantity) VALUES (?,?,?) ON DUPLICATE KEY UPDATE quantity=quantity-VALUES(quantity)", [transfer.from_branch_id, transfer.sku_id, transfer.quantity]);
+          await conn.execute("INSERT INTO branch_stock (branch_id,sku_id,quantity) VALUES (?,?,-?) ON DUPLICATE KEY UPDATE quantity=quantity+VALUES(quantity)", [transfer.from_branch_id, transfer.sku_id, transfer.quantity]);
           await conn.execute("INSERT INTO branch_stock (branch_id,sku_id,quantity) VALUES (?,?,?) ON DUPLICATE KEY UPDATE quantity=quantity+VALUES(quantity)", [transfer.to_branch_id, transfer.sku_id, transfer.quantity]);
         }
         await conn.commit();
@@ -2985,7 +3084,7 @@ var init_inventory = __esm({
         conn.release();
       }
     });
-    router7.put("/transfers/:id/cancel", async (req, res) => {
+    router8.put("/transfers/:id/cancel", async (req, res) => {
       const conn = await pool.getConnection();
       try {
         await conn.beginTransaction();
@@ -3004,7 +3103,7 @@ var init_inventory = __esm({
         conn.release();
       }
     });
-    router7.get("/transfers/device/:imei", async (req, res) => {
+    router8.get("/transfers/device/:imei", async (req, res) => {
       try {
         const device = await queryOne("SELECT * FROM devices WHERE imei=? AND business_id=?", [req.params.imei, req.user.business_id]);
         if (!device) return res.status(404).json({ error: "No device found with this IMEI" });
@@ -3022,7 +3121,7 @@ var init_inventory = __esm({
         res.status(500).json({ error: e.message });
       }
     });
-    router7.get("/repairs", async (req, res) => {
+    router8.get("/repairs", async (req, res) => {
       try {
         const isSuper = req.user.role === "superadmin";
         const sql = `
@@ -3037,7 +3136,7 @@ var init_inventory = __esm({
         res.status(500).json({ error: e.message });
       }
     });
-    router7.post("/repairs", async (req, res) => {
+    router8.post("/repairs", async (req, res) => {
       const {
         customer_id,
         customer_name,
@@ -3151,7 +3250,7 @@ var init_inventory = __esm({
         conn.release();
       }
     });
-    router7.put("/repairs/:id", async (req, res) => {
+    router8.put("/repairs/:id", async (req, res) => {
       const { status, notes, collected_amount, collected_method } = req.body;
       const jobId = req.params.id;
       const conn = await pool.getConnection();
@@ -3249,7 +3348,7 @@ var init_inventory = __esm({
         conn.release();
       }
     });
-    router7.get("/search", async (req, res) => {
+    router8.get("/search", async (req, res) => {
       const q = req.query.q;
       const type = req.query.type;
       if (!q || q.length < 2) return res.json([]);
@@ -3273,18 +3372,26 @@ var init_inventory = __esm({
              p.product_type, p.allow_overselling, d.imei, d.id as device_id, 1 as total_stock
       FROM devices d JOIN product_skus s ON d.sku_id=s.id
       JOIN products p ON s.product_id=p.id
-      WHERE (d.imei LIKE ? OR p.name LIKE ? OR s.sku_code LIKE ?) AND d.business_id=? ${!isSuper ? "AND d.branch_id=?" : ""} AND d.status='in_stock' LIMIT 15
+      WHERE (d.imei LIKE ? OR p.name LIKE ? OR s.sku_code LIKE ?) 
+      AND d.business_id=? ${!isSuper ? "AND d.branch_id=?" : ""} 
+      AND d.status='in_stock' 
+      AND d.imei IS NOT NULL AND d.imei != ''
+      LIMIT 15
     `, !isSuper ? [`%${q}%`, `%${q}%`, `%${q}%`, req.user.business_id, req.user.branch_id] : [`%${q}%`, `%${q}%`, `%${q}%`, req.user.business_id]);
         const results = [...devices];
         for (const p of products) {
-          if (!results.find((r) => r.id === p.id && !r.device_id)) results.push(p);
+          const normalizedType = (p.product_type || "").toLowerCase().trim();
+          if (normalizedType === "serialized") continue;
+          if (!results.some((r) => r.id === p.id)) {
+            results.push(p);
+          }
         }
         res.json(results);
       } catch (e) {
         res.status(500).json({ error: e.message });
       }
     });
-    inventory_default = router7;
+    inventory_default = router8;
   }
 });
 
@@ -3317,6 +3424,7 @@ async function startServer() {
   const PORT = process.env.PORT || 3e3;
   app.use(express.json({ limit: "10mb" }));
   const { default: authRouter, adminRouter: adminRouter2 } = await Promise.resolve().then(() => (init_auth(), auth_exports));
+  const { default: publicRouter } = await Promise.resolve().then(() => (init_public(), public_exports));
   const { default: productsRouter } = await Promise.resolve().then(() => (init_products(), products_exports));
   const { default: customersRouter } = await Promise.resolve().then(() => (init_customers(), customers_exports));
   const { default: invoicesRouter } = await Promise.resolve().then(() => (init_invoices(), invoices_exports));
@@ -3324,6 +3432,7 @@ async function startServer() {
   const { default: settingsRouter } = await Promise.resolve().then(() => (init_settings(), settings_exports));
   const { default: inventoryRouter } = await Promise.resolve().then(() => (init_inventory(), inventory_exports));
   app.use("/api/auth", authRouter);
+  app.use("/api/public", publicRouter);
   app.use("/api", requireAuthAsync);
   app.use("/api/admin", adminRouter2);
   app.use("/api/products", productsRouter);
