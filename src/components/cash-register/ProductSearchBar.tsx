@@ -5,12 +5,14 @@ interface ProductSearchBarProps {
   searchQuery: string;
   setSearchQuery: (query: string) => void;
   onClear: () => void;
+  onKeyDown?: (e: React.KeyboardEvent<HTMLInputElement>) => void;
 }
 
 export const ProductSearchBar: React.FC<ProductSearchBarProps> = ({
   searchQuery,
   setSearchQuery,
-  onClear
+  onClear,
+  onKeyDown
 }) => {
   return (
     <div className="relative group">
@@ -23,6 +25,7 @@ export const ProductSearchBar: React.FC<ProductSearchBarProps> = ({
         placeholder="Search products by name, SKU or scan barcode..."
         value={searchQuery}
         onChange={(e) => setSearchQuery(e.target.value)}
+        onKeyDown={onKeyDown}
         autoFocus
       />
       <div className="absolute inset-y-0 right-0 pr-5 flex items-center gap-3">

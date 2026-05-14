@@ -225,14 +225,38 @@ export default function CashRegister({ onViewCustomers, onSelectCustomer, preSel
       return;
     }
 
+    // Senior-Level Validation: Block duplicates and stock overruns
+    const isSerialized = product.product_type === 'serialized';
+    
+    // Check if this specific IMEI is already in the cart
+    if (isSerialized && product.device_id) {
+      const inCart = cart.some(item => item.device_id === product.device_id);
+      if (inCart) {
+        addActivity('Cart Blocked', `IMEI ${product.imei} is already in the cart`, 'system');
+        return;
+      }
+    }
+
+    // Check stock for non-serialized items if overselling is disabled
+    if (!isSerialized && !product.allow_overselling) {
+      const existing = cart.find(item => item.id === product.id);
+      const currentQty = existing ? existing.quantity : 0;
+      const available = product.total_stock || 0;
+      
+      if (currentQty >= available) {
+        addActivity('Stock Limit', `Cannot add more ${product.product_name}. Stock: ${available}`, 'stock');
+        return;
+      }
+    }
+
     setCart(prevCart => {
       // For serialized products, we match by product id AND device_id/imei
       const existingItemIndex = prevCart.findIndex(item => 
         item.id === product.id && 
-        (product.product_type !== 'serialized' || item.device_id === product.device_id)
+        (!isSerialized || item.device_id === product.device_id)
       );
 
-      if (existingItemIndex > -1 && product.product_type !== 'serialized') {
+      if (existingItemIndex > -1 && !isSerialized) {
         const newCart = [...prevCart];
         newCart[existingItemIndex].quantity += 1;
         return newCart;
@@ -250,7 +274,21 @@ export default function CashRegister({ onViewCustomers, onSelectCustomer, preSel
     setCart(prevCart => {
       return prevCart.map(item => {
         if (item.id === productId && (!deviceId || item.device_id === deviceId)) {
+          // Serialized items are locked at quantity 1
+          if (item.product_type === 'serialized') {
+            return item;
+          }
+
           const newQty = Math.max(1, item.quantity + delta);
+          
+          // Stock validation for quantity increase
+          if (delta > 0 && !item.allow_overselling) {
+            if (newQty > (item.total_stock || 0)) {
+              addActivity('Stock Limit', `Exceeded stock for ${item.product_name}`, 'stock');
+              return item;
+            }
+          }
+
           if (newQty !== item.quantity) {
             addActivity('Quantity Changed', `${item.product_name}: ${item.quantity} → ${newQty}`, 'stock');
           }
@@ -554,11 +592,18 @@ export default function CashRegister({ onViewCustomers, onSelectCustomer, preSel
               searchQuery={searchQuery}
               setSearchQuery={setSearchQuery}
               onClear={() => setSearchQuery('')}
+              onKeyDown={(e) => {
+                const filteredResults = searchResults.filter(p => !p.device_id || !cart.some(c => c.device_id === p.device_id));
+                if (e.key === 'Enter' && filteredResults.length > 0) {
+                  e.preventDefault();
+                  addToCart(filteredResults[0]);
+                }
+              }}
             />
             
             {/* Search Results (Floating) */}
             <SearchResults 
-              results={searchResults}
+              results={searchResults.filter(p => !p.device_id || !cart.some(c => c.device_id === p.device_id))}
               searchQuery={searchQuery}
               onAddProduct={addToCart}
             />
@@ -709,7 +754,7 @@ export default function CashRegister({ onViewCustomers, onSelectCustomer, preSel
       {/* Hidden Print Container */}
       <div className="hidden print:block fixed inset-0 bg-white z-[9999]">
         {lastInvoiceData && (
-          <div className={printType === 'Thermal' ? 'w-[80mm]' : 'w-full'}>
+          <div className={printType === 'Thermal' ? 'w-[72mm]' : 'w-full'}>
             <ThermalReceipt invoice={lastInvoiceData} settings={settings} company={company} />
           </div>
         )}

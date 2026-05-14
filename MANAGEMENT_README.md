@@ -9,7 +9,7 @@ Welcome to the EPOS System documentation. This guide explains the core functiona
 The EPOS platform operates as a multi-tenant (SaaS) application. This means multiple distinct companies (Businesses) can use the same deployed application and database, completely isolated from one another.
 
 ### Core Entities:
-- **Developer / Super Admin**: The ultimate system owner (e.g., `admin@icover.ie`, `tanveerfixit@gmail.com`). Has access to the **Developer Control Center** to oversee all businesses globally.
+- **Developer / Super Admin**: The ultimate system owner (e.g., `support@techinbox.ie`, `tanveerfixit@gmail.com`). Has access to the **Developer Control Center** to oversee all businesses globally.
 - **Businesses**: The highest tenant level. A business acts as a completely isolated bubble. Data from Business A can never be seen by Business B.
 - **Branches**: Physical or logical store locations belonging to a Business. A Business can have one or many branches.
 - **Users**: Employees configured with role-based access control (`staff`, `admin`, `superadmin`) who work at a specific Branch.

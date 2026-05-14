@@ -21,9 +21,8 @@ router.get('/eod-data', async (req: any, res) => {
     `, !isSuper ? [date, req.user.business_id, branchId] : [date, req.user.business_id]);
 
     const otherMovements = await query(`
-      SELECT p.*, u.name as user_name, c.name as customer_name 
+      SELECT p.*, 'System' as user_name, c.name as customer_name 
       FROM payments p
-      LEFT JOIN users u ON p.user_id=u.id
       LEFT JOIN customers c ON p.customer_id=c.id
       WHERE DATE(p.paid_at)=? AND p.invoice_id IS NULL AND c.business_id=?
       ${!isSuper ? 'AND c.branch_id=?' : ''}

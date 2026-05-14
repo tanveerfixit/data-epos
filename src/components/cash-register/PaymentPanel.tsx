@@ -81,6 +81,12 @@ export const PaymentPanel: React.FC<PaymentPanelProps> = ({
               value={paymentAmount}
               onChange={(e) => setPaymentAmount(e.target.value)}
               onFocus={(e) => e.target.select()}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  onAddPayment();
+                }
+              }}
             />
           </div>
           <button 

@@ -47,6 +47,15 @@ export const UpdateCartModal: React.FC<UpdateCartModalProps> = ({
       alert('Quantity must be greater than 0');
       return;
     }
+
+    // Stock validation for non-serialized items
+    if (item.product_type !== 'serialized' && !item.allow_overselling) {
+      const available = item.total_stock || 0;
+      if (q > available) {
+        alert(`Cannot set quantity to ${q}. Only ${available} available in stock.`);
+        return;
+      }
+    }
     
     onSave({
       customPrice: parseFloat(unitPrice) || 0,
@@ -94,15 +103,23 @@ export const UpdateCartModal: React.FC<UpdateCartModalProps> = ({
               />
             </div>
             <div className="space-y-1.5">
-              <label className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wider">Quantity (Required)</label>
+              <label className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wider">
+                Quantity {item.product_type === 'serialized' ? '(Fixed)' : '(Required)'}
+              </label>
               <input 
                 type="text"
                 value={quantity}
                 onChange={(e) => setQuantity(e.target.value.replace(/[^0-9]/g, ''))}
                 onFocus={(e) => e.target.select()}
-                className="w-full bg-[var(--bg-app)] border border-[var(--border-base)] rounded px-3 py-2 text-sm font-mono focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all"
+                disabled={item.product_type === 'serialized'}
+                className={`w-full bg-[var(--bg-app)] border border-[var(--border-base)] rounded px-3 py-2 text-sm font-mono focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all ${
+                  item.product_type === 'serialized' ? 'opacity-50 cursor-not-allowed bg-slate-100 dark:bg-slate-900' : ''
+                }`}
                 placeholder="1"
               />
+              {item.product_type === 'serialized' && (
+                <p className="text-[10px] text-blue-500 font-medium">Unique IMEI devices are limited to qty 1</p>
+              )}
             </div>
           </div>
 

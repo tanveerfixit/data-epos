@@ -30,6 +30,7 @@ async function startServer() {
 
   // ─── Import Route Modules ─────────────────────────────────────────────────
   const { default: authRouter, adminRouter } = await import('./src/routes/auth.js');
+  const { default: publicRouter } = await import('./src/routes/public.js');
   const { default: productsRouter } = await import('./src/routes/products.js');
   const { default: customersRouter } = await import('./src/routes/customers.js');
   const { default: invoicesRouter } = await import('./src/routes/invoices.js');
@@ -39,6 +40,7 @@ async function startServer() {
 
   // ─── Public Auth Routes (no auth required) ────────────────────────────────
   app.use('/api/auth', authRouter);
+  app.use('/api/public', publicRouter);
 
   // ─── Protected API Routes (auth required for everything below) ───────────
   app.use('/api', requireAuthAsync);

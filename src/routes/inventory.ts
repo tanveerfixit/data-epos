@@ -332,7 +332,7 @@ router.put('/transfers/:id/complete', async (req, res) => {
       await conn.execute('INSERT INTO branch_stock (branch_id,sku_id,quantity) VALUES (?,?,-1) ON DUPLICATE KEY UPDATE quantity=quantity-1', [transfer.from_branch_id, dsku]);
       await conn.execute('INSERT INTO branch_stock (branch_id,sku_id,quantity) VALUES (?,?,1) ON DUPLICATE KEY UPDATE quantity=quantity+1', [transfer.to_branch_id, dsku]);
     } else if (transfer.sku_id) {
-      await conn.execute('INSERT INTO branch_stock (branch_id,sku_id,quantity) VALUES (?,?,?) ON DUPLICATE KEY UPDATE quantity=quantity-VALUES(quantity)', [transfer.from_branch_id, transfer.sku_id, transfer.quantity]);
+      await conn.execute('INSERT INTO branch_stock (branch_id,sku_id,quantity) VALUES (?,?,-?) ON DUPLICATE KEY UPDATE quantity=quantity+VALUES(quantity)', [transfer.from_branch_id, transfer.sku_id, transfer.quantity]);
       await conn.execute('INSERT INTO branch_stock (branch_id,sku_id,quantity) VALUES (?,?,?) ON DUPLICATE KEY UPDATE quantity=quantity+VALUES(quantity)', [transfer.to_branch_id, transfer.sku_id, transfer.quantity]);
     }
     await conn.commit();
@@ -648,14 +648,27 @@ router.get('/search', async (req: any, res) => {
              p.product_type, p.allow_overselling, d.imei, d.id as device_id, 1 as total_stock
       FROM devices d JOIN product_skus s ON d.sku_id=s.id
       JOIN products p ON s.product_id=p.id
-      WHERE (d.imei LIKE ? OR p.name LIKE ? OR s.sku_code LIKE ?) AND d.business_id=? ${!isSuper ? 'AND d.branch_id=?' : ''} AND d.status='in_stock' LIMIT 15
+      WHERE (d.imei LIKE ? OR p.name LIKE ? OR s.sku_code LIKE ?) 
+      AND d.business_id=? ${!isSuper ? 'AND d.branch_id=?' : ''} 
+      AND d.status='in_stock' 
+      AND d.imei IS NOT NULL AND d.imei != ''
+      LIMIT 15
     `, !isSuper
         ? [`%${q}%`, `%${q}%`, `%${q}%`, req.user.business_id, req.user.branch_id]
         : [`%${q}%`, `%${q}%`, `%${q}%`, req.user.business_id]);
 
     const results: any[] = [...devices];
     for (const p of products) {
-      if (!results.find((r: any) => r.id === (p as any).id && !r.device_id)) results.push(p);
+      // Robust check: normalize the type to catch 'Serialized', 'serialized ', etc.
+      const normalizedType = (p.product_type || '').toLowerCase().trim();
+
+      // Requirement: Do not show generic/template entries for serialized products.
+      // We only want specific units with IMEIs (which are already in the 'results' array).
+      if (normalizedType === 'serialized') continue;
+
+      if (!results.some((r: any) => r.id === p.id)) {
+        results.push(p);
+      }
     }
     res.json(results);
   } catch (e: any) { res.status(500).json({ error: e.message }); }

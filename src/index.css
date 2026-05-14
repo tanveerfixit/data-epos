@@ -62,9 +62,11 @@
   --brand-accent: #00e5ff;     /* Vibrant cyan supplement for secondary features */
   --brand-accent-hover: #00d4eb;  /* Interaction state for cyan accents */
   --brand-success-bright: #00c853; /* Success state for specific hardware/status logic */
+  --bg-header: #E7E9EB;
 }
 
 .dark {
+  --bg-header: #0f172a;
   /* --- Surfaces & Brand Foundation --- */
   --bg-app: #020617;           /* Deep background for reduced eye strain in low light */
   --bg-surface-secondary: #0f172a; /* Secondary deep surface for structural bars */

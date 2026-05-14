@@ -124,8 +124,8 @@ router.post('/', async (req: any, res) => {
       
       if (productInfo?.product_type === 'stock') {
         await conn.execute(`
-          INSERT INTO branch_stock (branch_id,sku_id,quantity) VALUES (?,?,?)
-          ON DUPLICATE KEY UPDATE quantity=quantity-VALUES(quantity)
+          INSERT INTO branch_stock (branch_id,sku_id,quantity) VALUES (?,?,-?)
+          ON DUPLICATE KEY UPDATE quantity=quantity+VALUES(quantity)
         `, [req.user.branch_id, skuId, item.quantity]);
       } else if (item.device_id) {
         await conn.execute("UPDATE devices SET status='sold' WHERE id=? AND branch_id=?", [item.device_id, req.user.branch_id]);

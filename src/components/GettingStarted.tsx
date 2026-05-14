@@ -455,7 +455,7 @@ const GettingStarted: React.FC<GettingStartedProps> = ({ initialTab }) => {
             body { margin: 0; padding: 0; background: #eee; }
             .receipt { 
               background: white; 
-              width: 80mm; 
+              width: 72mm; 
               margin: 20px auto; 
               padding: 10mm 5mm;
               font-family: ${thermalSettings.font_family};

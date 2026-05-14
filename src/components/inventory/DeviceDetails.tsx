@@ -376,8 +376,8 @@ export default function DeviceDetailView({ deviceId, onBack, onOpenPrinterSettin
                     Edit
                   </button>
                   <button 
-                    onClick={handleDelete}
-                    className="px-6 py-2.5 bg-[#f44336] hover:bg-[#d32f2f] text-white rounded text-xs font-normal uppercase tracking-wider transition-all"
+                    onClick={() => alert('(contact Admin)')}
+                    className="px-6 py-2.5 bg-slate-300 cursor-not-allowed text-slate-500 rounded text-xs font-normal uppercase tracking-wider transition-all"
                   >
                     Remove from inventory
                   </button>

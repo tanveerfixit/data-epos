@@ -3,7 +3,7 @@ import { pool } from './src/mysql';
 async function update() {
   try {
     const [result] = await pool.execute(
-      "UPDATE users SET name = 'Developer Panel' WHERE email = 'admin@icover.ie'"
+      "UPDATE users SET name = 'Developer Panel' WHERE email = 'support@techinbox.ie'"
     );
     console.log('Update successful:', result);
     process.exit(0);

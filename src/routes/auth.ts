@@ -76,6 +76,13 @@ export async function requireAdminAsync(req: any, res: any, next: any) {
 
 const router = Router();
 
+function slugify(text: string) {
+  return text.toString().toLowerCase().trim()
+    .replace(/\s+/g, '-')
+    .replace(/[^\w-]+/g, '')
+    .replace(/--+/g, '-');
+}
+
 // POST /api/auth/signup
 router.post('/signup', async (req, res) => {
   const { mode, name, email, password, business_name, branch_name, branch_id } = req.body;
@@ -93,7 +100,15 @@ router.post('/signup', async (req, res) => {
       if (!business_name || !branch_name) {
         return res.status(400).json({ error: 'Business name and initial branch name are required' });
       }
-      const [biz] = await conn.execute('INSERT INTO businesses (name, email, status) VALUES (?, ?, ?)', [business_name, email, 'inactive']);
+      
+      // Generate initial slug
+      let slug = slugify(business_name);
+      const [existingSlug] = await conn.execute('SELECT id FROM businesses WHERE slug = ?', [slug]);
+      if ((existingSlug as any[]).length > 0) {
+        slug = `${slug}-${Math.floor(Math.random() * 1000)}`;
+      }
+
+      const [biz] = await conn.execute('INSERT INTO businesses (name, slug, email, status) VALUES (?, ?, ?, ?)', [business_name, slug, email, 'inactive']);
       const businessId = (biz as any).insertId;
       const [br] = await conn.execute('INSERT INTO branches (business_id, name) VALUES (?, ?)', [businessId, branch_name]);
       const branchId = (br as any).insertId;
@@ -225,7 +240,7 @@ router.post('/forgot-password', async (req, res) => {
     const user = await queryOne('SELECT * FROM users WHERE email=?', [req.body.email]) as any;
     if (!user) return;
     const otp = String(Math.floor(100000 + Math.random() * 900000));
-    const expires = new Date(Date.now() + 10 * 60 * 1000).toISOString().slice(0, 19).replace('T', ' ');
+    const expires = new Date(Date.now() + 2 * 60 * 1000).toISOString().slice(0, 19).replace('T', ' ');
     await execute('UPDATE users SET otp_code=?,otp_expires=? WHERE id=?', [otp, expires, user.id]);
     try { await sendOtpCode({ name: user.name, email: user.email }, otp); } catch {}
   } catch {}
@@ -236,9 +251,11 @@ router.post('/verify-otp', async (req, res) => {
   const { email, otp } = req.body;
   if (!email || !otp) return res.status(400).json({ error: 'Email and OTP required' });
   try {
-    const user = await queryOne('SELECT * FROM users WHERE email=?', [email]) as any;
-    if (!user || user.otp_code !== String(otp)) return res.status(400).json({ error: 'Invalid OTP code' });
-    if (!user.otp_expires || new Date(user.otp_expires) < new Date()) {
+    const user = await queryOne('SELECT * FROM users WHERE email=? AND otp_code=?', [email, String(otp)]) as any;
+    if (!user) return res.status(400).json({ error: 'Invalid OTP code' });
+    
+    const expiry = new Date(user.otp_expires).getTime();
+    if (isNaN(expiry) || expiry < Date.now()) {
       return res.status(400).json({ error: 'OTP has expired. Please request a new one.' });
     }
     const reset_token = crypto.randomUUID();
@@ -448,10 +465,18 @@ adminRouter.put('/system/businesses/:id', requireAuthAsync, async (req: any, res
   if (req.user.role !== 'developer') {
     return res.status(403).json({ error: 'Developer access required' });
   }
-  const { name, email, phone, address, city, state, zip_code, country } = req.body;
+  const { name, slug, email, phone, address, city, state, zip_code, country } = req.body;
   try {
-    await execute('UPDATE businesses SET name=?,email=?,phone=?,address=?,city=?,state=?,zip_code=?,country=? WHERE id=?',
-      [name, email, phone, address, city, state, zip_code, country, req.params.id]);
+    let finalSlug = slug;
+    if (!finalSlug) {
+      finalSlug = slugify(name);
+      const [existingSlug] = await pool.execute('SELECT id FROM businesses WHERE slug = ? AND id != ?', [finalSlug, req.params.id]);
+      if ((existingSlug as any[]).length > 0) {
+        finalSlug = `${finalSlug}-${Math.floor(Math.random() * 1000)}`;
+      }
+    }
+    await execute('UPDATE businesses SET name=?,slug=?,email=?,phone=?,address=?,city=?,state=?,zip_code=?,country=? WHERE id=?',
+      [name, finalSlug, email, phone, address, city, state, zip_code, country, req.params.id]);
     res.json({ success: true });
   } catch (e: any) { res.status(500).json({ error: e.message }); }
 });

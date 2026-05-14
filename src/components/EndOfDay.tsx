@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import { 
   Printer, 
   List, 
@@ -17,6 +18,423 @@ import {
   Calendar
 } from 'lucide-react';
 import { Payment, ClosingReport, ClosingReportPayment } from '../types';
+import { useThermalSettings } from '../hooks/useThermalSettings';
+
+interface PrintProps {
+  reportDate: string;
+  startingBalance: number;
+  totalSales: number;
+  cashCounted: number;
+  calculatedCash: number;
+  difference: number;
+  summaries: any[];
+  allPayments: any[];
+  comments: string;
+}
+
+const EndOfDayThermal: React.FC<PrintProps> = ({
+  reportDate,
+  startingBalance,
+  totalSales,
+  cashCounted,
+  calculatedCash,
+  difference,
+  summaries,
+  allPayments,
+  comments
+}) => {
+  const { settings, company } = useThermalSettings();
+  const now = new Date();
+
+  if (!settings || !company) return null;
+
+  return (
+    <div 
+      className="thermal-receipt bg-white text-black mx-auto p-4 font-mono text-[12px] leading-tight" 
+      id="eod-thermal-receipt"
+      style={{ 
+        width: '72mm',
+        maxWidth: '72mm',
+        boxSizing: 'border-box',
+        padding: '2mm'
+      }}
+    >
+      <style dangerouslySetInnerHTML={{ __html: `
+        @media print {
+          @page {
+            margin: 0;
+            size: 80mm auto;
+          }
+          body * {
+            visibility: hidden;
+          }
+          #eod-thermal-receipt, #eod-thermal-receipt * {
+            visibility: visible;
+          }
+          #eod-thermal-receipt {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 72mm;
+            max-width: 72mm;
+            padding: 2mm;
+            box-sizing: border-box;
+            background: white !important;
+            color: black !important;
+          }
+        }
+        .eod-divider {
+          border-top: 1px dashed #000;
+          margin: 8px 0;
+        }
+        .eod-row {
+          display: flex;
+          justify-content: space-between;
+          margin-bottom: 2px;
+        }
+        .eod-header {
+          text-align: center;
+          margin-bottom: 10px;
+        }
+        .eod-title {
+          font-weight: bold;
+          font-size: 14px;
+          text-transform: uppercase;
+        }
+      `}} />
+
+      <div className="eod-header">
+        <div className="eod-title">End of Day Report</div>
+        <div>{company.name}</div>
+        <div>Date: {reportDate}</div>
+        <div>Printed: {now.toLocaleString()}</div>
+      </div>
+
+      <div className="eod-divider"></div>
+
+      <div className="eod-row">
+        <span>Starting Bal:</span>
+        <span>€{startingBalance.toFixed(2)}</span>
+      </div>
+      <div className="eod-row">
+        <span>Total Sales:</span>
+        <span>€{totalSales.toFixed(2)}</span>
+      </div>
+
+      <div className="eod-divider"></div>
+
+      <div className="eod-row font-bold">
+        <span>CASH SUMMARY</span>
+      </div>
+      <div className="eod-row">
+        <span>Calculated:</span>
+        <span>€{calculatedCash.toFixed(2)}</span>
+      </div>
+      <div className="eod-row">
+        <span>Counted:</span>
+        <span>€{cashCounted.toFixed(2)}</span>
+      </div>
+      <div className="eod-row font-bold">
+        <span>Difference:</span>
+        <span>€{difference.toFixed(2)}</span>
+      </div>
+
+      <div className="eod-divider"></div>
+
+      <div className="eod-row font-bold">
+        <span>PAYMENT TYPES</span>
+      </div>
+      {summaries.map((s, idx) => (
+        <div key={idx} className="eod-row">
+          <span>{s.payment_type}:</span>
+          <span>€{s.calculated.toFixed(2)}</span>
+        </div>
+      ))}
+
+      {comments && (
+        <>
+          <div className="eod-divider"></div>
+          <div className="font-bold">Comments:</div>
+          <div className="italic">{comments}</div>
+        </>
+      )}
+
+      <div className="eod-divider"></div>
+
+      <div className="text-center text-[10px] italic">
+        Powered by iCover EPOS
+      </div>
+    </div>
+  );
+};
+
+const EndOfDayA4: React.FC<PrintProps> = ({
+  reportDate,
+  startingBalance,
+  totalSales,
+  cashCounted,
+  calculatedCash,
+  difference,
+  summaries,
+  allPayments,
+  comments
+}) => {
+  const { company } = useThermalSettings();
+  const now = new Date();
+
+  if (!company) return null;
+
+  return (
+    <div 
+      className="bg-white text-black p-8 font-sans" 
+      id="eod-a4-report"
+      style={{ 
+        width: '210mm',
+        minHeight: '297mm',
+        margin: '0 auto',
+        boxSizing: 'border-box',
+      }}
+    >
+      <style dangerouslySetInnerHTML={{ __html: `
+        @media print {
+          @page {
+            size: A4;
+            margin: 10mm;
+          }
+          body * {
+            visibility: hidden;
+          }
+          #eod-a4-report, #eod-a4-report * {
+            visibility: visible;
+          }
+          #eod-a4-report {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+            padding: 0;
+            background: white !important;
+            color: black !important;
+          }
+        }
+        .report-table {
+          width: 100%;
+          border-collapse: collapse;
+          margin-bottom: 24px;
+          border-radius: 4px;
+          overflow: hidden;
+        }
+        .report-table th {
+          background-color: #1a1a1a;
+          color: white;
+          font-weight: 600;
+          text-transform: uppercase;
+          font-size: 10px;
+          letter-spacing: 0.05em;
+          padding: 12px 10px;
+          border: none;
+        }
+        .report-table td {
+          border-bottom: 1px solid #eee;
+          padding: 10px;
+          font-size: 11px;
+          color: #333;
+        }
+        .report-table tr:nth-child(even) {
+          background-color: #fafafa;
+        }
+        .text-right {
+          text-align: right !important;
+        }
+        .header-section {
+          display: flex;
+          justify-content: space-between;
+          align-items: flex-start;
+          border-bottom: 3px solid #1a1a1a;
+          padding-bottom: 20px;
+          margin-bottom: 30px;
+        }
+        .title-section h1 {
+          margin: 0;
+          font-size: 28px;
+          font-weight: 800;
+          color: #1a1a1a;
+          letter-spacing: -0.02em;
+        }
+        .company-info {
+          text-align: right;
+        }
+        .company-info .company-name {
+          font-size: 18px;
+          font-weight: 700;
+          color: #1a1a1a;
+          margin-bottom: 4px;
+        }
+        .company-info .company-details {
+          font-size: 11px;
+          color: #666;
+          line-height: 1.4;
+        }
+        .summary-grid {
+          display: grid;
+          grid-template-columns: repeat(2, 1fr);
+          gap: 30px;
+          margin-bottom: 30px;
+        }
+        .summary-box {
+          background: #fff;
+          border: 1px solid #e5e7eb;
+          padding: 20px;
+          border-radius: 8px;
+        }
+        .summary-box h3 {
+          margin-top: 0;
+          margin-bottom: 15px;
+          font-size: 12px;
+          font-weight: 700;
+          text-transform: uppercase;
+          color: #999;
+          letter-spacing: 0.1em;
+          border-bottom: 1px solid #f3f4f6;
+          padding-bottom: 10px;
+        }
+        .stat-row {
+          display: flex;
+          justify-content: space-between;
+          padding: 8px 0;
+          border-bottom: 1px solid #f9fafb;
+          font-size: 13px;
+        }
+        .stat-row.total {
+          margin-top: 10px;
+          padding-top: 15px;
+          border-top: 2px solid #1a1a1a;
+          font-weight: 800;
+          font-size: 16px;
+        }
+      `}} />
+
+      <div className="header-section">
+        <div className="title-section">
+          <h1>End of Day Report</h1>
+          <div className="mt-2 flex items-center gap-2">
+            <span className="px-2 py-0.5 bg-gray-100 text-[10px] font-bold rounded uppercase tracking-wider">Date</span>
+            <span className="text-sm font-medium">{reportDate}</span>
+          </div>
+        </div>
+        <div className="company-info">
+          <div className="company-name">{company.name}</div>
+          <div className="company-details">
+            {company.address}<br />
+            {company.city}<br />
+            Tel: {company.phone}
+          </div>
+        </div>
+      </div>
+
+      <div className="summary-grid">
+        <div className="summary-box">
+          <h3>Reconciliation</h3>
+          <div className="stat-row">
+            <span>Starting Balance</span>
+            <span className="font-semibold text-gray-500">€{startingBalance.toFixed(2)}</span>
+          </div>
+          <div className="stat-row">
+            <span>Calculated Sales</span>
+            <span className="font-semibold text-blue-600">€{totalSales.toFixed(2)}</span>
+          </div>
+          <div className="stat-row">
+            <span>Calculated Cash in Drawer</span>
+            <span className="font-semibold text-blue-600">€{calculatedCash.toFixed(2)}</span>
+          </div>
+          <div className="stat-row">
+            <span>Actual Cash Counted</span>
+            <span className="font-semibold text-amber-600">€{cashCounted.toFixed(2)}</span>
+          </div>
+          <div className={`stat-row total ${difference >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+            <span>Difference</span>
+            <span>€{difference.toFixed(2)}</span>
+          </div>
+        </div>
+
+        <div className="summary-box">
+          <h3>Payments by Type</h3>
+          <div className="space-y-1">
+            {summaries.map((s, idx) => (
+              <div key={idx} className="stat-row">
+                <span className="font-medium text-gray-700">{s.payment_type}</span>
+                <span className="font-bold">€{s.calculated.toFixed(2)}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <h3 className="text-[12px] font-extrabold mb-4 uppercase tracking-[0.2em] text-gray-400">Transaction Breakdown</h3>
+        <table className="report-table">
+          <thead>
+            <tr>
+              <th>User</th>
+              <th>Time</th>
+              <th>Reference</th>
+              <th>Customer</th>
+              <th>Method</th>
+              <th className="text-right">Amount</th>
+            </tr>
+          </thead>
+          <tbody>
+            {allPayments.length === 0 ? (
+              <tr>
+                <td colSpan={6} className="text-center py-10 italic text-gray-400 bg-white">No transactions recorded for this period.</td>
+              </tr>
+            ) : (
+              allPayments.map((p, idx) => (
+                <tr key={idx}>
+                  <td className="font-medium">{p.user_name || 'Staff'}</td>
+                  <td className="text-gray-500">{p.paid_at ? new Date(p.paid_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true }) : '--:--'}</td>
+                  <td className="font-mono text-[10px]">{p.invoice_number || 'DEPOSIT'}</td>
+                  <td>{p.customer_name || '--'}</td>
+                  <td>
+                    <span className="px-1.5 py-0.5 bg-gray-100 rounded text-[9px] font-bold uppercase">{p.method}</span>
+                  </td>
+                  <td className="text-right font-bold text-gray-900">€{p.amount.toFixed(2)}</td>
+                </tr>
+              ))
+            )}
+          </tbody>
+          <tfoot>
+            <tr className="bg-gray-900 text-white font-bold">
+              <td colSpan={5} className="text-right py-3 uppercase text-[10px] tracking-widest">Total Sales for Period</td>
+              <td className="text-right py-3 text-lg">€{totalSales.toFixed(2)}</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+
+      {comments && (
+        <div className="mt-8">
+          <h3 className="text-[10px] font-bold mb-2 uppercase tracking-widest text-gray-400">Manager Notes</h3>
+          <div className="p-4 bg-gray-50 border-l-4 border-gray-900 text-sm italic text-gray-700 leading-relaxed shadow-sm">
+            "{comments}"
+          </div>
+        </div>
+      )}
+
+      <div className="mt-24 pt-8 border-t border-gray-100 flex justify-between items-end">
+        <div>
+          <div className="text-[10px] uppercase font-bold text-gray-400 mb-1">Authorization</div>
+          <div className="w-48 h-px bg-gray-300 mb-2"></div>
+          <div className="text-[9px] text-gray-400 italic">Signature / Timestamp</div>
+        </div>
+        <div className="text-right">
+          <div className="text-[10px] font-bold text-gray-900 mb-1 tracking-tighter uppercase italic">iCover EPOS System</div>
+          <div className="text-[9px] text-gray-400 tracking-widest uppercase">Certified Report • {now.toLocaleDateString()}</div>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 interface CashCounterProps {
   onClose: () => void;
@@ -136,6 +554,19 @@ export default function EndOfDay() {
     'Customer Deposit': 0,
     'Refunds': 0
   });
+
+  const [printLayout, setPrintLayout] = useState<'thermal' | 'a4' | null>(null);
+  const [showPrintOptions, setShowPrintOptions] = useState(false);
+
+  useEffect(() => {
+    if (printLayout) {
+      const timer = setTimeout(() => {
+        window.print();
+        setPrintLayout(null);
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [printLayout]);
 
   useEffect(() => {
     fetchEodData();
@@ -347,13 +778,79 @@ export default function EndOfDay() {
               <List size={16} />
               End of Day List
             </button>
-            <button 
-              onClick={() => window.print()}
-              className="flex items-center gap-2 px-4 py-2 bg-[var(--brand-primary)] text-white rounded text-sm font-normal hover:opacity-90 transition-all shadow-sm"
-            >
-              <Printer size={16} />
-              Print
-            </button>
+            <div className="relative">
+              <button 
+                onClick={() => setShowPrintOptions(!showPrintOptions)}
+                className={`flex items-center gap-2 px-5 py-2.5 rounded-md text-sm font-bold transition-all shadow-sm border ${
+                  showPrintOptions 
+                    ? 'bg-white border-[var(--brand-primary)] text-[var(--brand-primary)]' 
+                    : 'bg-[var(--brand-primary)] border-[var(--brand-primary)] text-white hover:bg-[var(--brand-primary-hover)]'
+                }`}
+              >
+                <Printer size={16} />
+                <span>Print</span>
+                <motion.div
+                  animate={{ rotate: showPrintOptions ? 180 : 0 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <ChevronDown size={14} />
+                </motion.div>
+              </button>
+
+              <AnimatePresence>
+                {showPrintOptions && (
+                  <>
+                    {/* Backdrop to close dropdown */}
+                    <div 
+                      className="fixed inset-0 z-40" 
+                      onClick={() => setShowPrintOptions(false)}
+                    />
+                    <motion.div 
+                      initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                      transition={{ duration: 0.15, ease: "easeOut" }}
+                      className="absolute right-0 mt-2 w-56 bg-white border border-[var(--border-base)] rounded-lg shadow-2xl z-50 py-1.5 overflow-hidden"
+                    >
+                      <div className="px-3 py-2 text-[10px] font-black text-[var(--text-muted)] uppercase tracking-wider border-b border-[var(--bg-zebra)] mb-1">
+                        Select Format
+                      </div>
+                      <button 
+                        onClick={() => {
+                          setPrintLayout('a4');
+                          setShowPrintOptions(false);
+                        }}
+                        className="w-full flex items-center gap-3 px-4 py-3 text-sm text-[var(--text-main)] hover:bg-blue-50 transition-colors text-left group"
+                      >
+                        <div className="w-9 h-9 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center group-hover:bg-blue-600 group-hover:text-white transition-colors shadow-sm">
+                          <FileText size={18} />
+                        </div>
+                        <div className="flex-1">
+                          <div className="font-bold text-gray-900 leading-tight">Full Page Print</div>
+                          <div className="text-[10px] text-[var(--text-muted)] mt-0.5">Professional A4 Report</div>
+                        </div>
+                      </button>
+                      
+                      <button 
+                        onClick={() => {
+                          setPrintLayout('thermal');
+                          setShowPrintOptions(false);
+                        }}
+                        className="w-full flex items-center gap-3 px-4 py-3 text-sm text-[var(--text-main)] hover:bg-amber-50 transition-colors text-left group"
+                      >
+                        <div className="w-9 h-9 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center group-hover:bg-amber-600 group-hover:text-white transition-colors shadow-sm">
+                          <Printer size={18} />
+                        </div>
+                        <div className="flex-1">
+                          <div className="font-bold text-gray-900 leading-tight">Thermal Print</div>
+                          <div className="text-[10px] text-[var(--text-muted)] mt-0.5">80mm POS Receipt</div>
+                        </div>
+                      </button>
+                    </motion.div>
+                  </>
+                )}
+              </AnimatePresence>
+            </div>
           </div>
         </div>
       </div>
@@ -605,6 +1102,38 @@ export default function EndOfDay() {
             setShowCashCounter(null);
           }}
         />
+      )}
+      {/* Print Layouts (Hidden from screen, only visible in print mode) */}
+      {printLayout === 'thermal' && (
+        <div className="hidden print:block fixed inset-0 z-[9999] bg-white">
+          <EndOfDayThermal 
+            reportDate={reportDate}
+            startingBalance={startingBalance}
+            totalSales={totalSales}
+            cashCounted={cashCounted}
+            calculatedCash={calculatedCashTotal}
+            difference={cashDifference}
+            summaries={summaries}
+            allPayments={allPayments}
+            comments={comments}
+          />
+        </div>
+      )}
+
+      {printLayout === 'a4' && (
+        <div className="hidden print:block fixed inset-0 z-[9999] bg-white">
+          <EndOfDayA4 
+            reportDate={reportDate}
+            startingBalance={startingBalance}
+            totalSales={totalSales}
+            cashCounted={cashCounted}
+            calculatedCash={calculatedCashTotal}
+            difference={cashDifference}
+            summaries={summaries}
+            allPayments={allPayments}
+            comments={comments}
+          />
+        </div>
       )}
     </div>
   );

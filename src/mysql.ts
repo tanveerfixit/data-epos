@@ -18,6 +18,7 @@ export const pool = mysql.createPool({
   queueLimit: 0,
   connectTimeout: 20000,
   decimalNumbers: true,
+  timezone: 'Z'
 });
 
 // Convenience wrapper
@@ -48,6 +49,7 @@ export async function initSchema() {
       CREATE TABLE IF NOT EXISTS businesses (
         id INT AUTO_INCREMENT PRIMARY KEY,
         name VARCHAR(255) NOT NULL,
+        slug VARCHAR(255) UNIQUE,
         email VARCHAR(255),
         phone VARCHAR(100),
         subdomain VARCHAR(100),
@@ -62,6 +64,14 @@ export async function initSchema() {
         deleted_at TIMESTAMP NULL
       )
     `);
+
+    // Migration: add slug to businesses if missing
+    try {
+      await conn.query('ALTER TABLE businesses ADD COLUMN slug VARCHAR(255) UNIQUE AFTER name');
+      console.log('[MySQL] Migration: added slug to businesses');
+    } catch (e: any) {
+      if (!e.message?.includes('Duplicate column')) throw e;
+    }
 
     await conn.query(`
       CREATE TABLE IF NOT EXISTS branches (
@@ -773,97 +783,122 @@ export async function initSchema() {
 // ─── Seed Initial Data ────────────────────────────────────────────────────────
 
 export async function seedData() {
-  const [biz] = await pool.execute('SELECT count(*) as count FROM businesses');
-  const count = (biz as any[])[0].count;
-  if (Number(count) > 0) return; // Already seeded
+  const [existing] = await pool.execute("SELECT id FROM businesses WHERE name='Phone Management System'");
+  if ((existing as any[]).length > 0) return;
 
-  console.log('[MySQL] Seeding initial data...');
+  const conn = await pool.getConnection();
+  try {
+    console.log('[MySQL] Resetting database and seeding initial data...');
+    
+    // Disable FK checks to allow truncation
+    await conn.query('SET FOREIGN_KEY_CHECKS = 0');
+    
+    const tables = [
+      'businesses', 'branches', 'users', 'customers', 'suppliers', 
+      'settings', 'payment_methods', 'smtp_settings', 'invoices', 
+      'invoice_items', 'products', 'product_skus', 'branch_stock', 
+      'devices', 'inventory_movements', 'jobs', 'device_transfers'
+    ];
+    
+    for (const table of tables) {
+      try {
+        await conn.query(`TRUNCATE TABLE ${table}`);
+      } catch (e) {}
+    }
 
-  const [bizResult] = await pool.execute(
-    'INSERT INTO businesses (name, email) VALUES (?, ?)',
-    ['iCover EPOS', 'contact@icover.com']
-  );
-  const businessId = (bizResult as mysql.ResultSetHeader).insertId;
-
-  // Branches
-  const [branchResult] = await pool.execute(
-    'INSERT INTO branches (business_id, name, address) VALUES (?, ?, ?)',
-    [businessId, 'Main Branch', '123 Tech St, Dublin']
-  );
-  const branchId = (branchResult as mysql.ResultSetHeader).insertId;
-  await pool.execute('INSERT INTO branches (business_id, name, address) VALUES (?, ?, ?)', [businessId, 'ennis', 'Ennis Branch']);
-  await pool.execute('INSERT INTO branches (business_id, name, address) VALUES (?, ?, ?)', [businessId, 'gort1', 'Gort Branch']);
-  await pool.execute('INSERT INTO branches (business_id, name, address) VALUES (?, ?, ?)', [businessId, 'ipear', 'iPear Branch']);
-  await pool.execute('INSERT INTO branches (business_id, name, address) VALUES (?, ?, ?)', [businessId, 'istore', 'iStore Branch']);
-  await pool.execute('INSERT INTO branches (business_id, name, address) VALUES (?, ?, ?)', [businessId, 'phoneshop', 'Phone Shop Branch']);
-  await pool.execute('INSERT INTO branches (business_id, name, address) VALUES (?, ?, ?)', [businessId, 'tesco', 'Tesco Branch']);
-
-  // Superadmin
-  const bcrypt = await import('bcryptjs');
-  const superAdminHash = await bcrypt.hash('Admin123', 10);
-  await pool.execute(
-    `INSERT INTO users (business_id, branch_id, name, email, password, password_hash, role, status)
-     VALUES (?, ?, ?, ?, ?, ?, 'superadmin', 'approved')
-     ON DUPLICATE KEY UPDATE role='superadmin', status='approved'`,
-    [businessId, branchId, 'Super Admin', 'tanveerfixit@gmail.com', 'Admin123', superAdminHash]
-  );
-
-  // Developer Panel user (role='developer', no plaintext password) (FINDING-002, FINDING-007)
-  const devHash = await bcrypt.hash(process.env.DEV_PASS || 'admin123', 10);
-  await pool.execute(
-    `INSERT INTO users (business_id, branch_id, name, email, password, password_hash, role, status)
-     VALUES (?, ?, ?, ?, '', ?, 'developer', 'approved')
-     ON DUPLICATE KEY UPDATE role='developer', status='approved', password=''`,
-    [businessId, branchId, 'Developer Panel', 'admin@icover.ie', devHash]
-  );
-
-  // Suppliers
-  await pool.execute('INSERT INTO suppliers (business_id, name) VALUES (?, ?)', [businessId, 'Apple Ireland']);
-  await pool.execute('INSERT INTO suppliers (business_id, name) VALUES (?, ?)', [businessId, 'Tech Distribution Ltd']);
-  await pool.execute('INSERT INTO suppliers (business_id, name) VALUES (?, ?)', [businessId, 'Mobile Wholesale']);
-
-  // Walk-in customer
-  await pool.execute('INSERT INTO customers (business_id, name) VALUES (?, ?)', [businessId, 'Walk-in Customer']);
-
-  // Settings
-  await pool.execute('INSERT INTO settings (business_id) VALUES (?)', [businessId]);
-
-  // Payment Methods
-  const methods = ['Debit Card', 'Cash', 'Other'];
-  for (let i = 0; i < methods.length; i++) {
-    await pool.execute(
-      'INSERT INTO payment_methods (business_id, name, display_order) VALUES (?, ?, ?)',
-      [businessId, methods[i], i + 1]
+    // Insert Main Business
+    const [bizResult] = await conn.execute(
+      'INSERT INTO businesses (name, email, slug, status) VALUES (?, ?, ?, ?)',
+      ['Phone Management System', 'support@techinbox.ie', 'phone-management-system', 'active']
     );
-  }
+    const businessId = (bizResult as mysql.ResultSetHeader).insertId;
 
-  // Seed SMTP from env
-  if (process.env.SMTP_USER) {
-    await pool.execute(
-      `INSERT INTO smtp_settings (business_id, host, port, secure, \`user\`, pass, from_name, from_email)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-       ON DUPLICATE KEY UPDATE host=VALUES(host), port=VALUES(port), secure=VALUES(secure),
-         \`user\`=VALUES(\`user\`), pass=VALUES(pass), from_name=VALUES(from_name), from_email=VALUES(from_email)`,
-      [
-        businessId,
-        process.env.SMTP_HOST || 'smtp.hostinger.com',
-        Number(process.env.SMTP_PORT) || 465,
-        process.env.SMTP_SECURE === 'false' ? 0 : 1,
-        process.env.SMTP_USER,
-        process.env.SMTP_PASS || '',
-        process.env.SMTP_FROM_NAME || 'iCover EPOS',
-        process.env.SMTP_FROM_EMAIL || process.env.SMTP_USER,
-      ]
+    const bcrypt = await import('bcryptjs');
+    const adminHash = await bcrypt.hash('Admin123', 10);
+
+    const branchesData = [
+      {
+        name: 'Phone Lab',
+        email: 'phone.lab.ennis@gmail.com',
+        address: "32 O'Connell Street, Clonroad Beg, Ennis, Co. Clare, V95 EW74",
+        phone: '(065) 672 4192'
+      },
+      {
+        name: 'FIXD GORT',
+        email: 'fixd.gort@gmail.com',
+        address: '1 Bridge St, Ballyhugh, Gort, Co. Galway, H91 FRC8',
+        phone: '(089) 981 5157'
+      },
+      {
+        name: 'Gadget Reapir & Vape shop',
+        email: 'istoreirl@gmail.com',
+        address: 'Apartment 1, Unit 1, Millennium house, Loughrea, Co. Galway, H62 H573',
+        phone: '(089) 961 7473'
+      },
+      {
+        name: 'iPear Ennis',
+        email: 'technomore.irl@gmail.com',
+        address: '6 Parnell St, Clonroad Beg, Ennis, Co. Clare, V95 X073',
+        phone: '(065) 682 2900'
+      },
+      {
+        name: 'iPear in Tesco',
+        email: 'ipear.ennis@gmail.com',
+        address: 'Unit 20, Francis St, Clonroad Beg, Ennis, Co. Clare, V95 EP8K',
+        phone: '(065) 672 4446'
+      }
+    ];
+
+    let firstBranchId: number | null = null;
+
+    for (const b of branchesData) {
+      const [brResult] = await conn.execute(
+        'INSERT INTO branches (business_id, name, address, phone, status) VALUES (?, ?, ?, ?, ?)',
+        [businessId, b.name, b.address, b.phone, 'active']
+      );
+      const branchId = (brResult as mysql.ResultSetHeader).insertId;
+      if (!firstBranchId) firstBranchId = branchId;
+
+      // Create Admin for each branch
+      await conn.execute(
+        `INSERT INTO users (business_id, branch_id, name, email, password, password_hash, role, status)
+         VALUES (?, ?, ?, ?, ?, ?, 'superadmin', 'approved')`,
+        [businessId, branchId, b.name + ' Admin', b.email, 'Admin123', adminHash]
+      );
+    }
+
+    // Developer Panel user
+    const devHash = await bcrypt.hash(process.env.DEV_PASS || 'admin123', 10);
+    await conn.execute(
+      `INSERT INTO users (business_id, branch_id, name, email, password, password_hash, role, status)
+       VALUES (?, ?, ?, ?, '', ?, 'developer', 'approved')`,
+      [businessId, firstBranchId, 'Developer Panel', 'support@techinbox.ie', devHash]
     );
-  }
 
-  console.log('[MySQL] Seed data inserted.');
+    // Global settings & defaults
+    await conn.execute('INSERT INTO settings (business_id) VALUES (?)', [businessId]);
+    await conn.execute('INSERT INTO customers (business_id, name) VALUES (?, ?)', [businessId, 'Walk-in Customer']);
+
+    const methods = ['Debit Card', 'Cash', 'Other'];
+    for (let i = 0; i < methods.length; i++) {
+      await conn.execute('INSERT INTO payment_methods (business_id, name, display_order) VALUES (?, ?, ?)', [businessId, methods[i], i + 1]);
+    }
+
+    await conn.query('SET FOREIGN_KEY_CHECKS = 1');
+    await conn.commit();
+    console.log('[MySQL] Reset and Seeding completed.');
+  } catch (e: any) {
+    await conn.rollback();
+    console.error('[MySQL] Seeding failed:', e.message);
+  } finally {
+    conn.release();
+  }
 }
 
 // ─── Ensure Superadmin Exists ─────────────────────────────────────────────────
 
 export async function ensureSuperAdmin() {
-  const [rows] = await pool.execute('SELECT id FROM businesses LIMIT 1');
+  const [rows] = await pool.execute("SELECT id FROM businesses WHERE name='Phone Management System' LIMIT 1");
   const businesses = rows as any[];
   if (businesses.length === 0) return;
   const businessId = businesses[0].id;
@@ -879,15 +914,14 @@ export async function ensureSuperAdmin() {
   await pool.execute(
     `INSERT INTO users (business_id, branch_id, name, email, password, password_hash, role, status)
      VALUES (?, ?, 'Super Admin', 'tanveerfixit@gmail.com', 'Admin123', ?, 'superadmin', 'approved')
-     ON DUPLICATE KEY UPDATE role='superadmin', status='approved', password='Admin123'`,
-    [businessId, branchId, hash]
+     ON DUPLICATE KEY UPDATE role='superadmin', status='approved', password='Admin123', business_id=?, branch_id=?`,
+    [businessId, branchId, hash, businessId, branchId]
   );
 
   // ─── Migrate Developer Panel user to role='developer' (FINDING-002) ──────
-  // Runs on every boot — safe because it's idempotent via email match.
   await pool.execute(
     `UPDATE users SET role='developer', password=''
-     WHERE email='admin@icover.ie' AND role IN ('admin','developer')`,
+     WHERE (email='admin@icover.ie' OR email='support@techinbox.ie') AND role IN ('admin','developer')`,
     []
   );
 

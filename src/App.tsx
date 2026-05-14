@@ -47,6 +47,7 @@ import SignupPage from './components/auth/SignupPage';
 import ForgotPassword from './components/auth/ForgotPassword';
 import ResetPassword from './components/auth/ResetPassword';
 import AdminLoginPage from './components/auth/AdminLoginPage';
+import PublicProfile from './components/PublicProfile';
 import { AuthProvider, useAuth } from './context/AuthContext';
 
 type View = 'home' | 'dashboard' | 'register' | 'repairs' | 'invoices' | 'invoice-details' | 'customers' | 'customer-details' | 'products' | 'devices' | 'device-details' | 'sku-device-details' | 'create-product' | 'product-details' | 'add-inventory' | 'purchase-orders' | 'purchase-order-detail' | 'manage-data' | 'end-of-day' | 'getting-started' | 'transfers';
@@ -67,6 +68,15 @@ function AppInner() {
   const [gettingStartedTab, setGettingStartedTab] = useState<string | undefined>(undefined);
   const [previousView, setPreviousView] = useState<View | null>(null);
   const [initiateDeposit, setInitiateDeposit] = useState(false);
+  const [publicSlug, setPublicSlug] = useState<string | null>(null);
+
+  useEffect(() => {
+    const path = window.location.pathname.slice(1);
+    const standardPaths = ['', 'login', 'signup', 'forgot', 'reset', 'admin-login'];
+    if (path && !standardPaths.includes(path) && !currentUser) {
+      setPublicSlug(path);
+    }
+  }, [currentUser]);
 
   const [isDarkMode, setIsDarkMode] = useState(() => {
     const saved = localStorage.getItem('theme');
@@ -97,6 +107,11 @@ function AppInner() {
         <div className="text-[var(--text-muted)] font-bold text-sm tracking-widest uppercase animate-pulse">Initializing System...</div>
       </div>
     );
+  }
+
+  // Public Profile handling
+  if (publicSlug && !currentUser) {
+    return <PublicProfile slug={publicSlug} onBack={() => { setPublicSlug(null); window.history.pushState({}, '', '/'); }} />;
   }
 
   // Auth flow
@@ -310,12 +325,12 @@ function AppInner() {
               onClick={() => setCurrentView('home')}
               className="transition-transform hover:scale-110 p-2"
             >
-              <Home size={24} className="text-[#000080] dark:text-blue-400" />
+              <Home size={24} className="text-[var(--brand-primary)]" />
             </button>
           </div>
           
           <div className="pl-6 flex flex-col items-start font-sans">
-            <h1 className="text-lg font-bold text-[#000080] dark:text-blue-400 tracking-tight leading-none">PHONE LAB</h1>
+            <h1 className="text-lg font-bold text-[var(--brand-primary)] tracking-tight leading-none uppercase">PHONE LAB</h1>
           </div>
         </div>
 

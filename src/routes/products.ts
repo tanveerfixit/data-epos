@@ -17,6 +17,7 @@ router.get('/', async (req: any, res) => {
       LEFT JOIN categories c ON p.category_id = c.id
       LEFT JOIN manufacturers m ON p.manufacturer_id = m.id
       WHERE p.deleted_at IS NULL AND p.business_id = ?
+      AND (p.product_type != 'serialized' OR (SELECT SUM(quantity) FROM branch_stock WHERE sku_id = s.id) > 0)
     `, [req.user.business_id]);
     const mapped = products.map((p: any) => ({
       ...p,

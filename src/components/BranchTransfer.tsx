@@ -90,21 +90,21 @@ export default function BranchTransfer() {
   };
 
   return (
-    <div className="h-full flex flex-col">
-      <div className="p-6 border-b border-slate-200 bg-white">
-        <h2 className="text-xl font-bold text-[#2c3e50]">Branch Transfers</h2>
-        <p className="text-sm text-slate-500 mt-0.5">Transfer serialized/IMEI devices between branches</p>
+    <div className="h-full flex flex-col bg-[var(--bg-app)]">
+      <div className="p-6 border-b border-[var(--border-base)] bg-[var(--bg-card)]">
+        <h2 className="text-xl font-bold text-[var(--text-main)]">Branch Transfers</h2>
+        <p className="text-sm text-[var(--text-muted)] mt-0.5">Transfer serialized/IMEI devices between branches</p>
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 px-6 pt-4 bg-white border-b border-slate-200">
+      <div className="flex gap-1 px-6 pt-4 bg-[var(--bg-card)] border-b border-[var(--border-base)]">
         {[
           { id: 'create', label: 'New Transfer', icon: ArrowRight },
           { id: 'list', label: `All Transfers (${transfers.length})`, icon: Package },
           { id: 'lookup', label: 'IMEI History', icon: History },
         ].map(t => (
           <button key={t.id} onClick={() => { setTab(t.id as any); if (t.id === 'list') loadTransfers(); }}
-            className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-t-lg border-b-2 transition ${tab === t.id ? 'border-[#3498db] text-[#3498db]' : 'border-transparent text-slate-500 hover:text-slate-700'}`}>
+            className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-t-lg border-b-2 transition ${tab === t.id ? 'border-[var(--brand-primary)] text-[var(--brand-primary)]' : 'border-transparent text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-hover)]'}`}>
             <t.icon size={15} />{t.label}
           </button>
         ))}
@@ -124,14 +124,14 @@ export default function BranchTransfer() {
             <form onSubmit={handleCreateTransfer} className="space-y-5">
               {/* Device Search */}
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1.5">Search Device by IMEI</label>
+                <label className="block text-sm font-medium text-[var(--text-main)] mb-1.5">Search Device by IMEI</label>
                 <div className="relative">
-                  <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                  <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
                   <input
                     value={deviceSearch}
                     onChange={e => { searchDevices(e.target.value); setSelectedDevice(null); }}
                     placeholder="Type IMEI to search..."
-                    className="w-full border border-slate-300 rounded-lg pl-9 pr-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#3498db]/30 focus:border-[#3498db]"
+                    className="w-full bg-[var(--bg-input)] border border-[var(--border-base)] rounded-lg pl-9 pr-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/30 focus:border-[var(--brand-primary)] text-[var(--text-main)]"
                   />
                 </div>
                 {searchResults.length > 0 && !selectedDevice && (
@@ -155,9 +155,9 @@ export default function BranchTransfer() {
 
               {/* Destination Branch */}
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1.5">Transfer To Branch</label>
+                <label className="block text-sm font-medium text-[var(--text-main)] mb-1.5">Transfer To Branch</label>
                 <select value={toBranch} onChange={e => setToBranch(e.target.value)} required
-                  className="w-full border border-slate-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#3498db]/30 focus:border-[#3498db]">
+                  className="w-full bg-[var(--bg-input)] border border-[var(--border-base)] rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/30 focus:border-[var(--brand-primary)] text-[var(--text-main)]">
                   <option value="">Select destination branch...</option>
                   {branches.filter(b => !selectedDevice || b.id !== selectedDevice.branch_id).map(b => (
                     <option key={b.id} value={b.id}>{b.name}</option>
@@ -167,13 +167,13 @@ export default function BranchTransfer() {
 
               {/* Notes */}
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1.5">Notes (optional)</label>
+                <label className="block text-sm font-medium text-[var(--text-main)] mb-1.5">Notes (optional)</label>
                 <input value={notes} onChange={e => setNotes(e.target.value)} placeholder="Reason for transfer..."
-                  className="w-full border border-slate-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#3498db]/30 focus:border-[#3498db]" />
+                  className="w-full bg-[var(--bg-input)] border border-[var(--border-base)] rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/30 focus:border-[var(--brand-primary)] text-[var(--text-main)]" />
               </div>
 
               <button type="submit" disabled={loading || !selectedDevice || !toBranch}
-                className="bg-[#3498db] hover:bg-[#2980b9] disabled:opacity-50 text-white font-semibold px-6 py-2.5 rounded-lg transition flex items-center gap-2">
+                className="bg-[var(--brand-primary)] hover:bg-[var(--brand-primary-hover)] disabled:opacity-50 text-white font-semibold px-6 py-2.5 rounded-lg transition flex items-center gap-2">
                 {loading ? <Loader size={15} className="animate-spin" /> : <ArrowRight size={15} />}
                 Initiate Transfer
               </button>
@@ -185,11 +185,11 @@ export default function BranchTransfer() {
         {tab === 'list' && (
           <div className="space-y-2">
             {transfers.length === 0 && <div className="text-center text-slate-400 py-16">No transfers yet.</div>}
-            {transfers.map(t => {
-              const s = statusColors[t.status] || statusColors.pending;
-              const Icon = s.icon;
-              return (
-                <div key={t.id} className="bg-white border border-slate-200 rounded-xl p-4 flex items-center gap-4 shadow-sm">
+              {transfers.map(t => {
+                const s = statusColors[t.status] || statusColors.pending;
+                const Icon = s.icon;
+                return (
+                  <div key={t.id} className="bg-[var(--bg-card)] border border-[var(--border-base)] rounded-xl p-4 flex items-center gap-4 shadow-sm">
                   <div className={`p-2 rounded-lg border ${s.bg}`}><Icon size={16} className={s.text} /></div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">

@@ -96,19 +96,27 @@ export const CartRow: React.FC<CartRowProps> = ({
       {/* Quantity Column */}
       <td className="py-2 px-3">
         <div className="flex items-center justify-center gap-2">
-          <button 
-            onClick={() => onUpdateQuantity(item.id, -1, item.device_id)}
-            className="w-7 h-7 flex items-center justify-center rounded border border-[var(--border-base)] hover:bg-[var(--bg-hover)] text-[var(--text-main)] transition-all"
-          >
-            <Minus size={14} />
-          </button>
-          <span className="w-8 text-center font-mono font-bold text-base text-[var(--text-main)]">{item.quantity}</span>
-          <button 
-            onClick={() => onUpdateQuantity(item.id, 1, item.device_id)}
-            className="w-7 h-7 flex items-center justify-center rounded border border-[var(--border-base)] hover:bg-emerald-50 hover:text-emerald-600 hover:border-emerald-200 text-[var(--text-main)] transition-all"
-          >
-            <Plus size={14} />
-          </button>
+          {item.product_type === 'serialized' ? (
+            <span className="w-20 text-center font-mono font-bold text-sm text-blue-600 bg-blue-50 dark:bg-blue-900/20 py-1 rounded border border-blue-200 dark:border-blue-800">
+              QTY: 1
+            </span>
+          ) : (
+            <>
+              <button 
+                onClick={() => onUpdateQuantity(item.id, -1, item.device_id)}
+                className="w-7 h-7 flex items-center justify-center rounded border border-[var(--border-base)] hover:bg-[var(--bg-hover)] text-[var(--text-main)] transition-all"
+              >
+                <Minus size={14} />
+              </button>
+              <span className="w-8 text-center font-mono font-bold text-base text-[var(--text-main)]">{item.quantity}</span>
+              <button 
+                onClick={() => onUpdateQuantity(item.id, 1, item.device_id)}
+                className="w-7 h-7 flex items-center justify-center rounded border border-[var(--border-base)] hover:bg-emerald-50 hover:text-emerald-600 hover:border-emerald-200 text-[var(--text-main)] transition-all"
+              >
+                <Plus size={14} />
+              </button>
+            </>
+          )}
         </div>
       </td>
 

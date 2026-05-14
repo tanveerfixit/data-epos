@@ -26,11 +26,11 @@ export default function ThermalReceipt({ invoice, settings, company }: Props) {
       style={{ 
         fontFamily: settings.font_family,
         fontSize: settings.font_size,
-        width: '80mm',
-        maxWidth: '80mm',
+        width: '72mm',
+        maxWidth: '72mm',
         lineHeight: '1.3',
         boxSizing: 'border-box',
-        padding: '4mm',
+        padding: '2mm',
         wordBreak: 'break-word',
         overflowWrap: 'break-word',
       }}
@@ -48,12 +48,12 @@ export default function ThermalReceipt({ invoice, settings, company }: Props) {
             visibility: visible;
           }
           #thermal-receipt {
-            position: fixed;
+            position: absolute;
             left: 0;
             top: 0;
-            width: 80mm;
-            max-width: 80mm;
-            padding: 4mm;
+            width: 72mm;
+            max-width: 72mm;
+            padding: 2mm;
             box-sizing: border-box;
             word-break: break-word;
             overflow-wrap: break-word;

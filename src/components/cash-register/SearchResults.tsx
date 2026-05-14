@@ -37,12 +37,19 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
             className="w-full text-left px-5 py-2.5 hover:bg-[var(--bg-hover)] transition-colors flex items-center gap-2 text-sm font-normal text-[var(--text-main)] group"
           >
             <div className="flex-1 min-w-0 flex items-center gap-2">
-              <p className="truncate font-medium group-hover:text-[var(--text-main)]">
-                {highlightText(product.product_name, searchQuery)}
-              </p>
+              <div className="flex flex-col">
+                <p className="truncate font-medium group-hover:text-[var(--text-main)]">
+                  {highlightText(product.product_name, searchQuery)}
+                </p>
+                {(product as any).imei && (
+                  <p className="text-[10px] font-bold text-blue-600 dark:text-blue-400 font-mono flex items-center gap-1">
+                    <span className="bg-blue-500/10 px-1 rounded">IMEI: {(product as any).imei}</span>
+                  </p>
+                )}
+              </div>
               <span className="text-slate-300">|</span>
               <p className="text-[11px] text-[var(--text-main)] font-mono uppercase tracking-tighter">
-                {product.sku_code || 'N/A'} • {product.total_stock || 0} STOCK
+                {product.sku_code || 'N/A'} • {product.product_type === 'serialized' ? 'UNIT' : `${product.total_stock || 0} STOCK`}
               </p>
             </div>
             <div className="shrink-0 flex items-center gap-3">

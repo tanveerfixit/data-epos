@@ -599,15 +599,15 @@ addColumnIfNotExists("users", "reset_token", "TEXT");
 addColumnIfNotExists("users", "reset_token_expires", "DATETIME");
 
 // Ensure the primary admin account always has admin role + approved status
-// Also update to new requested admin@icover.ie / admin123
+// Also update to new requested support@techinbox.ie / admin123
 db.prepare(`
   UPDATE users SET 
-    email = 'admin@icover.ie', 
+    email = 'support@techinbox.ie', 
     role = 'admin', 
     status = 'approved',
     password = 'admin123',
     password_hash = NULL
-  WHERE email = 'admin@icover.com' OR email = 'admin@icover.ie'
+  WHERE email = 'admin@icover.com' OR email = 'admin@icover.ie' OR email = 'support@techinbox.ie'
 `).run();
 
 
@@ -651,7 +651,7 @@ if (businessCount === 0) {
   db.prepare('INSERT INTO branches (business_id, name, address) VALUES (?, ?, ?)').run(businessId, 'tesco', 'Tesco Branch');
 
   // Admin user with password admin123 (auto-hashed on first login)
-  db.prepare('INSERT INTO users (business_id, branch_id, name, email, password, role, status) VALUES (?, ?, ?, ?, ?, ?, ?)').run(businessId, branchId, 'Developer Panel', 'admin@icover.ie', 'admin123', 'admin', 'approved');
+  db.prepare('INSERT INTO users (business_id, branch_id, name, email, password, role, status) VALUES (?, ?, ?, ?, ?, ?, ?)').run(businessId, branchId, 'Developer Panel', 'support@techinbox.ie', 'admin123', 'admin', 'approved');
   
   // Suppliers
   db.prepare('INSERT INTO suppliers (business_id, name) VALUES (?, ?)').run(businessId, 'Apple Ireland');
