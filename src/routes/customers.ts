@@ -5,12 +5,14 @@ const router = Router();
 
 router.get('/', async (req: any, res) => {
   try {
-    const isSuper = req.user.role === 'superadmin';
-    const sql = isSuper 
+    const isDeveloper = req.user.role === 'developer';
+    const branchId = req.user.branch_id;
+    const sql = (isDeveloper || !branchId) 
       ? 'SELECT * FROM customers WHERE business_id=? AND deleted_at IS NULL'
       : 'SELECT * FROM customers WHERE business_id=? AND branch_id=? AND deleted_at IS NULL';
-    const params = isSuper ? [req.user.business_id] : [req.user.business_id, req.user.branch_id];
+    const params = (isDeveloper || !branchId) ? [req.user.business_id] : [req.user.business_id, branchId];
     res.json(await query(sql, params));
+
   } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 

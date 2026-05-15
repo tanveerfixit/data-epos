@@ -40,10 +40,18 @@ router.post('/settings/auth', async (req: any, res) => {
 
 router.get('/company', async (req: any, res) => {
   try {
-    let c = await queryOne('SELECT * FROM businesses WHERE id=?', [req.user.business_id]);
+    const branchId = req.user?.branch_id;
+    if (branchId) {
+      const branch = await queryOne('SELECT name, address, phone, email FROM branches WHERE id=? AND business_id=?', [branchId, req.user.business_id]);
+      if (branch) {
+        return res.json(branch);
+      }
+    }
+    const c = await queryOne('SELECT * FROM businesses WHERE id=?', [req.user.business_id]);
     res.json(c || {});
   } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
+
 
 router.post('/company', async (req: any, res) => {
   const { name, email, phone, subdomain, address, city, state, zip_code, country } = req.body;

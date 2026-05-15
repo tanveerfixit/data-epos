@@ -6,6 +6,19 @@ const router = Router();
 // GET /api/products
 router.get('/', async (req: any, res) => {
   try {
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 20;
+    const offset = (page - 1) * limit;
+
+    const countSql = `
+      SELECT COUNT(DISTINCT s.id) as total
+      FROM product_skus s
+      JOIN products p ON s.product_id = p.id
+      WHERE p.deleted_at IS NULL AND p.business_id = ?
+    `;
+    const countRes = await query(countSql, [req.user.business_id]);
+    const total = countRes[0]?.total || 0;
+
     const products = await query(`
       SELECT s.id, p.name as product_name, s.sku_code, s.barcode,
              s.selling_price, s.cost_price, p.product_type,
@@ -17,15 +30,25 @@ router.get('/', async (req: any, res) => {
       LEFT JOIN categories c ON p.category_id = c.id
       LEFT JOIN manufacturers m ON p.manufacturer_id = m.id
       WHERE p.deleted_at IS NULL AND p.business_id = ?
-      AND (p.product_type != 'serialized' OR (SELECT SUM(quantity) FROM branch_stock WHERE sku_id = s.id) > 0)
-    `, [req.user.business_id]);
+      ORDER BY p.created_at DESC
+      LIMIT ? OFFSET ?
+    `, [req.user.business_id, limit, offset]);
+
+
     const mapped = products.map((p: any) => ({
       ...p,
       name: p.product_name + (p.sku_code ? ` (${p.sku_code})` : '')
     }));
-    res.json(mapped);
+
+    res.json({
+      products: mapped,
+      total,
+      page,
+      limit
+    });
   } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
+
 
 // GET /api/products/special/get-deposit-product
 // SENIOR: Implementation using a robust 'Find-or-Create' pattern to handle race conditions

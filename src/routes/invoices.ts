@@ -6,14 +6,16 @@ const router = Router();
 router.get('/', async (req: any, res) => {
   try {
     const { startDate, endDate } = req.query;
-    const isSuper = req.user.role === 'superadmin';
+    const isDeveloper = req.user.role === 'developer';
+    const branchId = req.user.branch_id;
     
     let sql = `
       SELECT i.*, c.name as customer_name FROM invoices i
       LEFT JOIN customers c ON i.customer_id=c.id
-      WHERE i.business_id=? ${!isSuper ? 'AND i.branch_id=?' : ''}
+      WHERE i.business_id=? ${(!isDeveloper && branchId) ? 'AND i.branch_id=?' : ''}
     `;
-    const params: any[] = !isSuper ? [req.user.business_id, req.user.branch_id] : [req.user.business_id];
+    const params: any[] = (!isDeveloper && branchId) ? [req.user.business_id, branchId] : [req.user.business_id];
+
 
     if (startDate) {
       sql += ' AND i.created_at >= ?';
@@ -31,13 +33,14 @@ router.get('/', async (req: any, res) => {
 
 router.get('/:id', async (req: any, res) => {
   try {
-    const isSuper = req.user.role === 'superadmin';
+    const isDeveloper = req.user.role === 'developer';
+    const branchId = req.user.branch_id;
     const sql = `
       SELECT i.*, c.name as customer_name, c.phone as customer_phone, c.email as customer_email
       FROM invoices i LEFT JOIN customers c ON i.customer_id=c.id 
-      WHERE i.id=? AND i.business_id=? ${!isSuper ? 'AND i.branch_id=?' : ''}
+      WHERE i.id=? AND i.business_id=? ${(!isDeveloper && branchId) ? 'AND i.branch_id=?' : ''}
     `;
-    const params = !isSuper ? [req.params.id, req.user.business_id, req.user.branch_id] : [req.params.id, req.user.business_id];
+    const params = (!isDeveloper && branchId) ? [req.params.id, req.user.business_id, branchId] : [req.params.id, req.user.business_id];
     const invoice = await queryOne(sql, params) as any;
     if (!invoice) return res.status(404).json({ error: 'Invoice not found or access denied' });
     const items = await query(`
@@ -222,10 +225,12 @@ router.post('/:id/refund', async (req, res) => {
   const { method } = req.body;
   const conn = await pool.getConnection();
   try {
-    const isSuper = req.user.role === 'superadmin';
-    const checkSql = `SELECT * FROM invoices WHERE id=? AND business_id=? ${!isSuper ? 'AND branch_id=?' : ''}`;
-    const checkParams = !isSuper ? [req.params.id, req.user.business_id, req.user.branch_id] : [req.params.id, req.user.business_id];
+    const isDeveloper = req.user.role === 'developer';
+    const branchId = req.user.branch_id;
+    const checkSql = `SELECT * FROM invoices WHERE id=? AND business_id=? ${(!isDeveloper && branchId) ? 'AND branch_id=?' : ''}`;
+    const checkParams = (!isDeveloper && branchId) ? [req.params.id, req.user.business_id, branchId] : [req.params.id, req.user.business_id];
     const [invRows] = await conn.execute(checkSql, checkParams);
+
     const invoice = (invRows as any[])[0];
     if (!invoice) throw new Error('Invoice not found or access denied');
     if (invoice.status==='void') throw new Error('Invoice already refunded');

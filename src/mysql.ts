@@ -485,8 +485,8 @@ export async function initSchema() {
     await conn.query(`
       CREATE TABLE IF NOT EXISTS thermal_printer_settings (
         id INT AUTO_INCREMENT PRIMARY KEY,
-        business_id INT NOT NULL UNIQUE,
-        branch_id INT,
+        business_id INT NOT NULL,
+        branch_id INT NULL,
         font_family VARCHAR(100) DEFAULT 'monospace',
         font_size VARCHAR(50) DEFAULT '12px',
         show_logo TINYINT(1) DEFAULT 1,
@@ -501,9 +501,12 @@ export async function initSchema() {
         show_totals TINYINT(1) DEFAULT 1,
         show_footer TINYINT(1) DEFAULT 1,
         footer_text TEXT,
-        FOREIGN KEY (business_id) REFERENCES businesses(id) ON DELETE CASCADE
+        FOREIGN KEY (business_id) REFERENCES businesses(id) ON DELETE CASCADE,
+        FOREIGN KEY (branch_id) REFERENCES branches(id) ON DELETE CASCADE,
+        UNIQUE KEY idx_business_branch (business_id, branch_id)
       )
     `);
+
 
     await conn.query(`
       CREATE TABLE IF NOT EXISTS drawers (

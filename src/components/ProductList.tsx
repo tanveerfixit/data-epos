@@ -12,12 +12,79 @@ export default function ProductList({
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [manufacturers, setManufacturers] = useState<Manufacturer[]>([]);
+  
+  // Pagination State
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalItems, setTotalItems] = useState(0);
+  const [itemsPerPage, setItemsPerPage] = useState(20);
+
+  const fetchProducts = () => {
+    fetch(`/api/products?page=${currentPage}&limit=${itemsPerPage}`)
+      .then(res => res.json())
+      .then(data => {
+        if (data.products) {
+          setProducts(data.products);
+          setTotalItems(data.total);
+        } else {
+          setProducts(data); // Fallback for old API if any
+        }
+      });
+  };
 
   useEffect(() => {
-    fetch('/api/products').then(res => res.json()).then(setProducts);
+    fetchProducts();
+  }, [currentPage, itemsPerPage]);
+
+  useEffect(() => {
     fetch('/api/categories').then(res => res.json()).then(setCategories);
     fetch('/api/manufacturers').then(res => res.json()).then(setManufacturers);
   }, []);
+
+  const totalPages = Math.ceil(totalItems / itemsPerPage);
+
+  const handlePageChange = (page: number) => {
+    if (page >= 1 && page <= totalPages) {
+      setCurrentPage(page);
+    }
+  };
+
+  const renderPageNumbers = () => {
+    const pages = [];
+    const maxVisible = 5;
+    
+    if (totalPages <= maxVisible) {
+      for (let i = 1; i <= totalPages; i++) {
+        pages.push(i);
+      }
+    } else {
+      if (currentPage <= 3) {
+        pages.push(1, 2, 3, 4, '..', totalPages);
+      } else if (currentPage >= totalPages - 2) {
+        pages.push(1, '..', totalPages - 3, totalPages - 2, totalPages - 1, totalPages);
+      } else {
+        pages.push(1, '..', currentPage - 1, currentPage, currentPage + 1, '..', totalPages);
+      }
+    }
+    
+    return pages.map((p, i) => (
+      <React.Fragment key={i}>
+        {p === '..' ? (
+          <span className="px-2 text-[var(--text-muted)]">..</span>
+        ) : (
+          <button
+            onClick={() => handlePageChange(Number(p))}
+            className={`px-3 py-1 rounded font-bold transition-colors ${
+              currentPage === p 
+                ? 'bg-[var(--brand-primary)] text-white' 
+                : 'border border-[var(--border-base)] text-[var(--text-main)] hover:bg-[var(--bg-app)]'
+            }`}
+          >
+            {p}
+          </button>
+        )}
+      </React.Fragment>
+    ));
+  };
 
   return (
     <div className="flex flex-col h-full bg-[var(--bg-app)] transition-colors duration-300">
@@ -73,39 +140,47 @@ export default function ProductList({
               </tr>
             </thead>
             <tbody>
-              {products.map((product, idx) => (
-                <tr 
-                  key={product.id} 
-                  onClick={() => onSelectProduct(product.id)}
-                  className={`border-b border-[var(--border-base)] text-sm hover:bg-[var(--bg-hover)] cursor-pointer transition-colors ${idx % 2 === 1 ? 'bg-[var(--bg-app)]/30' : ''}`}
-                >
-                  <td className="px-4 py-2 border-r border-[var(--border-base)] text-[var(--text-muted)]">{product.manufacturer_name || ''}</td>
-                  <td className="px-4 py-2 border-r border-[var(--border-base)] font-medium text-[var(--text-main)]">{product.product_name}</td>
-                  <td className="px-4 py-2 border-r border-[var(--border-base)] text-[var(--text-muted)] font-mono text-xs">{product.sku_code || product.barcode || ''}</td>
-                  <td className="px-4 py-2 border-r border-[var(--border-base)]">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[var(--text-muted)]">{product.category_name || ''}</span>
-                      {product.category_name && (
-                        <button className="p-1 bg-[var(--bg-sidebar)] text-white rounded-sm hover:opacity-90 transition-opacity">
-                          <div className="flex gap-0.5">
-                            <div className="w-0.5 h-0.5 bg-white rounded-full"></div>
-                            <div className="w-0.5 h-0.5 bg-white rounded-full"></div>
-                            <div className="w-0.5 h-0.5 bg-white rounded-full"></div>
-                          </div>
-                        </button>
-                      )}
-                    </div>
-                  </td>
-                  <td className="px-4 py-2 border-r border-[var(--border-base)] text-right font-medium text-[var(--text-main)]">
-                    €{product.selling_price.toFixed(2)}
-                  </td>
-                  <td className="px-4 py-2 text-center">
-                    <span className={`font-bold text-xs ${product.total_stock && product.total_stock > 0 ? 'text-[var(--brand-success)]' : 'text-[var(--brand-danger)]'}`}>
-                      {product.total_stock || 0}
-                    </span>
+              {products.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="px-4 py-8 text-center text-[var(--text-muted)]">
+                    No products found.
                   </td>
                 </tr>
-              ))}
+              ) : (
+                products.map((product, idx) => (
+                  <tr 
+                    key={product.id} 
+                    onClick={() => onSelectProduct(product.id)}
+                    className={`border-b border-[var(--border-base)] text-sm hover:bg-[var(--bg-hover)] cursor-pointer transition-colors ${idx % 2 === 1 ? 'bg-[var(--bg-app)]/30' : ''}`}
+                  >
+                    <td className="px-4 py-2 border-r border-[var(--border-base)] text-[var(--text-muted)]">{product.manufacturer_name || ''}</td>
+                    <td className="px-4 py-2 border-r border-[var(--border-base)] font-medium text-[var(--text-main)]">{product.product_name}</td>
+                    <td className="px-4 py-2 border-r border-[var(--border-base)] text-[var(--text-muted)] font-mono text-xs">{product.sku_code || product.barcode || ''}</td>
+                    <td className="px-4 py-2 border-r border-[var(--border-base)]">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[var(--text-muted)]">{product.category_name || ''}</span>
+                        {product.category_name && (
+                          <button className="p-1 bg-[var(--bg-sidebar)] text-white rounded-sm hover:opacity-90 transition-opacity">
+                            <div className="flex gap-0.5">
+                              <div className="w-0.5 h-0.5 bg-white rounded-full"></div>
+                              <div className="w-0.5 h-0.5 bg-white rounded-full"></div>
+                              <div className="w-0.5 h-0.5 bg-white rounded-full"></div>
+                            </div>
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-4 py-2 border-r border-[var(--border-base)] text-right font-medium text-[var(--text-main)]">
+                      €{product.selling_price.toFixed(2)}
+                    </td>
+                    <td className="px-4 py-2 text-center">
+                      <span className={`font-bold text-xs ${product.total_stock && product.total_stock > 0 ? 'text-[var(--brand-success)]' : 'text-[var(--brand-danger)]'}`}>
+                        {product.total_stock || 0}
+                      </span>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
@@ -114,22 +189,42 @@ export default function ProductList({
       {/* Footer Pagination */}
       <div className="p-4 bg-[var(--bg-card)] border-t border-[var(--border-base)] flex justify-between items-center text-xs text-[var(--text-muted)]">
         <div className="flex items-center gap-4">
-          <select className="bg-[var(--bg-card)] border border-[var(--border-base)] rounded px-2 py-1 focus:outline-none text-[var(--text-main)]">
-            <option>auto</option>
+          <select 
+            value={itemsPerPage}
+            onChange={(e) => {
+              setItemsPerPage(Number(e.target.value));
+              setCurrentPage(1);
+            }}
+            className="bg-[var(--bg-card)] border border-[var(--border-base)] rounded px-2 py-1 focus:outline-none text-[var(--text-main)]"
+          >
+            <option value={20}>20</option>
+            <option value={50}>50</option>
+            <option value={100}>100</option>
           </select>
-          <span className="font-bold">1-21/2928</span>
+          <span className="font-bold">
+            {totalItems > 0 ? `${(currentPage - 1) * itemsPerPage + 1}-${Math.min(currentPage * itemsPerPage, totalItems)}/${totalItems}` : '0-0/0'}
+          </span>
         </div>
         
         <div className="flex items-center gap-1">
-          <button className="px-2 py-1 border border-[var(--border-base)] rounded hover:bg-[var(--bg-app)]">«</button>
-          <button className="px-3 py-1 bg-[var(--brand-primary)] text-white rounded font-bold">1</button>
-          <button className="px-3 py-1 border border-[var(--border-base)] rounded hover:bg-[var(--bg-app)]">2</button>
-          <span className="px-2">..</span>
-          <button className="px-3 py-1 border border-[var(--border-base)] rounded hover:bg-[var(--bg-app)]">139</button>
-          <button className="px-3 py-1 border border-[var(--border-base)] rounded hover:bg-[var(--bg-app)]">140</button>
-          <button className="px-2 py-1 border border-[var(--border-base)] rounded hover:bg-[var(--bg-app)]">»</button>
+          <button 
+            onClick={() => handlePageChange(currentPage - 1)}
+            disabled={currentPage === 1}
+            className="px-2 py-1 border border-[var(--border-base)] rounded hover:bg-[var(--bg-app)] disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            «
+          </button>
+          {renderPageNumbers()}
+          <button 
+            onClick={() => handlePageChange(currentPage + 1)}
+            disabled={currentPage === totalPages}
+            className="px-2 py-1 border border-[var(--border-base)] rounded hover:bg-[var(--bg-app)] disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            »
+          </button>
         </div>
       </div>
+
 
     </div>
   );
