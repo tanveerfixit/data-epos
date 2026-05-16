@@ -22,12 +22,21 @@ export default function ProductList({
     fetch(`/api/products?page=${currentPage}&limit=${itemsPerPage}`)
       .then(res => res.json())
       .then(data => {
-        if (data.products) {
+        if (data && data.products && Array.isArray(data.products)) {
           setProducts(data.products);
-          setTotalItems(data.total);
+          setTotalItems(data.total || 0);
+        } else if (Array.isArray(data)) {
+          setProducts(data);
+          setTotalItems(data.length);
         } else {
-          setProducts(data); // Fallback for old API if any
+          setProducts([]);
+          setTotalItems(0);
         }
+      })
+      .catch(err => {
+        console.error('Error fetching products:', err);
+        setProducts([]);
+        setTotalItems(0);
       });
   };
 

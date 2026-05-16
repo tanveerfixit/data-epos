@@ -68,8 +68,8 @@ export default function AdminPortal({ onClose }: { onClose: () => void }) {
 
   useEffect(() => { loadUsers(); loadBranches(); loadSmtp(); loadAccess(); loadBusinesses(); }, []);
 
-  const pendingCount = users.filter(u => u.status === 'pending').length;
-  const pendingBusinessCount = businesses.filter(b => b.status === 'inactive' || b.status === 'pending').length;
+  const pendingCount = Array.isArray(users) ? users.filter(u => u.status === 'pending').length : 0;
+  const pendingBusinessCount = Array.isArray(businesses) ? businesses.filter(b => b.status === 'inactive' || b.status === 'pending').length : 0;
 
   const showMsg = (msg: string) => { setActionMsg(msg); setTimeout(() => setActionMsg(''), 3000); };
   const showSmtpMsg = (msg: string) => { setSmtpMsg(msg); setTimeout(() => setSmtpMsg(''), 4000); };
@@ -153,10 +153,10 @@ export default function AdminPortal({ onClose }: { onClose: () => void }) {
     setEditBusiness(null); setLoading(false); loadBusinesses();
   };
 
-  const filteredUsers = users.filter(u => 
+  const filteredUsers = Array.isArray(users) ? users.filter(u => 
     u.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
     u.email.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  ) : [];
 
   return (
     <div className="fixed inset-0 z-[60] flex font-sans bg-slate-50 text-slate-900 overflow-hidden">

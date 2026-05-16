@@ -31,12 +31,12 @@ export default function RepairList({ preSelectedCustomerId }: RepairListProps) {
     }
   }, [preSelectedCustomerId]);
 
-  const filtered = repairs.filter(r =>
+  const filtered = Array.isArray(repairs) ? repairs.filter(r =>
     String(r.id).includes(searchTerm) ||
     (r.device_model || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
     (r.customer_name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
     (r.status || '').toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  ) : [];
 
   const getStatusColor = (status: string) => {
     switch (status) {

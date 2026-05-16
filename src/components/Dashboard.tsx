@@ -14,12 +14,17 @@ export default function Dashboard() {
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const [invoices, repairs, customers, products] = await Promise.all([
+        const [invoicesRaw, repairsRaw, customersRaw, productsRaw] = await Promise.all([
           fetch('/api/invoices').then(res => res.json()),
           fetch('/api/repairs').then(res => res.json()),
           fetch('/api/customers').then(res => res.json()),
           fetch('/api/products').then(res => res.json())
         ]);
+
+        const invoices = Array.isArray(invoicesRaw) ? invoicesRaw : [];
+        const repairs = Array.isArray(repairsRaw) ? repairsRaw : [];
+        const customers = Array.isArray(customersRaw) ? customersRaw : [];
+        const products = Array.isArray(productsRaw) ? productsRaw : [];
 
         const totalSales = invoices.reduce((sum: number, inv: any) => sum + inv.grand_total, 0);
         const activeRepairs = repairs.filter((r: any) => r.status !== 'collected').length;

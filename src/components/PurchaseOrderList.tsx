@@ -21,13 +21,13 @@ export default function PurchaseOrderList({ onSelectPO }: { onSelectPO: (id: num
     });
   }, []);
 
-  const filteredPos = pos.filter(po => {
+  const filteredPos = Array.isArray(pos) ? pos.filter(po => {
     const matchesSearch = po.po_number.toLowerCase().includes(searchTerm.toLowerCase()) || 
                          (po.lot_ref_no || '').toLowerCase().includes(searchTerm.toLowerCase());
     const matchesSupplier = supplierFilter === '' || po.supplier_id === Number(supplierFilter);
     const matchesStatus = statusFilter === '' || po.status === statusFilter;
     return matchesSearch && matchesSupplier && matchesStatus;
-  });
+  }) : [];
 
   if (loading) return <div className="p-8 text-center text-[var(--text-muted)] bg-[var(--bg-app)]">Loading Purchase Orders...</div>;
 

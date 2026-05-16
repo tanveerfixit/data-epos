@@ -26,7 +26,13 @@ export default function DeviceInventory({ onSelectPO, onSelectProduct, onSelectD
   const [statusFilter, setStatusFilter] = useState('in_stock');
 
   useEffect(() => {
-    fetch(`/api/devices?status=${statusFilter}`).then(res => res.json()).then(setDevices);
+    fetch(`/api/devices?status=${statusFilter}`)
+      .then(res => res.json())
+      .then(data => setDevices(Array.isArray(data) ? data : []))
+      .catch(err => {
+        console.error('Error fetching devices:', err);
+        setDevices([]);
+      });
   }, [statusFilter]);
 
   return (

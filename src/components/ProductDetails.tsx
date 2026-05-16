@@ -87,7 +87,7 @@ export default function ProductDetails({
   if (loading && !product) return <div className="p-8 text-center text-slate-500">Loading product details...</div>;
   if (!product) return <div className="p-8 text-center text-red-500">Product not found</div>;
 
-  const totalStock = product.stock.reduce((acc, s) => acc + s.quantity, 0);
+  const totalStock = Array.isArray(product.stock) ? product.stock.reduce((acc, s) => acc + s.quantity, 0) : 0;
 
   return (
     <div className="flex flex-col h-full bg-[#f4f7f9]">

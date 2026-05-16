@@ -188,7 +188,9 @@ export default function CashRegister({ onViewCustomers, onSelectCustomer, preSel
       const response = await fetch(`/api/search?q=${encodeURIComponent(searchQuery)}&type=products`);
       if (response.ok) {
         const data = await response.json();
-        setSearchResults(data);
+        setSearchResults(Array.isArray(data) ? data : []);
+      } else {
+        setSearchResults([]);
       }
     } catch (error) {
       console.error('Error fetching products:', error);
@@ -200,7 +202,9 @@ export default function CashRegister({ onViewCustomers, onSelectCustomer, preSel
       const response = await fetch(`/api/search?q=${encodeURIComponent(customerSearch)}&type=customers`);
       if (response.ok) {
         const data = await response.json();
-        setCustomerResults(data);
+        setCustomerResults(Array.isArray(data) ? data : []);
+      } else {
+        setCustomerResults([]);
       }
     } catch (error) {
       console.error('Error fetching customers:', error);

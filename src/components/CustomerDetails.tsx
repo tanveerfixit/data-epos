@@ -42,9 +42,27 @@ export default function CustomerDetails({
     fetch(`/api/customers/${customerId}`).then(res => res.json()).then(data => {
       setCustomer(data);
     });
-    fetch(`/api/customers/${customerId}/invoices`).then(res => res.json()).then(setInvoices);
-    fetch(`/api/customers/${customerId}/payments`).then(res => res.json()).then(setPayments);
-    fetch(`/api/customers/${customerId}/activity`).then(res => res.json()).then(setActivities);
+    fetch(`/api/customers/${customerId}/invoices`)
+      .then(res => res.json())
+      .then(data => setInvoices(Array.isArray(data) ? data : []))
+      .catch(err => {
+        console.error('Error fetching invoices:', err);
+        setInvoices([]);
+      });
+    fetch(`/api/customers/${customerId}/payments`)
+      .then(res => res.json())
+      .then(data => setPayments(Array.isArray(data) ? data : []))
+      .catch(err => {
+        console.error('Error fetching payments:', err);
+        setPayments([]);
+      });
+    fetch(`/api/customers/${customerId}/activity`)
+      .then(res => res.json())
+      .then(data => setActivities(Array.isArray(data) ? data : []))
+      .catch(err => {
+        console.error('Error fetching activities:', err);
+        setActivities([]);
+      });
   };
 
   useEffect(() => {

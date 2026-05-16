@@ -42,11 +42,11 @@ export default function SkuDeviceDetails({ skuId, onBack }: Props) {
       });
   }, [skuId]);
 
-  const filteredDevices = devices.filter(d => {
+  const filteredDevices = Array.isArray(devices) ? devices.filter(d => {
     const matchesStatus = statusFilter === 'all' || d.status === statusFilter;
     const matchesSearch = d.imei.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesStatus && matchesSearch;
-  });
+  }) : [];
 
   return (
     <div className="flex flex-col h-full bg-[var(--bg-app)]">

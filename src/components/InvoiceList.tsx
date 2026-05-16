@@ -78,14 +78,14 @@ export default function InvoiceList({ onSelectInvoice, onSelectCustomer }: Props
     return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }).toLowerCase();
   };
 
-  const filteredInvoices = invoices.filter(inv => {
+  const filteredInvoices = Array.isArray(invoices) ? invoices.filter(inv => {
     if (!searchTerm) return true;
     const lowerSearch = searchTerm.toLowerCase();
     return (
       inv.invoice_number.toLowerCase().includes(lowerSearch) ||
       (inv.customer_name || '').toLowerCase().includes(lowerSearch)
     );
-  });
+  }) : [];
 
   return (
     <div className="flex flex-col h-full bg-[var(--bg-app)] select-none transition-colors duration-300">
