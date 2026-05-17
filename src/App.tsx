@@ -53,6 +53,17 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 type View = 'home' | 'dashboard' | 'register' | 'repairs' | 'invoices' | 'invoice-details' | 'customers' | 'customer-details' | 'products' | 'devices' | 'device-details' | 'sku-device-details' | 'create-product' | 'product-details' | 'add-inventory' | 'purchase-orders' | 'purchase-order-detail' | 'manage-data' | 'end-of-day' | 'getting-started' | 'transfers';
 type AuthView = 'login' | 'signup' | 'forgot' | 'reset' | 'admin-login';
 
+const slugify = (text: string) => {
+  return text
+    .toString()
+    .toLowerCase()
+    .replace(/\s+/g, '-')           // Replace spaces with -
+    .replace(/[^\w\-]+/g, '')       // Remove all non-word chars
+    .replace(/\-\-+/g, '-')         // Replace multiple - with single -
+    .replace(/^-+/, '')             // Trim - from start
+    .replace(/-+$/, '');            // Trim - from end
+};
+
 function AppInner() {
   const { currentUser, isAdmin, logout, loading } = useAuth();
   const [authView, setAuthView] = useState<AuthView>('login');
@@ -70,12 +81,80 @@ function AppInner() {
   const [initiateDeposit, setInitiateDeposit] = useState(false);
   const [publicSlug, setPublicSlug] = useState<string | null>(null);
 
+  // Helper to sync app state with URL in real-time
+  useEffect(() => {
+    if (!currentUser) return;
+    
+    const branchSlug = slugify(currentUser.branch_name || 'branch');
+    const expectedPath = `/${branchSlug}/${currentView}`;
+    
+    if (window.location.pathname !== expectedPath) {
+      window.history.pushState(null, '', expectedPath);
+    }
+  }, [currentUser, currentView]);
+
+  // Initial parse on app load / login
   useEffect(() => {
     const path = window.location.pathname.slice(1);
     const standardPaths = ['', 'login', 'signup', 'forgot', 'reset', 'admin-login'];
-    if (path && !standardPaths.includes(path) && !currentUser) {
-      setPublicSlug(path);
+    
+    if (!currentUser) {
+      if (path && !standardPaths.includes(path)) {
+        setPublicSlug(path);
+      }
+      return;
     }
+    
+    // User is logged in - parse branch and view slug
+    const pathParts = window.location.pathname.split('/').filter(Boolean);
+    const validViews: View[] = [
+      'home', 'dashboard', 'register', 'repairs', 'invoices', 
+      'invoice-details', 'customers', 'customer-details', 'products', 
+      'devices', 'device-details', 'sku-device-details', 'create-product', 
+      'product-details', 'add-inventory', 'purchase-orders', 
+      'purchase-order-detail', 'manage-data', 'end-of-day', 
+      'getting-started', 'transfers'
+    ];
+    
+    if (pathParts.length >= 2) {
+      const urlView = pathParts[1] as View;
+      if (validViews.includes(urlView)) {
+        setCurrentView(urlView);
+      } else {
+        setCurrentView('home');
+      }
+    } else {
+      setCurrentView('home');
+    }
+  }, [currentUser]);
+
+  // Support native browser Back/Forward button clicks (popstate)
+  useEffect(() => {
+    const handlePopState = () => {
+      if (!currentUser) return;
+      
+      const pathParts = window.location.pathname.split('/').filter(Boolean);
+      const validViews: View[] = [
+        'home', 'dashboard', 'register', 'repairs', 'invoices', 
+        'invoice-details', 'customers', 'customer-details', 'products', 
+        'devices', 'device-details', 'sku-device-details', 'create-product', 
+        'product-details', 'add-inventory', 'purchase-orders', 
+        'purchase-order-detail', 'manage-data', 'end-of-day', 
+        'getting-started', 'transfers'
+      ];
+      
+      if (pathParts.length >= 2) {
+        const urlView = pathParts[1] as View;
+        if (validViews.includes(urlView)) {
+          setCurrentView(urlView);
+          return;
+        }
+      }
+      setCurrentView('home');
+    };
+    
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
   }, [currentUser]);
 
   const [isDarkMode, setIsDarkMode] = useState(() => {
