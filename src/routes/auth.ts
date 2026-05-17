@@ -7,7 +7,7 @@ import { sendAccountPending, sendAccountApproved, sendAccountRejected, sendAccou
 // ─── Session Management ───────────────────────────────────────────────────────
 
 interface Session { userId: number; expiresAt: number; }
-const SESSION_TTL_MS = 8 * 60 * 60 * 1000; // 8 hours
+const SESSION_TTL_MS = 1 * 60 * 60 * 1000; // 1 hour
 
 export const sessions = new Map<string, Session>();
 
@@ -29,6 +29,8 @@ export function requireAuth(req: any, res: any, next: any) {
     if (token && sess) sessions.delete(token);
     return res.status(401).json({ error: 'Unauthorized' });
   }
+  // Extend session on activity (sliding window)
+  sess.expiresAt = Date.now() + SESSION_TTL_MS;
   req._sessionToken = token;
   next();
 }
@@ -40,6 +42,8 @@ export async function requireAuthAsync(req: any, res: any, next: any) {
     if (token && sess) sessions.delete(token);
     return res.status(401).json({ error: 'Unauthorized' });
   }
+  // Extend session on activity (sliding window)
+  sess.expiresAt = Date.now() + SESSION_TTL_MS;
   const userId = sess.userId;
   try {
     const user = await queryOne('SELECT * FROM users WHERE id=?', [userId]);
@@ -60,6 +64,8 @@ export async function requireAdminAsync(req: any, res: any, next: any) {
     if (token && sess) sessions.delete(token);
     return res.status(401).json({ error: 'Unauthorized' });
   }
+  // Extend session on activity (sliding window)
+  sess.expiresAt = Date.now() + SESSION_TTL_MS;
   const userId = sess.userId;
   try {
     const user = await queryOne('SELECT * FROM users WHERE id=?', [userId]) as any;

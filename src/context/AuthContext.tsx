@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 
 interface User {
   id: number;
@@ -58,13 +58,42 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setCurrentUser(data.user);
   };
 
-  const logout = () => {
+  const logout = useCallback(() => {
     const t = localStorage.getItem('epos_token');
     if (t) fetch('/api/auth/logout', { method: 'POST', headers: { Authorization: `Bearer ${t}` } });
     localStorage.removeItem('epos_token');
     setToken(null);
     setCurrentUser(null);
-  };
+  }, []);
+
+  useEffect(() => {
+    if (!token) return;
+
+    let timeoutId: any;
+
+    const resetTimer = () => {
+      if (timeoutId) clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => {
+        logout();
+        alert('You have been logged out due to inactivity.');
+      }, 1 * 60 * 60 * 1000); // 1 hour
+    };
+
+    const events = ['mousedown', 'keydown', 'scroll', 'touchstart'];
+    events.forEach(event => {
+      window.addEventListener(event, resetTimer);
+    });
+
+    // Initialize timer
+    resetTimer();
+
+    return () => {
+      if (timeoutId) clearTimeout(timeoutId);
+      events.forEach(event => {
+        window.removeEventListener(event, resetTimer);
+      });
+    };
+  }, [token, logout]);
 
   return (
     <AuthContext.Provider value={{ currentUser, token, isAdmin: ['admin','superadmin','developer'].includes(currentUser?.role || ''), login, logout, loading }}>

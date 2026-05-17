@@ -100,7 +100,16 @@ function AppInner() {
     
     if (!currentUser) {
       if (path && !standardPaths.includes(path)) {
-        setPublicSlug(path);
+        if (path.includes('/')) {
+          // If the path contains a slash (e.g., 'ipear-in-tesco/home'), it is a protected route.
+          // Since the user is not logged in, redirect them to '/' (login/home) immediately.
+          window.history.pushState(null, '', '/');
+          setPublicSlug(null);
+        } else {
+          setPublicSlug(path);
+        }
+      } else {
+        setPublicSlug(null);
       }
       return;
     }
@@ -456,7 +465,10 @@ function AppInner() {
           )}
           
           <button 
-            onClick={logout}
+            onClick={() => {
+              logout();
+              window.history.pushState(null, '', '/');
+            }}
             className="h-8 overflow-hidden group bg-[var(--bg-card)] text-[var(--text-main)] px-5 rounded-full text-[11px] uppercase tracking-widest transition-all border border-[var(--border-base)] shadow-sm cursor-pointer"
           >
             <div className="flex flex-col transition-transform duration-500 group-hover:-translate-y-8 ease-in-out">

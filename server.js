@@ -870,7 +870,9 @@ var init_mysql = __esm({
       queueLimit: 0,
       connectTimeout: 2e4,
       decimalNumbers: true,
-      timezone: "Z"
+      timezone: "Z",
+      enableKeepAlive: true,
+      keepAliveInitialDelay: 1e4
     });
   }
 });
@@ -995,6 +997,7 @@ function requireAuth(req, res, next) {
     if (token && sess) sessions.delete(token);
     return res.status(401).json({ error: "Unauthorized" });
   }
+  sess.expiresAt = Date.now() + SESSION_TTL_MS;
   req._sessionToken = token;
   next();
 }
@@ -1005,6 +1008,7 @@ async function requireAuthAsync(req, res, next) {
     if (token && sess) sessions.delete(token);
     return res.status(401).json({ error: "Unauthorized" });
   }
+  sess.expiresAt = Date.now() + SESSION_TTL_MS;
   const userId = sess.userId;
   try {
     const user = await queryOne("SELECT * FROM users WHERE id=?", [userId]);
@@ -1024,6 +1028,7 @@ async function requireAdminAsync(req, res, next) {
     if (token && sess) sessions.delete(token);
     return res.status(401).json({ error: "Unauthorized" });
   }
+  sess.expiresAt = Date.now() + SESSION_TTL_MS;
   const userId = sess.userId;
   try {
     const user = await queryOne("SELECT * FROM users WHERE id=?", [userId]);
@@ -1045,7 +1050,7 @@ var init_auth = __esm({
   "src/routes/auth.ts"() {
     init_mysql();
     init_mailer();
-    SESSION_TTL_MS = 8 * 60 * 60 * 1e3;
+    SESSION_TTL_MS = 1 * 60 * 60 * 1e3;
     sessions = /* @__PURE__ */ new Map();
     _cleanup = setInterval(() => {
       const now = Date.now();

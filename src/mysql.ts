@@ -18,8 +18,11 @@ export const pool = mysql.createPool({
   queueLimit: 0,
   connectTimeout: 20000,
   decimalNumbers: true,
-  timezone: 'Z'
+  timezone: 'Z',
+  enableKeepAlive: true,
+  keepAliveInitialDelay: 10000
 });
+
 
 // Convenience wrapper
 export async function query<T = any>(sql: string, params?: any[]): Promise<T[]> {
