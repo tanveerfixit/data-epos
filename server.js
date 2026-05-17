@@ -2897,6 +2897,35 @@ var init_inventory = __esm({
         res.status(500).json({ error: e.message });
       }
     });
+    router8.get("/devices/search", async (req, res) => {
+      const { q, imei, branch_id } = req.query;
+      const searchVal = q || imei;
+      try {
+        let sql = `
+      SELECT d.*, p.name as product_name, s.sku_code, b.name as branch_name
+      FROM devices d 
+      JOIN product_skus s ON d.sku_id=s.id
+      JOIN products p ON s.product_id=p.id
+      LEFT JOIN branches b ON d.branch_id=b.id 
+      WHERE d.status='in_stock' AND d.business_id=?
+    `;
+        const params = [req.user.business_id];
+        if (searchVal && String(searchVal).trim() !== "") {
+          sql += " AND (d.imei LIKE ? OR p.name LIKE ? OR s.sku_code LIKE ?)";
+          const term = `%${String(searchVal).trim()}%`;
+          params.push(term, term, term);
+        }
+        if (branch_id && String(branch_id).trim() !== "" && String(branch_id) !== "undefined") {
+          sql += " AND d.branch_id=?";
+          params.push(parseInt(branch_id));
+        }
+        sql += " LIMIT 20";
+        res.json(await query(sql, params));
+      } catch (e) {
+        console.error("[SearchDevices] Error:", e.message);
+        res.status(500).json({ error: e.message });
+      }
+    });
     router8.get("/devices/:id", async (req, res) => {
       try {
         const device = await queryOne(`
@@ -3026,35 +3055,6 @@ var init_inventory = __esm({
         const params = !isSuper ? [req.user.business_id, status, req.user.branch_id] : [req.user.business_id, status];
         res.json(await query(sql, params));
       } catch (e) {
-        res.status(500).json({ error: e.message });
-      }
-    });
-    router8.get("/devices/search", async (req, res) => {
-      const { q, imei, branch_id } = req.query;
-      const searchVal = q || imei;
-      try {
-        let sql = `
-      SELECT d.*, p.name as product_name, s.sku_code, b.name as branch_name
-      FROM devices d 
-      JOIN product_skus s ON d.sku_id=s.id
-      JOIN products p ON s.product_id=p.id
-      LEFT JOIN branches b ON d.branch_id=b.id 
-      WHERE d.status='in_stock' AND d.business_id=?
-    `;
-        const params = [req.user.business_id];
-        if (searchVal && String(searchVal).trim() !== "") {
-          sql += " AND (d.imei LIKE ? OR p.name LIKE ? OR s.sku_code LIKE ?)";
-          const term = `%${String(searchVal).trim()}%`;
-          params.push(term, term, term);
-        }
-        if (branch_id && String(branch_id).trim() !== "" && String(branch_id) !== "undefined") {
-          sql += " AND d.branch_id=?";
-          params.push(parseInt(branch_id));
-        }
-        sql += " LIMIT 20";
-        res.json(await query(sql, params));
-      } catch (e) {
-        console.error("[SearchDevices] Error:", e.message);
         res.status(500).json({ error: e.message });
       }
     });
