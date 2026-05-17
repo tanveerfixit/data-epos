@@ -9,17 +9,44 @@ router.get('/', async (req: any, res) => {
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 20;
     const offset = (page - 1) * limit;
+    const { search, category_id, manufacturer_id, product_type } = req.query;
+
+    let whereClause = 'WHERE p.deleted_at IS NULL AND p.business_id = ?';
+    const params: any[] = [req.user.business_id];
+
+    if (search && String(search).trim() !== '') {
+      whereClause += ' AND (p.name LIKE ? OR s.sku_code LIKE ? OR s.barcode LIKE ?)';
+      const term = `%${String(search).trim()}%`;
+      params.push(term, term, term);
+    }
+
+    if (category_id && String(category_id).trim() !== '' && category_id !== 'All Categories') {
+      whereClause += ' AND p.category_id = ?';
+      params.push(parseInt(category_id as string));
+    }
+
+    if (manufacturer_id && String(manufacturer_id).trim() !== '' && manufacturer_id !== 'All Manufacturers') {
+      whereClause += ' AND p.manufacturer_id = ?';
+      params.push(parseInt(manufacturer_id as string));
+    }
+
+    if (product_type && String(product_type).trim() !== '' && product_type !== 'All Types' && product_type !== 'All Products') {
+      whereClause += ' AND p.product_type = ?';
+      params.push(String(product_type).trim());
+    }
 
     const countSql = `
       SELECT COUNT(DISTINCT s.id) as total
       FROM product_skus s
       JOIN products p ON s.product_id = p.id
-      WHERE p.deleted_at IS NULL AND p.business_id = ?
+      LEFT JOIN categories c ON p.category_id = c.id
+      LEFT JOIN manufacturers m ON p.manufacturer_id = m.id
+      ${whereClause}
     `;
-    const countRes = await query(countSql, [req.user.business_id]);
+    const countRes = await query(countSql, params);
     const total = countRes[0]?.total || 0;
 
-    const products = await query(`
+    const productsSql = `
       SELECT s.id, p.name as product_name, s.sku_code, s.barcode,
              s.selling_price, s.cost_price, p.product_type,
              c.name as category_name, m.name as manufacturer_name,
@@ -29,11 +56,12 @@ router.get('/', async (req: any, res) => {
       JOIN products p ON s.product_id = p.id
       LEFT JOIN categories c ON p.category_id = c.id
       LEFT JOIN manufacturers m ON p.manufacturer_id = m.id
-      WHERE p.deleted_at IS NULL AND p.business_id = ?
+      ${whereClause}
       ORDER BY p.created_at DESC
-      LIMIT ? OFFSET ?
-    `, [req.user.business_id, limit, offset]);
-
+      LIMIT ${limit} OFFSET ${offset}
+    `;
+    
+    const products = await query(productsSql, params);
 
     const mapped = products.map((p: any) => ({
       ...p,
@@ -46,8 +74,12 @@ router.get('/', async (req: any, res) => {
       page,
       limit
     });
-  } catch (e: any) { res.status(500).json({ error: e.message }); }
+  } catch (e: any) { 
+    console.error('[GetProducts] Error:', e.message);
+    res.status(500).json({ error: e.message }); 
+  }
 });
+
 
 
 // GET /api/products/special/get-deposit-product

@@ -5,7 +5,7 @@ import {
   FileText, 
   Users, 
   Package, 
-  Home, 
+  LayoutGrid, 
   Smartphone,
   Search,
   ChevronDown,
@@ -324,14 +324,19 @@ function AppInner() {
             <button 
               onClick={() => setCurrentView('home')}
               className="transition-transform hover:scale-110 p-2"
+              title="Home Menu"
             >
-              <Home size={24} className="text-[var(--brand-primary)]" />
+              <LayoutGrid size={24} className="text-[var(--brand-primary)]" />
             </button>
           </div>
           
-          <div className="pl-6 flex flex-col items-start font-sans">
+          <button 
+            onClick={() => setCurrentView('home')} 
+            className="pl-6 flex flex-col items-start font-sans cursor-pointer hover:opacity-85 transition-opacity"
+            title="Home Menu"
+          >
             <h1 className="text-lg font-bold text-[var(--brand-primary)] tracking-tight leading-none uppercase">PHONE LAB</h1>
-          </div>
+          </button>
         </div>
 
         <div className="flex-1 max-w-xl px-12">

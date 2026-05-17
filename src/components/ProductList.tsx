@@ -18,8 +18,38 @@ export default function ProductList({
   const [totalItems, setTotalItems] = useState(0);
   const [itemsPerPage, setItemsPerPage] = useState(20);
 
+  // Search & Filter State
+  const [searchInput, setSearchInput] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('');
+  const [selectedManufacturer, setSelectedManufacturer] = useState('');
+  const [selectedType, setSelectedType] = useState('');
+
+  // Debounce search input to avoid hitting database on every keystroke
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setSearchQuery(searchInput);
+      setCurrentPage(1);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchInput]);
+
   const fetchProducts = () => {
-    fetch(`/api/products?page=${currentPage}&limit=${itemsPerPage}`)
+    let url = `/api/products?page=${currentPage}&limit=${itemsPerPage}`;
+    if (searchQuery.trim() !== '') {
+      url += `&search=${encodeURIComponent(searchQuery.trim())}`;
+    }
+    if (selectedCategory && selectedCategory !== 'All Categories') {
+      url += `&category_id=${selectedCategory}`;
+    }
+    if (selectedManufacturer && selectedManufacturer !== 'All Manufacturers') {
+      url += `&manufacturer_id=${selectedManufacturer}`;
+    }
+    if (selectedType && selectedType !== 'All Types' && selectedType !== 'All Products') {
+      url += `&product_type=${selectedType}`;
+    }
+
+    fetch(url)
       .then(res => res.json())
       .then(data => {
         if (data && data.products && Array.isArray(data.products)) {
@@ -42,7 +72,7 @@ export default function ProductList({
 
   useEffect(() => {
     fetchProducts();
-  }, [currentPage, itemsPerPage]);
+  }, [currentPage, itemsPerPage, searchQuery, selectedCategory, selectedManufacturer, selectedType]);
 
   useEffect(() => {
     fetch('/api/categories').then(res => res.json()).then(setCategories);
@@ -110,15 +140,30 @@ export default function ProductList({
       </div>
 
       <div className="p-4 flex flex-wrap gap-2 items-center bg-[var(--bg-card)] border-b border-[var(--border-base)]">
-        <select className="bg-[var(--bg-card)] border border-[var(--border-base)] rounded px-3 py-1.5 text-sm text-[var(--text-main)] focus:outline-none focus:ring-1 focus:ring-[var(--brand-primary)] w-48">
-          <option>All Products</option>
+        <select 
+          value={selectedType}
+          onChange={(e) => { setSelectedType(e.target.value); setCurrentPage(1); }}
+          className="bg-[var(--bg-card)] border border-[var(--border-base)] rounded px-3 py-1.5 text-sm text-[var(--text-main)] focus:outline-none focus:ring-1 focus:ring-[var(--brand-primary)] w-48"
+        >
+          <option value="All Products">All Types</option>
+          <option value="stock">Generic Stock</option>
+          <option value="serialized">Serialized Device</option>
+          <option value="service">Service Item</option>
         </select>
-        <select className="bg-[var(--bg-card)] border border-[var(--border-base)] rounded px-3 py-1.5 text-sm text-[var(--text-main)] focus:outline-none focus:ring-1 focus:ring-[var(--brand-primary)] w-48">
-          <option>All Manufacturers</option>
+        <select 
+          value={selectedManufacturer}
+          onChange={(e) => { setSelectedManufacturer(e.target.value); setCurrentPage(1); }}
+          className="bg-[var(--bg-card)] border border-[var(--border-base)] rounded px-3 py-1.5 text-sm text-[var(--text-main)] focus:outline-none focus:ring-1 focus:ring-[var(--brand-primary)] w-48"
+        >
+          <option value="All Manufacturers">All Manufacturers</option>
           {manufacturers.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
         </select>
-        <select className="bg-[var(--bg-card)] border border-[var(--border-base)] rounded px-3 py-1.5 text-sm text-[var(--text-main)] focus:outline-none focus:ring-1 focus:ring-[var(--brand-primary)] w-48">
-          <option>All Categories</option>
+        <select 
+          value={selectedCategory}
+          onChange={(e) => { setSelectedCategory(e.target.value); setCurrentPage(1); }}
+          className="bg-[var(--bg-card)] border border-[var(--border-base)] rounded px-3 py-1.5 text-sm text-[var(--text-main)] focus:outline-none focus:ring-1 focus:ring-[var(--brand-primary)] w-48"
+        >
+          <option value="All Categories">All Categories</option>
           {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
         </select>
         
@@ -126,9 +171,20 @@ export default function ProductList({
           <input
             type="text"
             placeholder="Search Products"
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                setSearchQuery(searchInput);
+                setCurrentPage(1);
+              }
+            }}
             className="w-full pl-3 pr-10 py-1.5 bg-[var(--bg-card)] border border-[var(--border-base)] rounded text-sm focus:outline-none focus:ring-1 focus:ring-[var(--brand-primary)] text-[var(--text-main)]"
           />
-          <div className="absolute right-0 top-0 h-full w-10 flex items-center justify-center bg-[var(--bg-app)] border-l border-[var(--border-base)] rounded-r cursor-pointer hover:bg-[var(--bg-hover)]">
+          <div 
+            onClick={() => { setSearchQuery(searchInput); setCurrentPage(1); }}
+            className="absolute right-0 top-0 h-full w-10 flex items-center justify-center bg-[var(--bg-app)] border-l border-[var(--border-base)] rounded-r cursor-pointer hover:bg-[var(--bg-hover)]"
+          >
             <Search size={16} className="text-[var(--text-muted)]" />
           </div>
         </div>

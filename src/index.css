@@ -6,13 +6,30 @@
   --shadow-soft: 0 10px 30px -5px rgba(0, 0, 0, 0.05), 0 4px 12px -3px rgba(0, 0, 0, 0.03);
   --shadow-strong: 0 20px 50px -12px rgba(0, 0, 0, 0.1);
 
-  --animate-shake: shake 0.5s cubic-bezier(.36,.07,.19,.97) both;
+  --animate-shake: shake 0.5s cubic-bezier(.36, .07, .19, .97) both;
 
   @keyframes shake {
-    10%, 90% { transform: translate3d(-1px, 0, 0); }
-    20%, 80% { transform: translate3d(2px, 0, 0); }
-    30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
-    40%, 60% { transform: translate3d(4px, 0, 0); }
+
+    10%,
+    90% {
+      transform: translate3d(-1px, 0, 0);
+    }
+
+    20%,
+    80% {
+      transform: translate3d(2px, 0, 0);
+    }
+
+    30%,
+    50%,
+    70% {
+      transform: translate3d(-4px, 0, 0);
+    }
+
+    40%,
+    60% {
+      transform: translate3d(4px, 0, 0);
+    }
   }
 }
 
@@ -27,69 +44,116 @@
 
 :root {
   /* --- Surfaces & Brand Foundation --- */
-  --bg-app: #f4f7f9;           /* Global background behind all cards and content */
-  --bg-surface-secondary: #E7E9EB; /* Structural surface for non-content areas (headers, bars) */
-  --bg-sidebar: #2c3e50;       /* High-contrast brand navigation container */
-  --bg-card: #ffffff;          /* Primary elevated surface for interactive content */
-  --bg-hover: #f1f5f9;         /* Dynamic hover feedback for ghost buttons and list items */
-  --bg-zebra: #f8f9fa;         /* Subtle alternating surface for tabular data readability */
-  --bg-accent-subtle: #e9ecef; /* Non-interactive structural surface (e.g. table headers) */
-  --bg-input: #ffffff;         /* Base surface for user text entry fields */
+  --bg-app: #f4f7f9;
+  /* Global background behind all cards and content */
+  --bg-surface-secondary: #E7E9EB;
+  /* Structural surface for non-content areas (headers, bars) */
+  --bg-sidebar: #2c3e50;
+  /* High-contrast brand navigation container */
+  --bg-card: #ffffff;
+  /* Primary elevated surface for interactive content */
+  --bg-hover: #f1f5f9;
+  /* Dynamic hover feedback for ghost buttons and list items */
+  --bg-zebra: #f8f9fa;
+  /* Subtle alternating surface for tabular data readability */
+  --bg-accent-subtle: #e9ecef;
+  /* Non-interactive structural surface (e.g. table headers) */
+  --bg-input: #ffffff;
+  /* Base surface for user text entry fields */
 
   /* --- Text & Typography --- */
-  --text-main: #0f172a;        /* High-contrast primary reading hierarchy */
-  --text-muted: #64748b;       /* Secondary descriptive or secondary label text */
-  --text-muted-more: #94a3b8;  /* Auxiliary meta-data or placeholder text */
-  --text-on-dark: #ffffff;     /* Forced contrast text for use on brand/dark backgrounds */
-  --text-on-accent: #ffffff;   /* Contrast text for action buttons and status badges */
-  --text-danger: #cc0000;      /* Specific text color for critical error messaging */
-  --text-neutral-dark: #333333; /* Legacy neutral dark text for hardware/report states */
+  --text-main: #0f172a;
+  /* High-contrast primary reading hierarchy */
+  --text-muted: #64748b;
+  /* Secondary descriptive or secondary label text */
+  --text-muted-more: #94a3b8;
+  /* Auxiliary meta-data or placeholder text */
+  --text-on-dark: #ffffff;
+  /* Forced contrast text for use on brand/dark backgrounds */
+  --text-on-accent: #ffffff;
+  /* Contrast text for action buttons and status badges */
+  --text-danger: #cc0000;
+  /* Specific text color for critical error messaging */
+  --text-neutral-dark: #333333;
+  /* Legacy neutral dark text for hardware/report states */
 
   /* --- Borders & Dividers --- */
-  --border-base: #e2e8f0;      /* Standard hairline divider for list separation */
-  --border-header: #cbd5e1;    /* Structural dividing line for main layout segments */
-  --border-input: #ced4da;     /* Form control boundary for input clarity */
-  --border-focus: #80bdff;     /* Active focus ring outline for accessibility */
-  --border-dashed: #000000;    /* Legacy dashed border for thermal receipt simulation */
+  --border-base: #e2e8f0;
+  /* Standard hairline divider for list separation */
+  --border-header: #cbd5e1;
+  /* Structural dividing line for main layout segments */
+  --border-input: #ced4da;
+  /* Form control boundary for input clarity */
+  --border-focus: #80bdff;
+  /* Active focus ring outline for accessibility */
+  --border-dashed: #000000;
+  /* Legacy dashed border for thermal receipt simulation */
 
   /* --- Accents & Actions (Brand Parity) --- */
-  --brand-primary: #3498db;    /* Primary brand action color (Buttons, Active Icons) */
-  --brand-primary-hover: #2980b9; /* Deepened interaction state for primary actions */
-  --brand-danger: #e74c3c;     /* Universal critical system feedback / Delete actions */
-  --brand-success: #27ae60;    /* Positive system feedback / Approval states */
-  --brand-warning: #f1c40f;    /* Cautionary system feedback / Pending states */
-  --brand-warning-hover: #f39c12; /* Interaction state for cautionary actions */
-  --brand-accent: #00e5ff;     /* Vibrant cyan supplement for secondary features */
-  --brand-accent-hover: #00d4eb;  /* Interaction state for cyan accents */
-  --brand-success-bright: #00c853; /* Success state for specific hardware/status logic */
+  --brand-primary: #0a77c0;
+  /* Primary brand action color (Buttons, Active Icons) */
+  --brand-primary-hover: #2980b9;
+  /* Deepened interaction state for primary actions */
+  --brand-danger: #e74c3c;
+  /* Universal critical system feedback / Delete actions */
+  --brand-success: #27ae60;
+  /* Positive system feedback / Approval states */
+  --brand-warning: #f1c40f;
+  /* Cautionary system feedback / Pending states */
+  --brand-warning-hover: #f39c12;
+  /* Interaction state for cautionary actions */
+  --brand-accent: #00e5ff;
+  /* Vibrant cyan supplement for secondary features */
+  --brand-accent-hover: #00d4eb;
+  /* Interaction state for cyan accents */
+  --brand-success-bright: #00c853;
+  /* Success state for specific hardware/status logic */
   --bg-header: #E7E9EB;
 }
 
 .dark {
   --bg-header: #0f172a;
   /* --- Surfaces & Brand Foundation --- */
-  --bg-app: #020617;           /* Deep background for reduced eye strain in low light */
-  --bg-surface-secondary: #0f172a; /* Secondary deep surface for structural bars */
-  --bg-sidebar: #020617;       /* Unified deep navigation container */
-  --bg-card: #1e293b;          /* Raised surface for content cards in dark mode */
-  --bg-hover: #334155;         /* Highlight feedback on dark surfaces */
-  --bg-zebra: #1e293b;         /* Low-contrast alternating list surface */
-  --bg-accent-subtle: #0f172a; /* Deep structural accent for headers/segments */
-  --bg-input: #0f172a;         /* Deep background for form fields */
+  --bg-app: #020617;
+  /* Deep background for reduced eye strain in low light */
+  --bg-surface-secondary: #0f172a;
+  /* Secondary deep surface for structural bars */
+  --bg-sidebar: #020617;
+  /* Unified deep navigation container */
+  --bg-card: #1e293b;
+  /* Raised surface for content cards in dark mode */
+  --bg-hover: #334155;
+  /* Highlight feedback on dark surfaces */
+  --bg-zebra: #1e293b;
+  /* Low-contrast alternating list surface */
+  --bg-accent-subtle: #0f172a;
+  /* Deep structural accent for headers/segments */
+  --bg-input: #0f172a;
+  /* Deep background for form fields */
 
   /* --- Text & Typography --- */
-  --text-main: #f8fafc;        /* High-readability light text for dark backgrounds */
-  --text-muted: #94a3b8;       /* Muted descriptive text for dark mode */
-  --text-muted-more: #64748b;  /* Auxiliary meta-data on dark surfaces */
-  --text-danger: #ff6b6b;      /* Adjusted danger text for dark mode visibility */
-  --text-neutral-dark: #cbd5e1; /* Inverted neutral text for dark mode */
+  --text-main: #f8fafc;
+  /* High-readability light text for dark backgrounds */
+  --text-muted: #94a3b8;
+  /* Muted descriptive text for dark mode */
+  --text-muted-more: #64748b;
+  /* Auxiliary meta-data on dark surfaces */
+  --text-danger: #ff6b6b;
+  /* Adjusted danger text for dark mode visibility */
+  --text-neutral-dark: #cbd5e1;
+  /* Inverted neutral text for dark mode */
 
   /* --- Borders & Dividers --- */
-  --border-base: #334155;      /* Muted dark divider for list items */
-  --border-header: #1e293b;    /* Structural dark dividing line */
-  --border-input: #475569;     /* Deep form boundary for dark inputs */
-  --border-focus: #3498db;     /* High-contrast focus state for dark mode */
-  --border-dashed: #475569;    /* Dark mode equivalent for dashed separators */
+  --border-base: #334155;
+  /* Muted dark divider for list items */
+  --border-header: #1e293b;
+  /* Structural dark dividing line */
+  --border-input: #475569;
+  /* Deep form boundary for dark inputs */
+  --border-focus: #3498db;
+  /* High-contrast focus state for dark mode */
+  --border-dashed: #475569;
+  /* Dark mode equivalent for dashed separators */
 
   /* Accents (Fixed for Brand Consistency) */
   --brand-primary: #3498db;
@@ -116,14 +180,17 @@ body {
   width: 8px;
   height: 8px;
 }
+
 ::-webkit-scrollbar-track {
   background: transparent;
 }
+
 ::-webkit-scrollbar-thumb {
   background-color: var(--border-base);
   border-radius: 9999px;
   transition: background-color 0.2s;
 }
+
 ::-webkit-scrollbar-thumb:hover {
   background-color: var(--text-muted);
 }
@@ -134,18 +201,39 @@ input:focus {
 
 /* Custom Animations */
 @keyframes pulse-subtle {
-  0%, 100% { transform: scale(1); opacity: 1; }
-  50% { transform: scale(1.01); opacity: 0.98; }
+
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+
+  50% {
+    transform: scale(1.01);
+    opacity: 0.98;
+  }
 }
 
 @keyframes bounce-short {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-2px); }
+
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-2px);
+  }
 }
 
 @keyframes shine {
-  from { left: -100%; }
-  to { left: 100%; }
+  from {
+    left: -100%;
+  }
+
+  to {
+    left: 100%;
+  }
 }
 
 .animate-pulse-subtle {
@@ -161,7 +249,7 @@ input:focus {
   top: 0;
   width: 50%;
   height: 100%;
-  background: linear-gradient(to right, transparent, rgba(255,255,255,0.3), transparent);
+  background: linear-gradient(to right, transparent, rgba(255, 255, 255, 0.3), transparent);
   animation: shine 1.5s infinite linear;
   transform: skewX(-20deg);
 }

@@ -452,8 +452,8 @@ async function initSchema() {
     await conn.query(`
       CREATE TABLE IF NOT EXISTS thermal_printer_settings (
         id INT AUTO_INCREMENT PRIMARY KEY,
-        business_id INT NOT NULL UNIQUE,
-        branch_id INT,
+        business_id INT NOT NULL,
+        branch_id INT NULL,
         font_family VARCHAR(100) DEFAULT 'monospace',
         font_size VARCHAR(50) DEFAULT '12px',
         show_logo TINYINT(1) DEFAULT 1,
@@ -468,7 +468,9 @@ async function initSchema() {
         show_totals TINYINT(1) DEFAULT 1,
         show_footer TINYINT(1) DEFAULT 1,
         footer_text TEXT,
-        FOREIGN KEY (business_id) REFERENCES businesses(id) ON DELETE CASCADE
+        FOREIGN KEY (business_id) REFERENCES businesses(id) ON DELETE CASCADE,
+        FOREIGN KEY (branch_id) REFERENCES branches(id) ON DELETE CASCADE,
+        UNIQUE KEY idx_business_branch (business_id, branch_id)
       )
     `);
     await conn.query(`
@@ -1540,7 +1542,40 @@ var init_products = __esm({
     router3 = Router3();
     router3.get("/", async (req, res) => {
       try {
-        const products = await query(`
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 20;
+        const offset = (page - 1) * limit;
+        const { search, category_id, manufacturer_id, product_type } = req.query;
+        let whereClause = "WHERE p.deleted_at IS NULL AND p.business_id = ?";
+        const params = [req.user.business_id];
+        if (search && String(search).trim() !== "") {
+          whereClause += " AND (p.name LIKE ? OR s.sku_code LIKE ? OR s.barcode LIKE ?)";
+          const term = `%${String(search).trim()}%`;
+          params.push(term, term, term);
+        }
+        if (category_id && String(category_id).trim() !== "" && category_id !== "All Categories") {
+          whereClause += " AND p.category_id = ?";
+          params.push(parseInt(category_id));
+        }
+        if (manufacturer_id && String(manufacturer_id).trim() !== "" && manufacturer_id !== "All Manufacturers") {
+          whereClause += " AND p.manufacturer_id = ?";
+          params.push(parseInt(manufacturer_id));
+        }
+        if (product_type && String(product_type).trim() !== "" && product_type !== "All Types" && product_type !== "All Products") {
+          whereClause += " AND p.product_type = ?";
+          params.push(String(product_type).trim());
+        }
+        const countSql = `
+      SELECT COUNT(DISTINCT s.id) as total
+      FROM product_skus s
+      JOIN products p ON s.product_id = p.id
+      LEFT JOIN categories c ON p.category_id = c.id
+      LEFT JOIN manufacturers m ON p.manufacturer_id = m.id
+      ${whereClause}
+    `;
+        const countRes = await query(countSql, params);
+        const total = countRes[0]?.total || 0;
+        const productsSql = `
       SELECT s.id, p.name as product_name, s.sku_code, s.barcode,
              s.selling_price, s.cost_price, p.product_type,
              c.name as category_name, m.name as manufacturer_name,
@@ -1550,15 +1585,23 @@ var init_products = __esm({
       JOIN products p ON s.product_id = p.id
       LEFT JOIN categories c ON p.category_id = c.id
       LEFT JOIN manufacturers m ON p.manufacturer_id = m.id
-      WHERE p.deleted_at IS NULL AND p.business_id = ?
-      AND (p.product_type != 'serialized' OR (SELECT SUM(quantity) FROM branch_stock WHERE sku_id = s.id) > 0)
-    `, [req.user.business_id]);
+      ${whereClause}
+      ORDER BY p.created_at DESC
+      LIMIT ${limit} OFFSET ${offset}
+    `;
+        const products = await query(productsSql, params);
         const mapped = products.map((p) => ({
           ...p,
           name: p.product_name + (p.sku_code ? ` (${p.sku_code})` : "")
         }));
-        res.json(mapped);
+        res.json({
+          products: mapped,
+          total,
+          page,
+          limit
+        });
       } catch (e) {
+        console.error("[GetProducts] Error:", e.message);
         res.status(500).json({ error: e.message });
       }
     });
@@ -1800,9 +1843,10 @@ var init_customers = __esm({
     router4 = Router4();
     router4.get("/", async (req, res) => {
       try {
-        const isSuper = req.user.role === "superadmin";
-        const sql = isSuper ? "SELECT * FROM customers WHERE business_id=? AND deleted_at IS NULL" : "SELECT * FROM customers WHERE business_id=? AND branch_id=? AND deleted_at IS NULL";
-        const params = isSuper ? [req.user.business_id] : [req.user.business_id, req.user.branch_id];
+        const isDeveloper = req.user.role === "developer";
+        const branchId = req.user.branch_id;
+        const sql = isDeveloper || !branchId ? "SELECT * FROM customers WHERE business_id=? AND deleted_at IS NULL" : "SELECT * FROM customers WHERE business_id=? AND branch_id=? AND deleted_at IS NULL";
+        const params = isDeveloper || !branchId ? [req.user.business_id] : [req.user.business_id, branchId];
         res.json(await query(sql, params));
       } catch (e) {
         res.status(500).json({ error: e.message });
@@ -2075,13 +2119,14 @@ var init_invoices = __esm({
     router5.get("/", async (req, res) => {
       try {
         const { startDate, endDate } = req.query;
-        const isSuper = req.user.role === "superadmin";
+        const isDeveloper = req.user.role === "developer";
+        const branchId = req.user.branch_id;
         let sql = `
       SELECT i.*, c.name as customer_name FROM invoices i
       LEFT JOIN customers c ON i.customer_id=c.id
-      WHERE i.business_id=? ${!isSuper ? "AND i.branch_id=?" : ""}
+      WHERE i.business_id=? ${!isDeveloper && branchId ? "AND i.branch_id=?" : ""}
     `;
-        const params = !isSuper ? [req.user.business_id, req.user.branch_id] : [req.user.business_id];
+        const params = !isDeveloper && branchId ? [req.user.business_id, branchId] : [req.user.business_id];
         if (startDate) {
           sql += " AND i.created_at >= ?";
           params.push(startDate + " 00:00:00");
@@ -2098,13 +2143,14 @@ var init_invoices = __esm({
     });
     router5.get("/:id", async (req, res) => {
       try {
-        const isSuper = req.user.role === "superadmin";
+        const isDeveloper = req.user.role === "developer";
+        const branchId = req.user.branch_id;
         const sql = `
       SELECT i.*, c.name as customer_name, c.phone as customer_phone, c.email as customer_email
       FROM invoices i LEFT JOIN customers c ON i.customer_id=c.id 
-      WHERE i.id=? AND i.business_id=? ${!isSuper ? "AND i.branch_id=?" : ""}
+      WHERE i.id=? AND i.business_id=? ${!isDeveloper && branchId ? "AND i.branch_id=?" : ""}
     `;
-        const params = !isSuper ? [req.params.id, req.user.business_id, req.user.branch_id] : [req.params.id, req.user.business_id];
+        const params = !isDeveloper && branchId ? [req.params.id, req.user.business_id, branchId] : [req.params.id, req.user.business_id];
         const invoice = await queryOne(sql, params);
         if (!invoice) return res.status(404).json({ error: "Invoice not found or access denied" });
         const items = await query(`
@@ -2285,9 +2331,10 @@ var init_invoices = __esm({
       const { method } = req.body;
       const conn = await pool.getConnection();
       try {
-        const isSuper = req.user.role === "superadmin";
-        const checkSql = `SELECT * FROM invoices WHERE id=? AND business_id=? ${!isSuper ? "AND branch_id=?" : ""}`;
-        const checkParams = !isSuper ? [req.params.id, req.user.business_id, req.user.branch_id] : [req.params.id, req.user.business_id];
+        const isDeveloper = req.user.role === "developer";
+        const branchId = req.user.branch_id;
+        const checkSql = `SELECT * FROM invoices WHERE id=? AND business_id=? ${!isDeveloper && branchId ? "AND branch_id=?" : ""}`;
+        const checkParams = !isDeveloper && branchId ? [req.params.id, req.user.business_id, branchId] : [req.params.id, req.user.business_id];
         const [invRows] = await conn.execute(checkSql, checkParams);
         const invoice = invRows[0];
         if (!invoice) throw new Error("Invoice not found or access denied");
@@ -2498,7 +2545,14 @@ var init_settings = __esm({
     });
     router7.get("/company", async (req, res) => {
       try {
-        let c = await queryOne("SELECT * FROM businesses WHERE id=?", [req.user.business_id]);
+        const branchId = req.user?.branch_id;
+        if (branchId) {
+          const branch = await queryOne("SELECT name, address, phone, email FROM branches WHERE id=? AND business_id=?", [branchId, req.user.business_id]);
+          if (branch) {
+            return res.json(branch);
+          }
+        }
+        const c = await queryOne("SELECT * FROM businesses WHERE id=?", [req.user.business_id]);
         res.json(c || {});
       } catch (e) {
         res.status(500).json({ error: e.message });
@@ -2976,26 +3030,31 @@ var init_inventory = __esm({
       }
     });
     router8.get("/devices/search", async (req, res) => {
-      const { imei, branch_id } = req.query;
+      const { q, imei, branch_id } = req.query;
+      const searchVal = q || imei;
       try {
         let sql = `
       SELECT d.*, p.name as product_name, s.sku_code, b.name as branch_name
-      FROM devices d JOIN product_skus s ON d.sku_id=s.id
+      FROM devices d 
+      JOIN product_skus s ON d.sku_id=s.id
       JOIN products p ON s.product_id=p.id
-      LEFT JOIN branches b ON d.branch_id=b.id WHERE d.status='in_stock' AND d.business_id=?
+      LEFT JOIN branches b ON d.branch_id=b.id 
+      WHERE d.status='in_stock' AND d.business_id=?
     `;
         const params = [req.user.business_id];
-        if (imei) {
-          sql += " AND d.imei LIKE ?";
-          params.push(`%${imei}%`);
+        if (searchVal && String(searchVal).trim() !== "") {
+          sql += " AND (d.imei LIKE ? OR p.name LIKE ? OR s.sku_code LIKE ?)";
+          const term = `%${String(searchVal).trim()}%`;
+          params.push(term, term, term);
         }
-        if (branch_id) {
+        if (branch_id && String(branch_id).trim() !== "" && String(branch_id) !== "undefined") {
           sql += " AND d.branch_id=?";
-          params.push(branch_id);
+          params.push(parseInt(branch_id));
         }
         sql += " LIMIT 20";
         res.json(await query(sql, params));
       } catch (e) {
+        console.error("[SearchDevices] Error:", e.message);
         res.status(500).json({ error: e.message });
       }
     });
