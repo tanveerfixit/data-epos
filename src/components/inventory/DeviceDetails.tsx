@@ -161,8 +161,9 @@ export default function DeviceDetailView({ deviceId, onBack, onOpenPrinterSettin
               overflow: hidden;
             }
             #barcode {
-              max-width: 100%;
-              height: auto;
+              max-width: 100% !important;
+              height: auto !important;
+              max-height: 40px !important;
             }
           </style>
           <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
