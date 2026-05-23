@@ -19,7 +19,21 @@ export default function AdminLoginPage({ onBack }: Props) {
     setError('');
     setLoading(true);
     try {
-      // Admins use the same login API, but we might add a flag or just rely on role check after login
+      // Pre-flight check to verify role before logging in
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Login failed');
+      
+      const role = data.user?.role;
+      if (!['superadmin', 'developer'].includes(role)) {
+        throw new Error('Access denied. Superadmin or Developer role required.');
+      }
+      
+      // Proceed with setting AuthContext
       await login(email, password);
     } catch (err: any) {
       setError(err.message);

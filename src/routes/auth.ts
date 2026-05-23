@@ -69,7 +69,7 @@ export async function requireAdminAsync(req: any, res: any, next: any) {
   const userId = sess.userId;
   try {
     const user = await queryOne('SELECT * FROM users WHERE id=?', [userId]) as any;
-    if (!user || !['admin', 'superadmin', 'developer'].includes(user.role)) {
+    if (!user || !['superadmin', 'developer'].includes(user.role)) {
       return res.status(403).json({ error: 'Admin access required' });
     }
     req.userId = userId;
