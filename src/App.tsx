@@ -423,7 +423,9 @@ function AppInner() {
             className="pl-6 flex flex-col items-start font-sans cursor-pointer hover:opacity-85 transition-opacity"
             title="Home Menu"
           >
-            <h1 className="text-lg font-bold text-[var(--brand-primary)] tracking-tight leading-none uppercase">PHONE LAB</h1>
+            <h1 className="text-lg font-bold text-[var(--brand-primary)] tracking-tight leading-none uppercase">
+              {currentUser?.branch_name || 'EPOS'}
+            </h1>
           </button>
         </div>
 
