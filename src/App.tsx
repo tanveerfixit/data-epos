@@ -469,7 +469,7 @@ function AppInner() {
           <button 
             onClick={() => {
               logout();
-              window.history.pushState(null, '', '/');
+              window.location.href = '/';
             }}
             className="h-8 overflow-hidden group bg-[var(--bg-card)] text-[var(--text-main)] px-5 rounded-full text-[11px] uppercase tracking-widest transition-all border border-[var(--border-base)] shadow-sm cursor-pointer"
           >
