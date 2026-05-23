@@ -401,7 +401,16 @@ adminRouter.post('/users/:id/resend-password', requireAdminAsync, async (req: an
 // GET /api/admin/branches
 adminRouter.get('/branches', requireAdminAsync, async (req: any, res) => {
   try {
-    res.json(await query('SELECT * FROM branches WHERE business_id=? AND deleted_at IS NULL', [req.user.business_id]));
+    if (req.user.role === 'developer') {
+      res.json(await query(`
+        SELECT b.*, biz.name as business_name 
+        FROM branches b 
+        JOIN businesses biz ON b.business_id = biz.id 
+        WHERE b.deleted_at IS NULL
+      `));
+    } else {
+      res.json(await query('SELECT * FROM branches WHERE business_id=? AND deleted_at IS NULL', [req.user.business_id]));
+    }
   } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 

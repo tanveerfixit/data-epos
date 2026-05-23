@@ -371,6 +371,11 @@ export default function AdminPortal({ onClose }: { onClose: () => void }) {
                         <span className="text-[10px] font-bold text-slate-300">ID {b.id}</span>
                       </div>
                       <h4 className="font-bold text-slate-900">{b.name}</h4>
+                      {b.business_name && (
+                        <div className="text-[10px] font-bold text-blue-600 uppercase mt-0.5 tracking-wider">
+                          Business: {b.business_name}
+                        </div>
+                      )}
                       <p className="text-xs text-slate-500 mt-2 flex-1">{b.address}</p>
                       <div className="text-xs font-bold text-slate-900 mt-4">{b.phone}</div>
                     </div>
