@@ -1288,6 +1288,9 @@ var init_auth = __esm({
           [req.params.id, req.user.business_id]
         );
         if (!user) return res.status(404).json({ error: "User not found or access denied" });
+        if (user.email === "support@techinbox.ie" && status !== "approved") {
+          return res.status(400).json({ error: "This developer account cannot be deactivated" });
+        }
         await execute(
           "UPDATE users SET status=? WHERE id=? AND business_id=?",
           [status, req.params.id, req.user.business_id]

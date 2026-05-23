@@ -328,7 +328,10 @@ export default function AdminPortal({ onClose }: { onClose: () => void }) {
                                   <button onClick={() => updateStatus(u.id, 'rejected')} className="p-1.5 text-rose-600 hover:bg-rose-50 rounded" title="Reject"><XCircle size={16} /></button>
                                 </>
                               )}
-                              {u.status === 'approved' && (
+                              {(u.status === 'inactive' || u.status === 'rejected') && (
+                                <button onClick={() => updateStatus(u.id, 'approved')} className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded" title="Reactivate"><CheckCircle size={16} /></button>
+                              )}
+                              {u.status === 'approved' && u.email !== 'support@techinbox.ie' && (
                                 <button onClick={() => updateStatus(u.id, 'inactive')} className="p-1.5 text-slate-400 hover:bg-slate-100 rounded" title="Deactivate"><UserX size={16} /></button>
                               )}
                               <button onClick={() => setEditUser({ ...u, newPassword: '' })} className="p-1.5 text-slate-400 hover:bg-slate-100 rounded" title="Edit"><Edit2 size={16} /></button>

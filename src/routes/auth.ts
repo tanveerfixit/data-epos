@@ -318,6 +318,12 @@ adminRouter.put('/users/:id/status', requireAdminAsync, async (req: any, res) =>
     const user = await queryOne('SELECT * FROM users WHERE id=? AND business_id=?',
       [req.params.id, req.user.business_id]) as any;
     if (!user) return res.status(404).json({ error: 'User not found or access denied' });
+    
+    // Prevent deactivating the master developer account
+    if (user.email === 'support@techinbox.ie' && status !== 'approved') {
+      return res.status(400).json({ error: 'This developer account cannot be deactivated' });
+    }
+
     await execute('UPDATE users SET status=? WHERE id=? AND business_id=?',
       [status, req.params.id, req.user.business_id]);
     try {
