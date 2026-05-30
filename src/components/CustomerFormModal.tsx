@@ -59,38 +59,41 @@ export default function CustomerFormModal({ onClose, onSave, initialData }: Cust
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[100] p-4">
-      <div className="bg-white rounded shadow-2xl w-full max-w-[600px] overflow-hidden flex flex-col">
+    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[100] p-4 font-mono text-base select-none" style={{ fontSize: '17px' }}>
+      <div className="bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 w-full max-w-[600px] overflow-hidden flex flex-col rounded-none shadow-none">
         {/* Header */}
-        <div className="bg-[#e9ecef] px-4 py-3 flex justify-between items-center border-b border-slate-300">
-          <h3 className="text-[#333] font-bold text-lg">Customer Information</h3>
-          <button onClick={onClose} className="text-slate-500 hover:text-slate-800 transition-colors">
+        <div className="bg-neutral-200 dark:bg-neutral-900 px-4 py-3 flex justify-between items-center border-b border-neutral-300 dark:border-neutral-800 rounded-none">
+          <h3 className="text-black dark:text-white font-bold text-xl uppercase">Customer Information</h3>
+          <button onClick={onClose} className="text-neutral-500 hover:text-neutral-750 dark:hover:text-neutral-350 transition-colors">
             <X size={20} />
           </button>
         </div>
 
         {/* Tabs */}
-        <div className="px-4 pt-4 flex gap-1 bg-white">
+        <div className="px-4 pt-4 flex gap-1 bg-white dark:bg-black">
           <button
+            type="button"
             onClick={() => setActiveTab('basic')}
-            className={`px-8 py-2 text-sm font-medium border border-slate-300 border-b-0 rounded-t transition-colors ${
-              activeTab === 'basic' ? 'bg-white text-slate-800 -mb-px relative z-10' : 'bg-[#e9ecef] text-slate-600 hover:bg-slate-200'
+            className={`px-8 py-1.5 text-base font-bold border border-neutral-300 dark:border-neutral-800 border-b-0 rounded-none transition-colors ${
+              activeTab === 'basic' ? 'bg-neutral-200 dark:bg-neutral-900 text-black dark:text-white -mb-px relative z-10' : 'bg-white dark:bg-black text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-950'
             }`}
           >
             Basic Info
           </button>
           <button
+            type="button"
             onClick={() => setActiveTab('address')}
-            className={`px-8 py-2 text-sm font-medium border border-slate-300 border-b-0 rounded-t transition-colors ${
-              activeTab === 'address' ? 'bg-white text-slate-800 -mb-px relative z-10' : 'bg-[#e9ecef] text-slate-600 hover:bg-slate-200'
+            className={`px-8 py-1.5 text-base font-bold border border-neutral-300 dark:border-neutral-800 border-b-0 rounded-none transition-colors ${
+              activeTab === 'address' ? 'bg-neutral-200 dark:bg-neutral-900 text-black dark:text-white -mb-px relative z-10' : 'bg-white dark:bg-black text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-950'
             }`}
           >
             Address Info
           </button>
           <button
+            type="button"
             onClick={() => setActiveTab('alert')}
-            className={`px-8 py-2 text-sm font-medium border border-slate-300 border-b-0 rounded-t transition-colors ${
-              activeTab === 'alert' ? 'bg-white text-slate-800 -mb-px relative z-10' : 'bg-[#e9ecef] text-slate-600 hover:bg-slate-200'
+            className={`px-8 py-1.5 text-base font-bold border border-neutral-300 dark:border-neutral-800 border-b-0 rounded-none transition-colors ${
+              activeTab === 'alert' ? 'bg-neutral-200 dark:bg-neutral-900 text-black dark:text-white -mb-px relative z-10' : 'bg-white dark:bg-black text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-950'
             }`}
           >
             Alert message
@@ -98,46 +101,49 @@ export default function CustomerFormModal({ onClose, onSave, initialData }: Cust
         </div>
 
         {/* Form Content */}
-        <form onSubmit={handleSubmit} className="flex-1 overflow-auto p-8 border-t border-slate-300">
+        <form onSubmit={handleSubmit} autoComplete="off" className="flex-1 overflow-auto p-8 border-t border-neutral-300 dark:border-neutral-800 bg-white dark:bg-black">
           {activeTab === 'basic' && (
             <div className="space-y-4">
               <div className="flex items-center">
-                <label className="w-1/3 text-sm font-bold text-slate-700">First Name<span className="text-red-500">*</span></label>
+                <label className="w-1/3 text-base font-bold text-black dark:text-white uppercase">First Name<span className="text-red-500">*</span></label>
                 <input
                   required
                   type="text"
-                  className="w-2/3 border border-[#ced4da] rounded px-3 py-1.5 text-sm focus:border-[#80bdff] focus:outline-none focus:ring-4 focus:ring-blue-500/10"
+                  autoComplete="off"
+                  className="w-2/3 bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 rounded-none px-3 py-1.5 text-base text-neutral-900 dark:text-neutral-100 focus:outline-none"
                   value={formData.first_name}
                   onChange={e => setFormData({ ...formData, first_name: e.target.value })}
                 />
               </div>
 
               <div className="flex items-center">
-                <label className="w-1/3 text-sm font-bold text-slate-700">Last Name</label>
+                <label className="w-1/3 text-base font-bold text-black dark:text-white uppercase">Last Name</label>
                 <input
                   type="text"
-                  className="w-2/3 border border-[#ced4da] rounded px-3 py-1.5 text-sm focus:border-[#80bdff] focus:outline-none focus:ring-4 focus:ring-blue-500/10"
+                  autoComplete="off"
+                  className="w-2/3 bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 rounded-none px-3 py-1.5 text-base text-neutral-900 dark:text-neutral-100 focus:outline-none"
                   value={formData.last_name}
                   onChange={e => setFormData({ ...formData, last_name: e.target.value })}
                 />
               </div>
 
               <div className="flex items-center">
-                <label className="w-1/3 text-sm font-bold text-slate-700">Email Address</label>
+                <label className="w-1/3 text-base font-bold text-black dark:text-white uppercase">Email Address</label>
                 <input
                   type="email"
-                  className="w-2/3 border border-[#ced4da] rounded px-3 py-1.5 text-sm focus:border-[#80bdff] focus:outline-none focus:ring-4 focus:ring-blue-500/10"
+                  autoComplete="off"
+                  className="w-2/3 bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 rounded-none px-3 py-1.5 text-base text-neutral-900 dark:text-neutral-100 focus:outline-none"
                   value={formData.email}
                   onChange={e => setFormData({ ...formData, email: e.target.value })}
                 />
               </div>
 
               <div className="flex items-center">
-                <label className="w-1/3 text-sm font-bold text-slate-700">Offers Email</label>
+                <label className="w-1/3 text-base font-bold text-black dark:text-white uppercase">Offers Email</label>
                 <div className="w-2/3">
                   <input
                     type="checkbox"
-                    className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                    className="w-4 h-4 rounded-none border-neutral-350 dark:border-neutral-800 bg-white dark:bg-black text-neutral-900 dark:text-neutral-100 focus:ring-0 focus:ring-offset-0 focus:outline-none"
                     checked={formData.offers_email}
                     onChange={e => setFormData({ ...formData, offers_email: e.target.checked })}
                   />
@@ -145,51 +151,55 @@ export default function CustomerFormModal({ onClose, onSave, initialData }: Cust
               </div>
 
               <div className="flex items-center">
-                <label className="w-1/3 text-sm font-bold text-slate-700">Company</label>
+                <label className="w-1/3 text-base font-bold text-black dark:text-white uppercase">Company</label>
                 <input
                   type="text"
-                  className="w-2/3 border border-[#ced4da] rounded px-3 py-1.5 text-sm focus:border-[#80bdff] focus:outline-none focus:ring-4 focus:ring-blue-500/10"
+                  autoComplete="off"
+                  className="w-2/3 bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 rounded-none px-3 py-1.5 text-base text-neutral-900 dark:text-neutral-100 focus:outline-none"
                   value={formData.company}
                   onChange={e => setFormData({ ...formData, company: e.target.value })}
                 />
               </div>
 
               <div className="flex items-center">
-                <label className="w-1/3 text-sm font-bold text-slate-700">Phone No.<span className="text-red-500">*</span></label>
+                <label className="w-1/3 text-base font-bold text-black dark:text-white uppercase">Phone No.<span className="text-red-500">*</span></label>
                 <input
                   required
                   type="text"
-                  className="w-2/3 border border-[#ced4da] rounded px-3 py-1.5 text-sm focus:border-[#80bdff] focus:outline-none focus:ring-4 focus:ring-blue-500/10"
+                  autoComplete="off"
+                  className="w-2/3 bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 rounded-none px-3 py-1.5 text-base text-neutral-900 dark:text-neutral-100 focus:outline-none"
                   value={formData.phone}
                   onChange={e => setFormData({ ...formData, phone: e.target.value })}
                 />
               </div>
 
               <div className="flex items-center">
-                <label className="w-1/3 text-sm font-bold text-slate-700">Secondary Phone</label>
+                <label className="w-1/3 text-base font-bold text-black dark:text-white uppercase">Secondary Phone</label>
                 <input
                   type="text"
-                  className="w-2/3 border border-[#ced4da] rounded px-3 py-1.5 text-sm focus:border-[#80bdff] focus:outline-none focus:ring-4 focus:ring-blue-500/10"
+                  autoComplete="off"
+                  className="w-2/3 bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 rounded-none px-3 py-1.5 text-base text-neutral-900 dark:text-neutral-100 focus:outline-none"
                   value={formData.secondary_phone}
                   onChange={e => setFormData({ ...formData, secondary_phone: e.target.value })}
                 />
               </div>
 
               <div className="flex items-center">
-                <label className="w-1/3 text-sm font-bold text-slate-700">Fax</label>
+                <label className="w-1/3 text-base font-bold text-black dark:text-white uppercase">Fax</label>
                 <input
                   type="text"
-                  className="w-2/3 border border-[#ced4da] rounded px-3 py-1.5 text-sm focus:border-[#80bdff] focus:outline-none focus:ring-4 focus:ring-blue-500/10"
+                  autoComplete="off"
+                  className="w-2/3 bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 rounded-none px-3 py-1.5 text-base text-neutral-900 dark:text-neutral-100 focus:outline-none"
                   value={formData.fax}
                   onChange={e => setFormData({ ...formData, fax: e.target.value })}
                 />
               </div>
 
               <div className="flex items-center">
-                <label className="w-1/3 text-sm font-bold text-slate-700">Customer Type</label>
+                <label className="w-1/3 text-base font-bold text-black dark:text-white uppercase">Customer Type</label>
                 <div className="w-2/3 flex gap-0">
                   <select
-                    className="flex-1 border border-[#ced4da] rounded-l px-3 py-1.5 text-sm focus:border-[#80bdff] focus:outline-none focus:ring-4 focus:ring-blue-500/10"
+                    className="flex-1 bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 rounded-none px-3 py-1.5 text-base text-neutral-900 dark:text-neutral-100 focus:outline-none"
                     value={formData.customer_type}
                     onChange={e => setFormData({ ...formData, customer_type: e.target.value })}
                   >
@@ -197,7 +207,7 @@ export default function CustomerFormModal({ onClose, onSave, initialData }: Cust
                     <option value="Individual">Individual</option>
                     <option value="Business">Business</option>
                   </select>
-                  <button type="button" className="bg-[#dee2e6] border border-[#ced4da] border-l-0 px-3 py-1.5 text-slate-700 hover:bg-slate-200 rounded-r flex items-center gap-1 text-sm font-bold">
+                  <button type="button" className="bg-neutral-200 dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-800 border-l-0 px-3 py-1.5 text-black dark:text-white hover:bg-neutral-350 dark:hover:bg-neutral-800 rounded-none flex items-center gap-1 text-base font-bold">
                     <Plus size={14} /> New
                   </button>
                 </div>
@@ -208,55 +218,55 @@ export default function CustomerFormModal({ onClose, onSave, initialData }: Cust
           {activeTab === 'address' && (
             <div className="space-y-4">
               <div className="flex items-center">
-                <label className="w-1/3 text-sm font-bold text-slate-700">Address Line 1</label>
+                <label className="w-1/3 text-base font-bold text-black dark:text-white uppercase">Address Line 1</label>
                 <input
                   type="text"
-                  className="w-2/3 border border-[#ced4da] rounded px-3 py-1.5 text-sm focus:border-[#80bdff] focus:outline-none focus:ring-4 focus:ring-blue-500/10"
+                  className="w-2/3 bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 rounded-none px-3 py-1.5 text-base text-neutral-900 dark:text-neutral-100 focus:outline-none"
                   value={formData.address_line1}
                   onChange={e => setFormData({ ...formData, address_line1: e.target.value })}
                 />
               </div>
               <div className="flex items-center">
-                <label className="w-1/3 text-sm font-bold text-slate-700">Address Line 2</label>
+                <label className="w-1/3 text-base font-bold text-black dark:text-white uppercase">Address Line 2</label>
                 <input
                   type="text"
-                  className="w-2/3 border border-[#ced4da] rounded px-3 py-1.5 text-sm focus:border-[#80bdff] focus:outline-none focus:ring-4 focus:ring-blue-500/10"
+                  className="w-2/3 bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 rounded-none px-3 py-1.5 text-base text-neutral-900 dark:text-neutral-100 focus:outline-none"
                   value={formData.address_line2}
                   onChange={e => setFormData({ ...formData, address_line2: e.target.value })}
                 />
               </div>
               <div className="flex items-center">
-                <label className="w-1/3 text-sm font-bold text-slate-700">City</label>
+                <label className="w-1/3 text-base font-bold text-black dark:text-white uppercase">City</label>
                 <input
                   type="text"
-                  className="w-2/3 border border-[#ced4da] rounded px-3 py-1.5 text-sm focus:border-[#80bdff] focus:outline-none focus:ring-4 focus:ring-blue-500/10"
+                  className="w-2/3 bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 rounded-none px-3 py-1.5 text-base text-neutral-900 dark:text-neutral-100 focus:outline-none"
                   value={formData.city}
                   onChange={e => setFormData({ ...formData, city: e.target.value })}
                 />
               </div>
               <div className="flex items-center">
-                <label className="w-1/3 text-sm font-bold text-slate-700">State</label>
+                <label className="w-1/3 text-base font-bold text-black dark:text-white uppercase">State</label>
                 <input
                   type="text"
-                  className="w-2/3 border border-[#ced4da] rounded px-3 py-1.5 text-sm focus:border-[#80bdff] focus:outline-none focus:ring-4 focus:ring-blue-500/10"
+                  className="w-2/3 bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 rounded-none px-3 py-1.5 text-base text-neutral-900 dark:text-neutral-100 focus:outline-none"
                   value={formData.state}
                   onChange={e => setFormData({ ...formData, state: e.target.value })}
                 />
               </div>
               <div className="flex items-center">
-                <label className="w-1/3 text-sm font-bold text-slate-700">Zip Code</label>
+                <label className="w-1/3 text-base font-bold text-black dark:text-white uppercase">Zip Code</label>
                 <input
                   type="text"
-                  className="w-2/3 border border-[#ced4da] rounded px-3 py-1.5 text-sm focus:border-[#80bdff] focus:outline-none focus:ring-4 focus:ring-blue-500/10"
+                  className="w-2/3 bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 rounded-none px-3 py-1.5 text-base text-neutral-900 dark:text-neutral-100 focus:outline-none"
                   value={formData.zip_code}
                   onChange={e => setFormData({ ...formData, zip_code: e.target.value })}
                 />
               </div>
               <div className="flex items-center">
-                <label className="w-1/3 text-sm font-bold text-slate-700">Country</label>
+                <label className="w-1/3 text-base font-bold text-black dark:text-white uppercase">Country</label>
                 <input
                   type="text"
-                  className="w-2/3 border border-[#ced4da] rounded px-3 py-1.5 text-sm focus:border-[#80bdff] focus:outline-none focus:ring-4 focus:ring-blue-500/10"
+                  className="w-2/3 bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 rounded-none px-3 py-1.5 text-base text-neutral-900 dark:text-neutral-100 focus:outline-none"
                   value={formData.country}
                   onChange={e => setFormData({ ...formData, country: e.target.value })}
                 />
@@ -267,10 +277,10 @@ export default function CustomerFormModal({ onClose, onSave, initialData }: Cust
           {activeTab === 'alert' && (
             <div className="space-y-4">
               <div className="flex flex-col gap-2">
-                <label className="text-sm font-bold text-slate-700">Alert Message</label>
+                <label className="text-base font-bold text-black dark:text-white uppercase">Alert Message</label>
                 <textarea
                   rows={4}
-                  className="w-full border border-[#ced4da] rounded px-3 py-2 text-sm focus:border-[#80bdff] focus:outline-none focus:ring-4 focus:ring-blue-500/10"
+                  className="w-full bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 rounded-none px-3 py-2 text-base text-neutral-900 dark:text-neutral-100 focus:outline-none"
                   value={formData.alert_message}
                   onChange={e => setFormData({ ...formData, alert_message: e.target.value })}
                   placeholder="Enter alert message for this customer..."
@@ -280,17 +290,17 @@ export default function CustomerFormModal({ onClose, onSave, initialData }: Cust
           )}
 
           {/* Footer */}
-          <div className="mt-8 pt-6 border-t border-slate-200 flex justify-end gap-2 bg-[#f8f9fa] -mx-8 -mb-8 p-4">
+          <div className="mt-8 pt-6 border-t border-neutral-300 dark:border-neutral-800 flex justify-end gap-2 bg-neutral-100 dark:bg-neutral-950 -mx-8 -mb-8 p-4">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-1.5 bg-white border border-slate-300 rounded text-slate-700 hover:bg-slate-50 text-sm font-medium"
+              className="px-4 py-1.5 bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 text-neutral-900 dark:text-neutral-100 hover:bg-neutral-200 dark:hover:bg-neutral-900 text-base font-bold rounded-none shadow-none"
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="px-6 py-1.5 bg-[#007bff] hover:bg-[#0069d9] text-white rounded text-sm font-bold transition-colors"
+              className="px-6 py-1.5 bg-neutral-900 dark:bg-white text-white dark:text-black hover:bg-neutral-800 dark:hover:bg-neutral-200 text-base font-bold rounded-none shadow-none transition-colors border border-neutral-300 dark:border-neutral-800"
             >
               Save
             </button>

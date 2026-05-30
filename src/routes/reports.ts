@@ -1,10 +1,11 @@
 import { Router } from 'express';
 import { pool, query, queryOne, execute } from '../mysql.js';
+import { z } from 'zod';
 
 const router = Router();
 
 // GET /api/reports/eod-data
-router.get('/eod-data', async (req: any, res) => {
+router.get('/eod-data', async (req: any, res, next) => {
   const date = (req.query.date as string) || new Date().toISOString().split('T')[0];
   try {
     const isSuper = req.user.role === 'superadmin';
@@ -36,13 +37,32 @@ router.get('/eod-data', async (req: any, res) => {
     `, !isSuper ? [date, req.user.business_id, branchId] : [date, req.user.business_id]);
 
     res.json({ invoicePayments, otherMovements, summary, date });
-  } catch (e: any) { res.status(500).json({ error: e.message }); }
+  } catch (e: any) { next(e); }
+});
+
+const endOfDaySchema = z.object({
+  report_date: z.string().optional(),
+  starting_balance: z.number().or(z.string().transform(Number)).optional(),
+  cash_counted: z.number().or(z.string().transform(Number)).optional(),
+  calculated_cash: z.number().or(z.string().transform(Number)).optional(),
+  difference: z.number().or(z.string().transform(Number)).optional(),
+  total_sales: z.number().or(z.string().transform(Number)).optional(),
+  total_deposits: z.number().or(z.string().transform(Number)).optional(),
+  total_cash_in_drawer: z.number().or(z.string().transform(Number)).optional(),
+  comments: z.string().optional(),
+  payment_summaries: z.array(z.object({
+    payment_type: z.string().optional(),
+    calculated: z.number().or(z.string().transform(Number)).optional(),
+    counted: z.number().or(z.string().transform(Number)).optional(),
+    difference: z.number().or(z.string().transform(Number)).optional()
+  })).default([])
 });
 
 // POST /api/reports/eod
-router.post('/eod', async (req: any, res) => {
+router.post('/eod', async (req: any, res, next) => {
+  const data = endOfDaySchema.parse(req.body);
   const { report_date, starting_balance, cash_counted, calculated_cash, difference,
-    total_sales, total_deposits, total_cash_in_drawer, comments, payment_summaries } = req.body;
+    total_sales, total_deposits, total_cash_in_drawer, comments, payment_summaries } = data;
   const conn = await pool.getConnection();
   try {
     await conn.beginTransaction();
@@ -62,12 +82,12 @@ router.post('/eod', async (req: any, res) => {
     }
     await conn.commit();
     res.json({ success: true, id: reportId });
-  } catch (e: any) { await conn.rollback(); res.status(500).json({ error: e.message }); }
+  } catch (e: any) { await conn.rollback(); next(e); }
   finally { conn.release(); }
 });
 
 // GET /api/reports/eod-list
-router.get('/eod-list', async (req: any, res) => {
+router.get('/eod-list', async (req: any, res, next) => {
   try {
     const isSuper = req.user.role === 'superadmin';
     const sql = `
@@ -78,7 +98,7 @@ router.get('/eod-list', async (req: any, res) => {
     `;
     const params = !isSuper ? [req.user.business_id, req.user.branch_id] : [req.user.business_id];
     res.json(await query(sql, params));
-  } catch (e: any) { res.status(500).json({ error: e.message }); }
+  } catch (e: any) { next(e); }
 });
 
 export default router;

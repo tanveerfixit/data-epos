@@ -53,6 +53,7 @@ interface ThermalPrinterSettingsData {
   show_items_table: boolean;
   show_totals: boolean;
   show_footer: boolean;
+  show_powered_by: boolean;
   footer_text: string;
 }
 
@@ -93,7 +94,7 @@ const GettingStarted: React.FC<GettingStartedProps> = ({ initialTab }) => {
     font_family: 'Arial'
   });
   const [thermalSettings, setThermalSettings] = useState<ThermalPrinterSettingsData>({
-    font_family: 'monospace',
+    font_family: 'Arial',
     font_size: '12px',
     show_logo: true,
     show_business_name: true,
@@ -106,6 +107,7 @@ const GettingStarted: React.FC<GettingStartedProps> = ({ initialTab }) => {
     show_items_table: true,
     show_totals: true,
     show_footer: true,
+    show_powered_by: true,
     footer_text: 'Thank you for your business!'
   });
   const [csvText, setCsvText] = useState('');
@@ -284,6 +286,7 @@ const GettingStarted: React.FC<GettingStartedProps> = ({ initialTab }) => {
               show_items_table: !!data.show_items_table,
               show_totals: !!data.show_totals,
               show_footer: !!data.show_footer,
+              show_powered_by: !!data.show_powered_by,
             });
           }
         })
@@ -411,7 +414,7 @@ const GettingStarted: React.FC<GettingStartedProps> = ({ initialTab }) => {
   const handleResetThermalSettings = () => {
     if (window.confirm('Are you sure you want to reset thermal printer settings to default?')) {
       setThermalSettings({
-        font_family: 'monospace',
+        font_family: 'Arial',
         font_size: '12px',
         show_logo: true,
         show_business_name: true,
@@ -424,6 +427,7 @@ const GettingStarted: React.FC<GettingStartedProps> = ({ initialTab }) => {
         show_items_table: true,
         show_totals: true,
         show_footer: true,
+        show_powered_by: true,
         footer_text: 'Thank you for your business!'
       });
     }
@@ -518,6 +522,12 @@ const GettingStarted: React.FC<GettingStartedProps> = ({ initialTab }) => {
             ${thermalSettings.show_footer ? `
               <div class="text-center mt-4 pt-4 border-t" style="font-style: italic; font-size: 0.9em;">
                 ${thermalSettings.footer_text}
+              </div>
+            ` : ''}
+
+            ${thermalSettings.show_powered_by ? `
+              <div class="text-center mt-4 text-[0.7em] text-slate-400">
+                Powered by iCover EPOS
               </div>
             ` : ''}
           </div>
@@ -1037,6 +1047,7 @@ const GettingStarted: React.FC<GettingStartedProps> = ({ initialTab }) => {
                             onChange={(e) => setThermalSettings({ ...thermalSettings, font_family: e.target.value })}
                             className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
                           >
+                            <option value="Arial">Arial</option>
                             <option value="monospace">Monospace</option>
                             <option value="sans-serif">Sans-Serif</option>
                             <option value="serif">Serif</option>
@@ -1073,6 +1084,7 @@ const GettingStarted: React.FC<GettingStartedProps> = ({ initialTab }) => {
                           { key: 'show_items_table', label: 'Items Table' },
                           { key: 'show_totals', label: 'Totals Section' },
                           { key: 'show_footer', label: 'Footer Section' },
+                          { key: 'show_powered_by', label: 'Show Powered By Brand' },
                         ].map((section) => (
                           <label key={section.key} className="flex items-center gap-3 cursor-pointer group">
                             <input 
@@ -1197,9 +1209,11 @@ const GettingStarted: React.FC<GettingStartedProps> = ({ initialTab }) => {
                         </div>
                       )}
                       
-                      <div className="text-center mt-4 text-[0.7em] text-slate-400">
-                        Powered by iCover EPOS
-                      </div>
+                      {thermalSettings.show_powered_by && (
+                        <div className="text-center mt-4 text-[0.7em] text-slate-400">
+                          Powered by iCover EPOS
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>

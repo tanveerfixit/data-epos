@@ -4,7 +4,7 @@ dotenv.config();
 
 // SECURITY: Credentials must come from environment variables (FINDING-001)
 if (!process.env.DB_PASS) {
-  console.warn('[SECURITY WARNING] DB_PASS is not set. Using hardcoded fallback. Set this in your .env file before going to production.');
+  throw new Error('[SECURITY FATAL] DB_PASS is not set in the .env file. Refusing to start with insecure credentials.');
 }
 
 export const pool = mysql.createPool({
@@ -12,7 +12,7 @@ export const pool = mysql.createPool({
   port: Number(process.env.DB_PORT) || 3306,
   database: process.env.DB_NAME || 'u583652021_clare',
   user: process.env.DB_USER || 'u583652021_clare_user',
-  password: process.env.DB_PASS || 'Tani@8877!!',
+  password: process.env.DB_PASS,
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0,
@@ -503,12 +503,21 @@ export async function initSchema() {
         show_items_table TINYINT(1) DEFAULT 1,
         show_totals TINYINT(1) DEFAULT 1,
         show_footer TINYINT(1) DEFAULT 1,
+        show_powered_by TINYINT(1) DEFAULT 1,
         footer_text TEXT,
         FOREIGN KEY (business_id) REFERENCES businesses(id) ON DELETE CASCADE,
         FOREIGN KEY (branch_id) REFERENCES branches(id) ON DELETE CASCADE,
         UNIQUE KEY idx_business_branch (business_id, branch_id)
       )
     `);
+
+    // Migration: add show_powered_by to thermal_printer_settings if missing
+    try {
+      await conn.query('ALTER TABLE thermal_printer_settings ADD COLUMN show_powered_by TINYINT(1) DEFAULT 1 AFTER show_footer');
+      console.log('[MySQL] Migration: added show_powered_by to thermal_printer_settings');
+    } catch (e: any) {
+      if (!e.message?.includes('Duplicate column')) throw e;
+    }
 
 
     await conn.query(`
@@ -780,6 +789,39 @@ export async function initSchema() {
     }
 
     await conn.query('SET FOREIGN_KEY_CHECKS = 1');
+
+    // Migration: Clean up customer names containing literal "null" string
+    try {
+      // 1. Fix names that end with " null" (e.g. "Khan null" → "Khan")
+      await conn.query(`
+        UPDATE customers 
+        SET name = TRIM(REPLACE(name, 'null', ''))
+        WHERE name LIKE '%null%'
+      `);
+      // 2. Fix last_name fields that are literally "null"
+      await conn.query(`
+        UPDATE customers 
+        SET last_name = NULL 
+        WHERE last_name = 'null'
+      `);
+      // 3. Fix first_name fields that are literally "null"
+      await conn.query(`
+        UPDATE customers 
+        SET first_name = NULL 
+        WHERE first_name = 'null'
+      `);
+      // 4. Rebuild name from first_name + last_name where name is now empty
+      await conn.query(`
+        UPDATE customers 
+        SET name = TRIM(CONCAT(COALESCE(first_name, ''), ' ', COALESCE(last_name, '')))
+        WHERE (name IS NULL OR name = '' OR name = ' ')
+          AND (first_name IS NOT NULL OR last_name IS NOT NULL)
+      `);
+      console.log('[MySQL] Migration: cleaned up customer names containing "null"');
+    } catch (e: any) {
+      console.warn('[MySQL] Customer name cleanup migration warning:', e.message);
+    }
+
     console.log('[MySQL] Schema initialised successfully');
   } finally {
     conn.release();

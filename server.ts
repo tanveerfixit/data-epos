@@ -2,6 +2,7 @@ import express from 'express';
 import { createServer as createViteServer } from 'vite';
 import dotenv from 'dotenv';
 import fs from 'fs';
+import { ZodError } from 'zod';
 import { initSchema, seedData, ensureSuperAdmin } from './src/mysql.js';
 import { requireAuthAsync } from './src/routes/auth.js';
 
@@ -62,7 +63,7 @@ async function startServer() {
   app.use('/api', inventoryRouter);
 
   // ─── Import Products ──────────────────────────────────────────────────────
-  app.post('/api/import-products', requireAuthAsync, async (req: any, res) => {
+  app.post('/api/import-products', requireAuthAsync, async (req: any, res, next) => {
     const { products } = req.body;
     const businessId = req.user.business_id;
     const { pool } = await import('./src/mysql.js');
@@ -122,7 +123,7 @@ async function startServer() {
       res.json({ success: true });
     } catch (e: any) {
       await conn.rollback();
-      res.status(500).json({ error: e.message });
+      next(e);
     } finally { conn.release(); }
   });
 
@@ -146,6 +147,17 @@ async function startServer() {
       res.sendFile(path.join(__dirname, 'dist', 'index.html'));
     });
   }
+
+  // ─── Global Error Handler ─────────────────────────────────────────────────
+  app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+    if (err instanceof ZodError) {
+      return res.status(400).json({ error: 'Validation Error', details: err.errors });
+    }
+    
+    logError('Unhandled API Error', err);
+    console.error('[Global Error Handler]', err);
+    res.status(500).json({ error: 'Internal Server Error' });
+  });
 
   app.listen(PORT, '0.0.0.0', () => {
     console.log(`✓ Server running on port ${PORT}`);

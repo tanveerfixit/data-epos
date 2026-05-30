@@ -1,11 +1,29 @@
 import { Router } from 'express';
 import { pool, query, queryOne, execute } from '../mysql.js';
+import { z } from 'zod';
 
 const router = Router();
 
+const addInventorySchema = z.object({
+  sku_id: z.number().or(z.string().transform(Number)),
+  branch_id: z.number().or(z.string().transform(Number)).optional(),
+  quantity: z.number().or(z.string().transform(Number)).optional(),
+  cost_price: z.number().or(z.string().transform(Number)).optional(),
+  selling_price: z.number().or(z.string().transform(Number)).optional(),
+  supplier_id: z.number().or(z.string().transform(Number)).nullable().optional(),
+  po_number: z.string().optional(),
+  items: z.array(z.object({
+    imei: z.string().optional(),
+    color: z.string().optional(),
+    gb: z.string().optional(),
+    condition: z.string().optional()
+  })).optional()
+});
+
 // POST /api/inventory/add
-router.post('/add', async (req: any, res) => {
-  const { sku_id, branch_id, quantity, cost_price, selling_price, supplier_id, po_number, items } = req.body;
+router.post('/add', async (req: any, res, next) => {
+  const data = addInventorySchema.parse(req.body);
+  const { sku_id, branch_id, quantity, cost_price, selling_price, supplier_id, po_number, items } = data;
   const activeBranchId = branch_id || req.user.branch_id;
   const conn = await pool.getConnection();
   try {
@@ -75,12 +93,12 @@ router.post('/add', async (req: any, res) => {
     );
     await conn.commit();
     res.json({ success: true });
-  } catch (e: any) { await conn.rollback(); console.error('[inventory/add] Error:', e.message, e.sql || ''); res.status(500).json({ error: e.message }); }
+  } catch (e: any) { await conn.rollback(); console.error('[inventory/add] Error:', e.message, e.sql || ''); next(e); }
   finally { conn.release(); }
 });
 
 // GET /api/purchase-orders
-router.get('/purchase-orders', async (req: any, res) => {
+router.get('/purchase-orders', async (req: any, res, next) => {
   try {
     const isSuper = req.user.role === 'superadmin';
     const sql = `
@@ -91,18 +109,18 @@ router.get('/purchase-orders', async (req: any, res) => {
     `;
     const params = !isSuper ? [req.user.business_id, req.user.branch_id] : [req.user.business_id];
     res.json(await query(sql, params));
-  } catch (e: any) { res.status(500).json({ error: e.message }); }
+  } catch (e: any) { next(e); }
 });
 
-router.get('/purchase-orders/by-number/:number', async (req, res) => {
+router.get('/purchase-orders/by-number/:number', async (req: any, res, next) => {
   try {
     const po = await queryOne('SELECT id FROM purchase_orders WHERE po_number=? AND business_id=?', [req.params.number, (req as any).user.business_id]);
     if (!po) return res.status(404).json({ error: 'Purchase order not found' });
     res.json(po);
-  } catch (e: any) { res.status(500).json({ error: e.message }); }
+  } catch (e: any) { next(e); }
 });
 
-router.get('/purchase-orders/:id', async (req, res) => {
+router.get('/purchase-orders/:id', async (req: any, res, next) => {
   try {
     const po = await queryOne(`
       SELECT po.*, s.name as supplier_name, s.email as supplier_email FROM purchase_orders po
@@ -112,11 +130,11 @@ router.get('/purchase-orders/:id', async (req, res) => {
     if (!po) return res.status(404).json({ error: 'Purchase order not found' });
     const items = await query('SELECT * FROM purchase_order_items WHERE po_id=?', [req.params.id]);
     res.json({ ...po, items });
-  } catch (e: any) { res.status(500).json({ error: e.message }); }
+  } catch (e: any) { next(e); }
 });
 
 // GET /api/devices/search  (must be BEFORE /devices/:id to avoid wildcard clash)
-router.get('/devices/search', async (req: any, res) => {
+router.get('/devices/search', async (req: any, res, next) => {
   const { q, imei, branch_id } = req.query;
   const searchVal = q || imei;
   try {
@@ -145,12 +163,12 @@ router.get('/devices/search', async (req: any, res) => {
     res.json(await query(sql, params));
   } catch (e: any) { 
     console.error('[SearchDevices] Error:', e.message);
-    res.status(500).json({ error: e.message }); 
+    next(e); 
   }
 });
 
 // GET /api/devices/:id
-router.get('/devices/:id', async (req: any, res) => {
+router.get('/devices/:id', async (req: any, res, next) => {
   try {
     const device = await queryOne(`
       SELECT d.*, p.name as product_name, s.sku_code, s.barcode
@@ -161,12 +179,25 @@ router.get('/devices/:id', async (req: any, res) => {
     `, [req.params.id, req.user.business_id]);
     if (!device) return res.status(404).json({ error: 'Device not found' });
     res.json(device);
-  } catch (e: any) { res.status(500).json({ error: e.message }); }
+  } catch (e: any) { next(e); }
+});
+
+const updateDeviceSchema = z.object({
+  color: z.string().optional(),
+  gb: z.string().optional(),
+  ram: z.string().optional(),
+  condition: z.string().optional(),
+  cost_price: z.number().or(z.string().transform(Number)).optional(),
+  selling_price: z.number().or(z.string().transform(Number)).optional(),
+  unlocked: z.boolean().or(z.number().transform(Boolean)).optional(),
+  imei_status: z.string().optional(),
+  carrier: z.string().optional()
 });
 
 // PUT /api/devices/:id
-router.put('/devices/:id', async (req: any, res) => {
-  const { color, gb, ram, condition, cost_price, selling_price, unlocked, imei_status, carrier } = req.body;
+router.put('/devices/:id', async (req: any, res, next) => {
+  const data = updateDeviceSchema.parse(req.body);
+  const { color, gb, ram, condition, cost_price, selling_price, unlocked, imei_status, carrier } = data;
   try {
     const old = await queryOne('SELECT * FROM devices WHERE id=? AND business_id=?', [req.params.id, req.user.business_id]);
     if (!old) return res.status(404).json({ error: 'Device not found' });
@@ -200,11 +231,11 @@ router.put('/devices/:id', async (req: any, res) => {
     }
 
     res.json({ success: true });
-  } catch (e: any) { res.status(500).json({ error: e.message }); }
+  } catch (e: any) { next(e); }
 });
 
 // GET /api/devices/:id/activity
-router.get('/devices/:id/activity', async (req: any, res) => {
+router.get('/devices/:id/activity', async (req: any, res, next) => {
   try {
     const activities = await query(`
       SELECT 'device' as source, a.id, a.user_id, a.activity, a.details, a.created_at, u.name as user_name 
@@ -224,12 +255,18 @@ router.get('/devices/:id/activity', async (req: any, res) => {
       ORDER BY created_at DESC
     `, [req.params.id, req.params.id, req.params.id, req.params.id]);
     res.json(activities);
-  } catch (e: any) { res.status(500).json({ error: e.message }); }
+  } catch (e: any) { next(e); }
+});
+
+const deviceActivitySchema = z.object({
+  activity: z.string().optional(),
+  details: z.string().optional()
 });
 
 // POST /api/devices/:id/activity (Add Note)
-router.post('/devices/:id/activity', async (req: any, res) => {
-  const { activity, details } = req.body;
+router.post('/devices/:id/activity', async (req: any, res, next) => {
+  const data = deviceActivitySchema.parse(req.body);
+  const { activity, details } = data;
   try {
     const device = await queryOne('SELECT id FROM devices WHERE id=? AND business_id=?', [req.params.id, req.user.business_id]);
     if (!device) return res.status(404).json({ error: 'Device not found' });
@@ -239,20 +276,20 @@ router.post('/devices/:id/activity', async (req: any, res) => {
     await execute('INSERT INTO activity_logs (device_id, user_id, activity_type, description) VALUES (?, ?, ?, ?)',
       [req.params.id, req.userId, activity || 'Note Added', details || '']);
     res.json({ success: true });
-  } catch (e: any) { res.status(500).json({ error: e.message }); }
+  } catch (e: any) { next(e); }
 });
 
 // DELETE /api/devices/:id
-router.delete('/devices/:id', async (req: any, res) => {
+router.delete('/devices/:id', async (req: any, res, next) => {
   try {
     const result = await execute('DELETE FROM devices WHERE id=? AND business_id=?', [req.params.id, req.user.business_id]);
     if (result.affectedRows === 0) return res.status(404).json({ error: 'Device not found or access denied' });
     res.json({ success: true });
-  } catch (e: any) { res.status(500).json({ error: e.message }); }
+  } catch (e: any) { next(e); }
 });
 
 // GET /api/devices
-router.get('/devices', async (req: any, res) => {
+router.get('/devices', async (req: any, res, next) => {
   const status = req.query.status || 'in_stock';
   try {
     const isSuper = req.user.role === 'superadmin';
@@ -271,12 +308,21 @@ router.get('/devices', async (req: any, res) => {
       ? [req.user.business_id, status, req.user.branch_id] 
       : [req.user.business_id, status];
     res.json(await query(sql, params));
-  } catch (e: any) { res.status(500).json({ error: e.message }); }
+  } catch (e: any) { next(e); }
+});
+
+const transferSchema = z.object({
+  device_id: z.number().optional(),
+  sku_id: z.number().optional(),
+  quantity: z.number().or(z.string().transform(Number)).optional(),
+  to_branch_id: z.number().or(z.string().transform(Number)),
+  notes: z.string().optional()
 });
 
 // POST /api/transfers
-router.post('/transfers', async (req: any, res) => {
-  const { device_id, sku_id, quantity, to_branch_id, notes } = req.body;
+router.post('/transfers', async (req: any, res, next) => {
+  const data = transferSchema.parse(req.body);
+  const { device_id, sku_id, quantity, to_branch_id, notes } = data;
   if (!to_branch_id) return res.status(400).json({ error: 'Destination branch is required' });
   const conn = await pool.getConnection();
   try {
@@ -307,7 +353,7 @@ router.post('/transfers', async (req: any, res) => {
 });
 
 // GET /api/transfers
-router.get('/transfers', async (req: any, res) => {
+router.get('/transfers', async (req: any, res, next) => {
   try {
     const isSuper = req.user.role === 'superadmin';
     const sql = `
@@ -328,11 +374,11 @@ router.get('/transfers', async (req: any, res) => {
       ? [req.user.business_id, req.user.branch_id, req.user.branch_id] 
       : [req.user.business_id];
     res.json(await query(sql, params));
-  } catch (e: any) { res.status(500).json({ error: e.message }); }
+  } catch (e: any) { next(e); }
 });
 
 // PUT /api/transfers/:id/complete
-router.put('/transfers/:id/complete', async (req, res) => {
+router.put('/transfers/:id/complete', async (req: any, res, next) => {
   const conn = await pool.getConnection();
   try {
     await conn.beginTransaction();
@@ -353,12 +399,12 @@ router.put('/transfers/:id/complete', async (req, res) => {
     }
     await conn.commit();
     res.json({ success: true });
-  } catch (e: any) { await conn.rollback(); res.status(500).json({ error: e.message }); }
+  } catch (e: any) { await conn.rollback(); next(e); }
   finally { conn.release(); }
 });
 
 // PUT /api/transfers/:id/cancel
-router.put('/transfers/:id/cancel', async (req, res) => {
+router.put('/transfers/:id/cancel', async (req: any, res, next) => {
   const conn = await pool.getConnection();
   try {
     await conn.beginTransaction();
@@ -370,12 +416,12 @@ router.put('/transfers/:id/cancel', async (req, res) => {
     if (transfer.device_id) await conn.execute("UPDATE devices SET status='in_stock' WHERE id=?", [transfer.device_id]);
     await conn.commit();
     res.json({ success: true });
-  } catch (e: any) { await conn.rollback(); res.status(500).json({ error: e.message }); }
+  } catch (e: any) { await conn.rollback(); next(e); }
   finally { conn.release(); }
 });
 
 // GET /api/transfers/device/:imei
-router.get('/transfers/device/:imei', async (req, res) => {
+router.get('/transfers/device/:imei', async (req: any, res, next) => {
   try {
     const device = await queryOne('SELECT * FROM devices WHERE imei=? AND business_id=?', [req.params.imei, (req as any).user.business_id]);
     if (!device) return res.status(404).json({ error: 'No device found with this IMEI' });
@@ -389,11 +435,11 @@ router.get('/transfers/device/:imei', async (req, res) => {
     `, [(device as any).id]);
     const currentBranch = await queryOne('SELECT * FROM branches WHERE id=?', [(device as any).branch_id]);
     res.json({ device, currentBranch, transfers });
-  } catch (e: any) { res.status(500).json({ error: e.message }); }
+  } catch (e: any) { next(e); }
 });
 
 // GET /api/repairs
-router.get('/repairs', async (req: any, res) => {
+router.get('/repairs', async (req: any, res, next) => {
   try {
     const isSuper = req.user.role === 'superadmin';
     const sql = `
@@ -404,11 +450,27 @@ router.get('/repairs', async (req: any, res) => {
     `;
     const params = !isSuper ? [req.user.business_id, req.user.branch_id] : [req.user.business_id];
     res.json(await query(sql, params));
-  } catch (e: any) { res.status(500).json({ error: e.message }); }
+  } catch (e: any) { next(e); }
+});
+
+const createRepairSchema = z.object({
+  customer_id: z.number().optional(),
+  customer_name: z.string().optional(),
+  first_name: z.string().optional(),
+  last_name: z.string().optional(),
+  phone: z.string().optional(),
+  device_model: z.string().optional(),
+  issue: z.string().optional(),
+  status: z.string().optional(),
+  total_quote: z.number().or(z.string().transform(Number)).optional(),
+  deposit_paid: z.number().or(z.string().transform(Number)).optional(),
+  remaining_balance: z.number().or(z.string().transform(Number)).optional(),
+  payment_method: z.string().optional()
 });
 
 // POST /api/repairs
-router.post('/repairs', async (req: any, res) => {
+router.post('/repairs', async (req: any, res, next) => {
+  const data = createRepairSchema.parse(req.body);
   const { 
     customer_id, 
     customer_name, 
@@ -419,8 +481,10 @@ router.post('/repairs', async (req: any, res) => {
     total_quote,
     deposit_paid,
     remaining_balance,
-    payment_method 
-  } = req.body;
+    payment_method,
+    first_name,
+    last_name
+  } = data;
   
   const conn = await pool.getConnection();
   try {
@@ -439,7 +503,6 @@ router.post('/repairs', async (req: any, res) => {
         finalCustomerId = (existing as any[])[0].id;
       } else {
         // Create new customer
-        const { first_name, last_name } = req.body;
         const combinedName = `${first_name || ''} ${last_name || ''}`.trim();
         
         if (!combinedName) {
@@ -523,14 +586,22 @@ router.post('/repairs', async (req: any, res) => {
   } catch (e: any) { 
     await conn.rollback(); 
     console.error('[POST /api/repairs] Error:', e.message);
-    res.status(500).json({ error: e.message }); 
+    next(e); 
   }
   finally { conn.release(); }
 });
 
+const updateRepairSchema = z.object({
+  status: z.string().optional(),
+  notes: z.string().optional(),
+  collected_amount: z.number().or(z.string().transform(Number)).optional(),
+  collected_method: z.string().optional()
+});
+
 // PUT /api/repairs/:id — update status, notes, collect remaining payment
-router.put('/repairs/:id', async (req: any, res) => {
-  const { status, notes, collected_amount, collected_method } = req.body;
+router.put('/repairs/:id', async (req: any, res, next) => {
+  const data = updateRepairSchema.parse(req.body);
+  const { status, notes, collected_amount, collected_method } = data;
   const jobId = req.params.id;
   const conn = await pool.getConnection();
   try {
@@ -628,14 +699,14 @@ router.put('/repairs/:id', async (req: any, res) => {
   } catch (e: any) {
     await conn.rollback();
     console.error('[PUT /api/repairs/:id] Error:', e.message);
-    res.status(500).json({ error: e.message });
+    next(e);
   } finally {
     conn.release();
   }
 });
 
 // GET /api/search
-router.get('/search', async (req: any, res) => {
+router.get('/search', async (req: any, res, next) => {
   const q = req.query.q as string;
   const type = req.query.type as string;
   if (!q || q.length < 2) return res.json([]);
@@ -687,7 +758,7 @@ router.get('/search', async (req: any, res) => {
       }
     }
     res.json(results);
-  } catch (e: any) { res.status(500).json({ error: e.message }); }
+  } catch (e: any) { next(e); }
 });
 
 // Payment method update is handled in invoices.ts with business isolation (FINDING-005)

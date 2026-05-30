@@ -4,7 +4,7 @@ import { queryOne } from '../mysql.js';
 const router = Router();
 
 // GET /api/public/business/:slug
-router.get('/business/:slug', async (req, res) => {
+router.get('/business/:slug', async (req: any, res, next) => {
   const { slug } = req.params;
   try {
     const business = await queryOne(`
@@ -25,7 +25,7 @@ router.get('/business/:slug', async (req, res) => {
       branches: Array.isArray(branches) ? branches : [branches].filter(Boolean)
     });
   } catch (e: any) {
-    res.status(500).json({ error: e.message });
+    next(e);
   }
 });
 

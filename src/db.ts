@@ -344,6 +344,7 @@ db.exec(`
     show_items_table INTEGER DEFAULT 1,
     show_totals INTEGER DEFAULT 1,
     show_footer INTEGER DEFAULT 1,
+    show_powered_by INTEGER DEFAULT 1,
     footer_text TEXT DEFAULT 'Thank you for your business!',
     FOREIGN KEY (business_id) REFERENCES businesses(id) ON DELETE CASCADE
   );
@@ -592,6 +593,7 @@ isolatedTables.forEach(table => {
 });
 
 // Auth columns on users
+addColumnIfNotExists("thermal_printer_settings", "show_powered_by", "INTEGER DEFAULT 1");
 addColumnIfNotExists("users", "role", "TEXT DEFAULT 'staff'");
 addColumnIfNotExists("users", "status", "TEXT DEFAULT 'approved'");
 addColumnIfNotExists("users", "password_hash", "TEXT");

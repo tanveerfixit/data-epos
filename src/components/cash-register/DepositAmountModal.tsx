@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { X, Wallet } from 'lucide-react';
 import { Customer } from '../../types';
+import { safeCustomerName } from '../../utils/customerName';
 
 interface DepositAmountModalProps {
   customer: Customer | null;
@@ -47,7 +48,7 @@ export const DepositAmountModal: React.FC<DepositAmountModalProps> = ({
             {customer && (
               <div className="px-4 py-3 bg-[var(--brand-primary)]/10 border border-[var(--brand-primary)]/20 mb-6">
                 <p className="text-[10px] font-bold text-[var(--brand-primary)] uppercase tracking-widest mb-1">Customer</p>
-                <p className="text-sm font-bold text-[var(--text-main)]">{customer.name}</p>
+                <p className="text-sm font-bold text-[var(--text-main)]">{safeCustomerName(customer)}</p>
                 <p className="text-xs font-semibold text-[var(--brand-success)] mt-1">Current Balance: €{(customer.wallet_balance || 0).toFixed(2)}</p>
               </div>
             )}

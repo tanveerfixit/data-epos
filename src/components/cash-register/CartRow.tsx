@@ -47,7 +47,7 @@ export const CartRow: React.FC<CartRowProps> = ({
       <td className="py-2 px-3 min-w-[250px]">
         <div className="flex flex-col">
           <div className="flex items-baseline gap-2 flex-wrap">
-            <span className="text-[15px] font-bold text-[var(--text-main)] leading-tight">{item.product_name}</span>
+            <span className="text-[15px] font-normal text-[var(--text-main)] leading-tight">{item.product_name}</span>
             <button 
               onClick={() => onSelectProduct?.(item.id)}
               className="text-[11px] font-mono font-bold text-blue-600 hover:underline hover:text-blue-700 uppercase"

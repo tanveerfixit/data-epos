@@ -1,9 +1,10 @@
 import { Router } from 'express';
 import { pool, query, queryOne, execute } from '../mysql.js';
+import { z } from 'zod';
 
 const router = Router();
 
-router.get('/', async (req: any, res) => {
+router.get('/', async (req: any, res, next) => {
   try {
     const isDeveloper = req.user.role === 'developer';
     const branchId = req.user.branch_id;
@@ -13,10 +14,10 @@ router.get('/', async (req: any, res) => {
     const params = (isDeveloper || !branchId) ? [req.user.business_id] : [req.user.business_id, branchId];
     res.json(await query(sql, params));
 
-  } catch (e: any) { res.status(500).json({ error: e.message }); }
+  } catch (e: any) { next(e); }
 });
 
-router.get('/:id', async (req: any, res) => {
+router.get('/:id', async (req: any, res, next) => {
   try {
     const isSuper = req.user.role === 'superadmin';
     const sql = isSuper 
@@ -26,14 +27,40 @@ router.get('/:id', async (req: any, res) => {
     const c = await queryOne(sql, params);
     if (!c) return res.status(404).json({ error: 'Customer not found' });
     res.json(c);
-  } catch (e: any) { res.status(500).json({ error: e.message }); }
+  } catch (e: any) { next(e); }
 });
 
-router.post('/', async (req: any, res) => {
+const customerSchema = z.object({
+  name: z.string().nullable().optional(),
+  phone: z.string().nullable().optional(),
+  email: z.string().email("Invalid email").optional().or(z.literal('')).or(z.null()),
+  first_name: z.string().nullable().optional(),
+  last_name: z.string().nullable().optional(),
+  secondary_phone: z.string().nullable().optional(),
+  fax: z.string().nullable().optional(),
+  offers_email: z.union([z.boolean(), z.number().transform(v => v === 1)]).nullable().optional(),
+  company: z.string().nullable().optional(),
+  customer_type: z.string().nullable().optional(),
+  address_line1: z.string().nullable().optional(),
+  address_line2: z.string().nullable().optional(),
+  city: z.string().nullable().optional(),
+  state: z.string().nullable().optional(),
+  zip_code: z.string().nullable().optional(),
+  country: z.string().nullable().optional(),
+  website: z.string().nullable().optional(),
+  alert_message: z.string().nullable().optional(),
+  wallet_balance: z.number().or(z.string().transform(Number)).nullable().optional()
+});
+
+router.post('/', async (req: any, res, next) => {
   try {
-    const b = req.body;
+    const b = customerSchema.parse(req.body);
+    // Helper to strip literal "null" strings
+    const stripNull = (v: any) => (v === null || v === undefined || v === 'null') ? '' : String(v).replace(/\bnull\b/gi, '').trim();
     // Derive a combined name if not explicitly provided
-    const fullName = b.name || `${b.first_name || ''} ${b.last_name || ''}`.trim() || 'Unknown';
+    const derivedFirst = stripNull(b.first_name);
+    const derivedLast = stripNull(b.last_name);
+    const fullName = stripNull(b.name) || `${derivedFirst} ${derivedLast}`.trim() || 'Unknown';
     const businessId = req.user?.business_id;
     const branchId = req.user?.branch_id ?? null;
 
@@ -59,13 +86,20 @@ router.post('/', async (req: any, res) => {
     res.json((newCustomer as any[])[0]);
   } catch (e: any) {
     console.error('[POST /api/customers] Error:', e.message);
-    res.status(500).json({ error: e.message });
+    next(e);
   }
 });
 
-router.put('/:id', async (req: any, res) => {
-  const { name, phone, email, address, first_name, last_name, secondary_phone, fax, offers_email,
-    company, customer_type, address_line1, address_line2, city, state, zip_code, country, website, alert_message, wallet_balance } = req.body;
+router.put('/:id', async (req: any, res, next) => {
+  const data = customerSchema.parse(req.body);
+  const { phone, email, address, first_name, last_name, secondary_phone, fax, offers_email,
+    company, customer_type, address_line1, address_line2, city, state, zip_code, country, website, alert_message, wallet_balance } = data as any;
+  // Helper to strip literal "null" strings
+  const stripNull = (v: any) => (v === null || v === undefined || v === 'null') ? '' : String(v).replace(/\bnull\b/gi, '').trim();
+  // Always rebuild name from first_name + last_name to keep it clean
+  const derivedFirst = stripNull(first_name);
+  const derivedLast = stripNull(last_name);
+  const name = stripNull(data.name) || `${derivedFirst} ${derivedLast}`.trim() || 'Unknown';
   const conn = await pool.getConnection();
   try {
     await conn.beginTransaction();
@@ -97,11 +131,11 @@ router.put('/:id', async (req: any, res) => {
     }
     await conn.commit();
     res.json({ success: true });
-  } catch (e: any) { await conn.rollback(); res.status(500).json({ error: e.message }); }
+  } catch (e: any) { await conn.rollback(); next(e); }
   finally { conn.release(); }
 });
 
-router.delete('/:id', async (req: any, res) => {
+router.delete('/:id', async (req: any, res, next) => {
   try {
     const isSuper = req.user.role === 'superadmin';
     const sql = isSuper 
@@ -111,10 +145,10 @@ router.delete('/:id', async (req: any, res) => {
     const r = await execute(sql, params);
     if (r.affectedRows === 0) return res.status(404).json({ error: 'Customer not found or access denied' });
     res.json({ success: true });
-  } catch (e: any) { res.status(500).json({ error: e.message }); }
+  } catch (e: any) { next(e); }
 });
 
-router.get('/:id/invoices', async (req: any, res) => {
+router.get('/:id/invoices', async (req: any, res, next) => {
   try {
     const sql = `
       SELECT i.* FROM invoices i
@@ -124,10 +158,10 @@ router.get('/:id/invoices', async (req: any, res) => {
     `;
     const params = req.user.role !== 'superadmin' ? [req.params.id, req.user.business_id, req.user.branch_id] : [req.params.id, req.user.business_id];
     res.json(await query(sql, params));
-  } catch (e: any) { res.status(500).json({ error: e.message }); }
+  } catch (e: any) { next(e); }
 });
 
-router.get('/:id/payments', async (req: any, res) => {
+router.get('/:id/payments', async (req: any, res, next) => {
   try {
     res.json(await query(`
       SELECT p.*, i.invoice_number FROM payments p
@@ -135,10 +169,10 @@ router.get('/:id/payments', async (req: any, res) => {
       JOIN customers c ON p.customer_id=c.id
       WHERE p.customer_id=? AND c.business_id=? ORDER BY p.paid_at DESC
     `, [req.params.id, req.user.business_id]));
-  } catch (e: any) { res.status(500).json({ error: e.message }); }
+  } catch (e: any) { next(e); }
 });
 
-router.get('/:id/ledger', async (req: any, res) => {
+router.get('/:id/ledger', async (req: any, res, next) => {
   try {
     res.json(await query(`
       SELECT p.*, i.invoice_number FROM payments p
@@ -146,10 +180,10 @@ router.get('/:id/ledger', async (req: any, res) => {
       JOIN customers c ON p.customer_id=c.id
       WHERE p.customer_id=? AND c.business_id=? ORDER BY p.paid_at DESC
     `, [req.params.id, req.user.business_id]));
-  } catch (e: any) { res.status(500).json({ error: e.message }); }
+  } catch (e: any) { next(e); }
 });
 
-router.get('/:id/activity', async (req: any, res) => {
+router.get('/:id/activity', async (req: any, res, next) => {
   try {
     const sql = `
       SELECT a.*, u.name as user_name FROM customer_activity a
@@ -160,11 +194,18 @@ router.get('/:id/activity', async (req: any, res) => {
     `;
     const params = req.user.role !== 'superadmin' ? [req.params.id, req.user.business_id, req.user.branch_id] : [req.params.id, req.user.business_id];
     res.json(await query(sql, params));
-  } catch (e: any) { res.status(500).json({ error: e.message }); }
+  } catch (e: any) { next(e); }
 });
 
-router.post('/:id/payments', async (req: any, res) => {
-  const { amount, method, note } = req.body;
+const depositSchema = z.object({
+  amount: z.number().or(z.string().transform(Number)),
+  method: z.string().optional(),
+  note: z.string().optional()
+});
+
+router.post('/:id/payments', async (req: any, res, next) => {
+  const data = depositSchema.parse(req.body);
+  const { amount, method, note } = data;
   const numAmount = Number(amount);
   const conn = await pool.getConnection();
   try {
@@ -208,7 +249,7 @@ router.post('/:id/payments', async (req: any, res) => {
     
     await conn.commit();
     res.json({ success: true, invoice_number: invoiceNumber });
-  } catch (e: any) { await conn.rollback(); res.status(500).json({ error: e.message }); }
+  } catch (e: any) { await conn.rollback(); next(e); }
   finally { conn.release(); }
 });
 

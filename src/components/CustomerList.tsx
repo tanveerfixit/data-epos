@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Plus, Search } from 'lucide-react';
 import { Customer } from '../types';
+import { safeCustomerName } from '../utils/customerName';
 import CustomerFormModal from './CustomerFormModal';
 
 interface CustomerListProps {
@@ -11,6 +12,7 @@ export default function CustomerList({ onSelectCustomer }: CustomerListProps) {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   const fetchCustomers = () => {
     fetch('/api/customers')
@@ -22,6 +24,12 @@ export default function CustomerList({ onSelectCustomer }: CustomerListProps) {
   useEffect(() => {
     fetchCustomers();
   }, []);
+
+  useEffect(() => {
+    if (searchInputRef.current) {
+      searchInputRef.current.focus();
+    }
+  }, [customers]);
 
   const handleAddCustomer = async (customerData: Partial<Customer>) => {
     try {
@@ -45,31 +53,32 @@ export default function CustomerList({ onSelectCustomer }: CustomerListProps) {
   const filtered = customers.filter(c => {
     const q = searchQuery.toLowerCase();
     return (
-      (c.name || '').toLowerCase().includes(q) ||
+      safeCustomerName(c).toLowerCase().includes(q) ||
       (c.phone || '').includes(q) ||
       (c.email || '').toLowerCase().includes(q)
     );
   });
 
   return (
-    <div className="h-full flex flex-col bg-[var(--bg-app)] overflow-hidden transition-colors duration-300">
+    <div className="flex flex-col h-full bg-neutral-100 text-neutral-900 dark:bg-neutral-950 dark:text-neutral-100 font-mono text-base px-2 py-2 select-none w-full overflow-hidden" style={{ fontSize: '17px' }}>
       {/* Header bar */}
-      <div className="flex justify-between items-center px-4 py-3 bg-[var(--bg-card)] border-b border-[var(--border-base)] shrink-0">
-        <h2 className="text-xl font-medium text-[var(--text-main)]">Customers</h2>
+      <div className="flex justify-between items-center px-4 py-1.5 bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 shrink-0 mb-2 rounded-none shadow-none">
+        <h2 className="text-xl font-bold text-black dark:text-white uppercase">Customers</h2>
         <div className="flex gap-2">
           <div className="relative w-64">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted-more)]" size={16} />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-500" size={16} />
             <input
+              ref={searchInputRef}
               type="text"
               placeholder="Search name, phone or email..."
-              className="w-full pl-10 pr-4 py-1.5 bg-[var(--bg-card)] border border-[var(--border-base)] rounded text-sm focus:outline-none focus:ring-1 focus:ring-[var(--brand-primary)] text-[var(--text-main)]"
+              className="w-full pl-10 pr-4 py-1 bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 rounded-none text-base focus:outline-none text-neutral-900 dark:text-neutral-100"
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
             />
           </div>
           <button
             onClick={() => setIsModalOpen(true)}
-            className="bg-[var(--brand-primary)] hover:bg-[var(--brand-primary-hover)] text-white font-medium py-1.5 px-4 rounded text-sm flex items-center gap-2 transition-all"
+            className="bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-900 text-neutral-900 dark:text-neutral-100 font-normal py-1 px-3 rounded-none text-base flex items-center gap-2 transition-all"
           >
             <Plus size={16} />
             Add Customer
@@ -78,39 +87,39 @@ export default function CustomerList({ onSelectCustomer }: CustomerListProps) {
       </div>
 
       {/* Table — full width, no container */}
-      <div className="flex-1 overflow-auto">
+      <div className="flex-1 overflow-auto border border-neutral-300 dark:border-neutral-800 bg-white dark:bg-black">
         <table className="w-full text-left border-collapse">
-          <thead className="sticky top-0 z-10">
-            <tr className="bg-[var(--bg-app)] border-b border-[var(--border-base)] text-[11px] font-bold text-[var(--text-main)] uppercase tracking-wider">
-              <th className="px-4 py-2 border-r border-[var(--border-base)]">Name</th>
-              <th className="px-4 py-2 border-r border-[var(--border-base)]">Phone</th>
-              <th className="px-4 py-2 border-r border-[var(--border-base)]">Email</th>
-              <th className="px-4 py-2 border-r border-[var(--border-base)]">Company</th>
-              <th className="px-4 py-2 border-r border-[var(--border-base)] text-right">Wallet</th>
-              <th className="px-4 py-2 text-center">Actions</th>
+          <thead className="sticky top-0 z-10 bg-neutral-200 dark:bg-neutral-900 border-b border-neutral-300 dark:border-neutral-800 text-[13px] font-bold text-black dark:text-white uppercase tracking-wider">
+            <tr>
+              <th className="px-2 py-1 border-r border-neutral-300 dark:border-neutral-800">Name</th>
+              <th className="px-2 py-1 border-r border-neutral-300 dark:border-neutral-800">Phone</th>
+              <th className="px-2 py-1 border-r border-neutral-300 dark:border-neutral-800">Email</th>
+              <th className="px-2 py-1 border-r border-neutral-300 dark:border-neutral-800">Company</th>
+              <th className="px-2 py-1 border-r border-neutral-300 dark:border-neutral-800 text-right">Wallet</th>
+              <th className="px-2 py-1 text-center">Actions</th>
             </tr>
           </thead>
           <tbody>
             {filtered.map(customer => (
-              <tr key={customer.id} className="border-b border-[var(--border-base)] hover:bg-[var(--bg-hover)] transition-colors text-sm bg-[var(--bg-card)]">
-                <td className="px-4 py-2 border-r border-[var(--border-base)] font-bold text-[var(--text-main)]">
+              <tr key={customer.id} className="border-b border-neutral-200 dark:border-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-900 transition-colors text-base font-normal text-neutral-900 dark:text-neutral-100 bg-white dark:bg-black">
+                <td className="px-2 py-1 border-r border-neutral-300 dark:border-neutral-800 font-normal text-neutral-900 dark:text-neutral-100 font-sans">
                   <button
                     onClick={() => onSelectCustomer(customer.id)}
-                    className="hover:text-[var(--brand-primary)] transition-colors text-left text-[var(--text-main)]"
+                    className="hover:text-blue-500 dark:hover:text-blue-400 transition-colors text-left text-neutral-900 dark:text-neutral-100 font-normal font-sans"
                   >
-                    {customer.name}
+                    {safeCustomerName(customer)}
                   </button>
                 </td>
-                <td className="px-4 py-2 border-r border-[var(--border-base)] text-[var(--text-muted)]">{customer.phone || '—'}</td>
-                <td className="px-4 py-2 border-r border-[var(--border-base)] text-[var(--text-muted)]">{customer.email || '—'}</td>
-                <td className="px-4 py-2 border-r border-[var(--border-base)] text-[var(--text-muted)]">{customer.company || '—'}</td>
-                <td className="px-4 py-2 border-r border-[var(--border-base)] text-right font-bold text-[var(--brand-success)]">
+                <td className="px-2 py-1 border-r border-neutral-300 dark:border-neutral-800 text-neutral-600 dark:text-neutral-400 font-sans">{customer.phone || '—'}</td>
+                <td className="px-2 py-1 border-r border-neutral-300 dark:border-neutral-800 text-neutral-600 dark:text-neutral-400 font-sans">{customer.email || '—'}</td>
+                <td className="px-2 py-1 border-r border-neutral-300 dark:border-neutral-800 text-neutral-600 dark:text-neutral-400 font-sans">{customer.company || '—'}</td>
+                <td className="px-2 py-1 border-r border-neutral-300 dark:border-neutral-800 text-right font-normal text-emerald-600 dark:text-emerald-400">
                   €{Number(customer.wallet_balance || 0).toFixed(2)}
                 </td>
-                <td className="px-4 py-2 text-center">
+                <td className="px-2 py-1 text-center font-sans">
                   <button
                     onClick={() => onSelectCustomer(customer.id)}
-                    className="text-[var(--brand-primary)] hover:underline font-medium text-xs"
+                    className="text-blue-500 hover:underline font-normal text-sm font-sans"
                   >
                     View History
                   </button>
@@ -119,7 +128,7 @@ export default function CustomerList({ onSelectCustomer }: CustomerListProps) {
             ))}
             {filtered.length === 0 && (
               <tr>
-                <td colSpan={6} className="px-4 py-16 text-center text-[var(--text-muted-more)] bg-[var(--bg-card)]">
+                <td colSpan={6} className="px-2 py-16 text-center text-neutral-400 dark:text-neutral-500 bg-white dark:bg-black">
                   {searchQuery ? `No customers found for "${searchQuery}"` : 'No customers yet. Add your first customer.'}
                 </td>
               </tr>

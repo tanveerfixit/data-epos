@@ -67,14 +67,14 @@ export const UpdateCartModal: React.FC<UpdateCartModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[110] p-4 animate-in fade-in duration-200">
-      <div className="bg-[var(--bg-card)] rounded-md shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-300 border border-[var(--border-base)]">
+    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[110] p-4">
+      <div className="bg-[var(--bg-card)] w-full max-w-md overflow-hidden border border-[var(--border-base)]">
         {/* Modal Header */}
         <div className="px-6 py-4 border-b border-[var(--border-base)] flex justify-between items-center bg-[var(--bg-header)]">
           <h3 className="text-sm font-black text-[var(--text-main)] uppercase tracking-widest">Update POS Cart</h3>
           <button 
             onClick={onClose}
-            className="p-1 rounded-full hover:bg-[var(--bg-hover)] text-[var(--text-muted-more)] transition-colors"
+            className="p-1 hover:bg-[var(--bg-hover)] text-[var(--text-muted-more)]"
           >
             <X size={20} />
           </button>
@@ -82,7 +82,7 @@ export const UpdateCartModal: React.FC<UpdateCartModalProps> = ({
 
         {/* Modal Body */}
         <div className="p-6 space-y-5">
-          <div className="flex items-start gap-4 p-3 bg-blue-50 dark:bg-blue-950/20 rounded-lg border border-blue-100 dark:border-blue-900/30">
+          <div className="flex items-start gap-4 p-3 bg-blue-50 dark:bg-blue-950/20 border border-blue-100 dark:border-blue-900/30">
             <Info size={18} className="text-blue-500 mt-0.5 shrink-0" />
             <div>
               <p className="text-sm font-bold text-blue-700 dark:text-blue-400">{item.product_name}</p>
@@ -98,7 +98,7 @@ export const UpdateCartModal: React.FC<UpdateCartModalProps> = ({
                 value={unitPrice}
                 onChange={(e) => setUnitPrice(e.target.value.replace(/[^0-9.]/g, ''))}
                 onFocus={(e) => e.target.select()}
-                className="w-full bg-[var(--bg-app)] border border-[var(--border-base)] rounded px-3 py-2 text-sm font-mono focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all"
+                className="w-full bg-[var(--bg-app)] border border-[var(--border-base)] px-3 py-2 text-sm font-mono focus:outline-none focus:ring-1 focus:ring-blue-500"
                 placeholder="0.00"
               />
             </div>
@@ -112,7 +112,7 @@ export const UpdateCartModal: React.FC<UpdateCartModalProps> = ({
                 onChange={(e) => setQuantity(e.target.value.replace(/[^0-9]/g, ''))}
                 onFocus={(e) => e.target.select()}
                 disabled={item.product_type === 'serialized'}
-                className={`w-full bg-[var(--bg-app)] border border-[var(--border-base)] rounded px-3 py-2 text-sm font-mono focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all ${
+                className={`w-full bg-[var(--bg-app)] border border-[var(--border-base)] px-3 py-2 text-sm font-mono focus:outline-none focus:ring-1 focus:ring-blue-500 ${
                   item.product_type === 'serialized' ? 'opacity-50 cursor-not-allowed bg-slate-100 dark:bg-slate-900' : ''
                 }`}
                 placeholder="1"
@@ -131,13 +131,13 @@ export const UpdateCartModal: React.FC<UpdateCartModalProps> = ({
                 value={discount}
                 onChange={(e) => setDiscount(e.target.value.replace(/[^0-9.]/g, ''))}
                 onFocus={(e) => e.target.select()}
-                className="flex-1 bg-[var(--bg-app)] border border-[var(--border-base)] rounded px-3 py-2 text-sm font-mono focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all"
+                className="flex-1 bg-[var(--bg-app)] border border-[var(--border-base)] px-3 py-2 text-sm font-mono focus:outline-none focus:ring-1 focus:ring-blue-500"
                 placeholder="0"
               />
               <select 
                 value={discountType}
                 onChange={(e) => setDiscountType(e.target.value as 'percentage' | 'fixed')}
-                className="bg-[var(--bg-app)] border border-[var(--border-base)] rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all"
+                className="bg-[var(--bg-app)] border border-[var(--border-base)] px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
               >
                 <option value="percentage">%</option>
                 <option value="fixed">€</option>
@@ -150,7 +150,7 @@ export const UpdateCartModal: React.FC<UpdateCartModalProps> = ({
             <textarea 
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              className="w-full bg-[var(--bg-app)] border border-[var(--border-base)] rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all min-h-[80px]"
+              className="w-full bg-[var(--bg-app)] border border-[var(--border-base)] px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 min-h-[80px]"
               placeholder="Add any internal notes about this item..."
             />
           </div>
@@ -171,13 +171,13 @@ export const UpdateCartModal: React.FC<UpdateCartModalProps> = ({
         <div className="px-6 py-4 bg-[var(--bg-app)] border-t border-[var(--border-base)] flex gap-3">
           <button 
             onClick={onClose}
-            className="flex-1 py-2.5 rounded font-bold text-[var(--text-muted)] hover:bg-[var(--bg-hover)] transition-all border border-[var(--border-base)] uppercase text-xs tracking-widest"
+            className="flex-1 py-2.5 font-bold text-[var(--text-muted)] hover:bg-[var(--bg-hover)] border border-[var(--border-base)] uppercase text-xs tracking-widest"
           >
             Cancel
           </button>
           <button 
             onClick={handleSave}
-            className="flex-1 py-2.5 rounded font-bold text-white bg-blue-600 hover:bg-blue-700 transition-all shadow-lg shadow-blue-200 dark:shadow-none flex items-center justify-center gap-2 uppercase text-xs tracking-widest"
+            className="flex-1 py-2.5 font-bold text-white bg-blue-600 hover:bg-blue-700 flex items-center justify-center gap-2 uppercase text-xs tracking-widest"
           >
             <Save size={16} />
             Update Item

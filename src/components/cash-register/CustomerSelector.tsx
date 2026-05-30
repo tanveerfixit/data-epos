@@ -1,6 +1,7 @@
 import React from 'react';
 import { User, UserPlus, Search, X, Plus } from 'lucide-react';
 import { Customer } from '../../types';
+import { safeCustomerName } from '../../utils/customerName';
 
 interface CustomerSelectorProps {
   selectedCustomer: Customer | null;
@@ -45,11 +46,11 @@ export const CustomerSelector: React.FC<CustomerSelectorProps> = ({
         <div className="bg-[var(--bg-hover)] border border-[var(--brand-primary)] rounded-md p-3 flex justify-between items-center animate-in fade-in slide-in-from-top-1">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-[var(--brand-primary)] rounded-full flex items-center justify-center text-white font-bold">
-              {selectedCustomer.first_name?.[0] || selectedCustomer.name?.[0] || '?'}
+              {safeCustomerName(selectedCustomer).charAt(0) || '?'}
             </div>
             <div>
               <p className="font-bold text-[var(--text-main)] text-sm">
-                {selectedCustomer.first_name ? `${selectedCustomer.first_name} ${selectedCustomer.last_name}` : selectedCustomer.name}
+                {safeCustomerName(selectedCustomer)}
               </p>
               <div className="flex items-center gap-2">
                 <p className="text-xs text-[var(--brand-primary)] font-medium">{selectedCustomer.phone}</p>
@@ -101,11 +102,11 @@ export const CustomerSelector: React.FC<CustomerSelectorProps> = ({
                   className="w-full text-left p-3 hover:bg-[var(--bg-hover)] transition-colors flex items-center gap-3 border-b border-[var(--border-base)] last:border-0"
                 >
                   <div className="w-8 h-8 bg-[var(--bg-app)] rounded-full flex items-center justify-center text-[var(--text-muted)] text-xs font-bold">
-                    {customer.first_name?.[0] || customer.name?.[0] || '?'}
+                    {safeCustomerName(customer).charAt(0) || '?'}
                   </div>
                   <div>
                     <p className="text-sm font-bold text-[var(--text-main)]">
-                      {customer.first_name ? `${customer.first_name} ${customer.last_name}` : customer.name}
+                      {safeCustomerName(customer)}
                     </p>
                     <p className="text-[10px] text-[var(--text-muted)] font-mono">{customer.phone}</p>
                   </div>

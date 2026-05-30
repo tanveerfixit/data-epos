@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Package, History, Plus, Edit3, Trash2, Link, ExternalLink, List, Search } from 'lucide-react';
+import { ArrowLeft, Trash2, List, Link } from 'lucide-react';
 import { Product, ProductActivity } from '../types';
 
 interface ProductWithStock extends Product {
@@ -84,41 +84,50 @@ export default function ProductDetails({
     }
   };
 
-  if (loading && !product) return <div className="p-8 text-center text-slate-500">Loading product details...</div>;
-  if (!product) return <div className="p-8 text-center text-red-500">Product not found</div>;
+  if (loading && !product) return (
+    <div className="flex items-center justify-center h-full bg-neutral-100 dark:bg-neutral-950 text-neutral-900 dark:text-neutral-100 font-mono p-8 text-lg">
+      *** LOADING SYSTEM DATA ***
+    </div>
+  );
+  
+  if (!product) return (
+    <div className="flex items-center justify-center h-full bg-neutral-100 dark:bg-neutral-955 text-red-500 font-mono p-8 text-lg">
+      *** PRODUCT NOT FOUND ***
+    </div>
+  );
 
   const totalStock = Array.isArray(product.stock) ? product.stock.reduce((acc, s) => acc + s.quantity, 0) : 0;
 
   return (
-    <div className="flex flex-col h-full bg-[#f4f7f9]">
+    <div className="flex flex-col h-full bg-neutral-100 text-neutral-900 dark:bg-neutral-955 dark:text-neutral-100 font-mono text-base px-2 py-2 select-none w-full overflow-auto" style={{ fontSize: '17px' }}>
       {/* Tabs Header */}
-      <div className="flex bg-[#e9ecef] border-b border-slate-300 px-4 pt-2 gap-1">
+      <div className="flex bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 px-4 pt-2 gap-1 rounded-none shadow-none mb-2 flex-wrap md:flex-nowrap">
         <button 
           onClick={() => setActiveTab('info')}
-          className={`px-4 py-2 text-sm font-medium rounded-t-lg border-t border-x transition-colors ${
+          className={`px-4 py-1.5 border border-neutral-300 dark:border-neutral-800 border-b-0 text-base font-bold -mb-px relative transition-colors rounded-none ${
             activeTab === 'info' 
-              ? 'bg-white border-slate-300 text-slate-700 -mb-[1px]' 
-              : 'bg-slate-200 border-transparent text-slate-500 hover:bg-slate-100'
+              ? 'bg-neutral-200 dark:bg-neutral-900 text-black dark:text-white' 
+              : 'bg-white dark:bg-black text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-950'
           }`}
         >
           Product Information
         </button>
         <button 
           onClick={() => setActiveTab('pricing')}
-          className={`px-4 py-2 text-sm font-medium rounded-t-lg border-t border-x transition-colors ${
+          className={`px-4 py-1.5 border border-neutral-300 dark:border-neutral-800 border-b-0 text-base font-bold -mb-px relative transition-colors rounded-none ${
             activeTab === 'pricing' 
-              ? 'bg-white border-slate-300 text-slate-700 -mb-[1px]' 
-              : 'bg-slate-200 border-transparent text-slate-500 hover:bg-slate-100'
+              ? 'bg-neutral-200 dark:bg-neutral-900 text-black dark:text-white' 
+              : 'bg-white dark:bg-black text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-950'
           }`}
         >
           Special Pricing
         </button>
         <button 
           onClick={() => setActiveTab('activity')}
-          className={`px-4 py-2 text-sm font-medium rounded-t-lg border-t border-x transition-colors ${
+          className={`px-4 py-1.5 border border-neutral-300 dark:border-neutral-800 border-b-0 text-base font-bold -mb-px relative transition-colors rounded-none ${
             activeTab === 'activity' 
-              ? 'bg-white border-slate-300 text-slate-700 -mb-[1px]' 
-              : 'bg-slate-200 border-transparent text-slate-500 hover:bg-slate-100'
+              ? 'bg-neutral-200 dark:bg-neutral-900 text-black dark:text-white' 
+              : 'bg-white dark:bg-black text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-950'
           }`}
         >
           Activity Log
@@ -127,14 +136,14 @@ export default function ProductDetails({
         <div className="ml-auto flex items-center pb-2 gap-2">
           <button 
             onClick={handleArchive}
-            className="bg-white border border-red-200 hover:bg-red-50 text-red-600 font-medium py-1 px-3 rounded text-xs flex items-center gap-1 transition-all shadow-sm"
+            className="bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-900 text-red-650 dark:text-red-400 font-bold py-1 px-3 rounded-none text-sm flex items-center gap-1 transition-all shadow-none"
           >
             <Trash2 size={14} />
             Archive
           </button>
           <button 
             onClick={onBack}
-            className="bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 font-medium py-1 px-3 rounded text-xs flex items-center gap-1 transition-all shadow-sm"
+            className="bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-900 text-neutral-900 dark:text-neutral-100 font-bold py-1 px-3 rounded-none text-sm flex items-center gap-1 transition-all shadow-none"
           >
             <List size={14} />
             List Products
@@ -142,25 +151,25 @@ export default function ProductDetails({
         </div>
       </div>
 
-      <div className="flex-1 overflow-auto bg-white m-4 border border-slate-300 rounded shadow-sm">
+      <div className="flex-1 overflow-auto bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 rounded-none shadow-none p-4">
         {activeTab === 'info' && (
           <div className="p-8">
             <div className="flex flex-col md:flex-row gap-12">
               {/* Left: Product Image Placeholder */}
               <div className="w-full md:w-1/3 flex flex-col items-center">
-                <div className="w-64 h-64 bg-slate-50 border-2 border-slate-200 rounded-lg flex items-center justify-center mb-6">
-                  <Link size={120} className="text-slate-900" strokeWidth={3} />
+                <div className="w-64 h-64 bg-neutral-200 dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-800 rounded-none flex items-center justify-center mb-6 shadow-none">
+                  <Link size={120} className="text-neutral-900 dark:text-neutral-100" strokeWidth={3} />
                 </div>
                 <div className="flex flex-wrap gap-2 justify-center">
-                  <button className="bg-[#555] hover:bg-[#444] text-white text-xs font-bold py-2 px-4 rounded transition-colors">
+                  <button className="bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-900 text-neutral-900 dark:text-neutral-100 text-sm font-normal py-1 px-3 rounded-none transition-colors">
                     Change Picture
                   </button>
-                  <button className="bg-[#555] hover:bg-[#444] text-white text-xs font-bold py-2 px-4 rounded transition-colors">
+                  <button className="bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-900 text-neutral-900 dark:text-neutral-100 text-sm font-normal py-1 px-3 rounded-none transition-colors">
                     Web Description
                   </button>
                   <button 
                     onClick={() => setIsEditing(true)}
-                    className="bg-[#555] hover:bg-[#444] text-white text-xs font-bold py-2 px-4 rounded transition-colors"
+                    className="bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-900 text-neutral-900 dark:text-neutral-100 text-sm font-normal py-1 px-3 rounded-none transition-colors"
                   >
                     Edit
                   </button>
@@ -168,24 +177,24 @@ export default function ProductDetails({
               </div>
 
               {/* Right: Product Details */}
-              <div className="flex-1 space-y-4">
-                <h1 className="text-2xl font-medium text-[#2980b9] mb-4">{product.product_name}</h1>
+              <div className="flex-1 space-y-4 font-normal text-neutral-900 dark:text-neutral-100 text-base">
+                <h1 className="text-2xl font-bold text-[#2980b9] dark:text-[#2980b9] mb-4">{product.product_name}</h1>
                 
-                <div className="grid grid-cols-[180px_1fr] gap-y-3 text-sm">
-                  <span className="font-bold text-slate-700">Category :</span>
-                  <span className="text-slate-500">{product.category_name || 'Uncategorized'}</span>
+                <div className="grid grid-cols-[200px_1fr] gap-y-3 text-base font-normal">
+                  <span className="font-normal text-neutral-900 dark:text-neutral-100">Category :</span>
+                  <span className="text-neutral-600 dark:text-neutral-400">{product.category_name || 'Uncategorized'}</span>
                   
-                  <span className="font-bold text-slate-700">Inventory & Tracking Type :</span>
-                  <span className="text-slate-500 capitalize">{product.product_type}</span>
+                  <span className="font-normal text-neutral-900 dark:text-neutral-100">Inventory & Tracking Type :</span>
+                  <span className="text-neutral-600 dark:text-neutral-400 capitalize">{product.product_type}</span>
                   
-                  <span className="font-bold text-slate-700">SKU/Barcode :</span>
-                  <span className="text-slate-500 font-mono">{product.sku_code || 'N/A'}</span>
+                  <span className="font-normal text-neutral-900 dark:text-neutral-100">SKU/Barcode :</span>
+                  <span className="text-neutral-600 dark:text-neutral-400 font-mono">{product.sku_code || 'N/A'}</span>
                   
-                  <span className="font-bold text-slate-700">Need/Have/OnPO :</span>
+                  <span className="font-normal text-neutral-900 dark:text-neutral-100">Need/Have/OnPO :</span>
                   <div className="flex items-center gap-3">
                     <button 
                       onClick={() => onViewDevices(product.id)}
-                      className="text-[#2980b9] font-bold hover:underline"
+                      className="text-[#2980b9] font-normal hover:underline"
                     >
                       0 / {totalStock} / 0
                     </button>
@@ -194,23 +203,23 @@ export default function ProductDetails({
                     </button>
                     <button 
                       onClick={() => onAddInventory(product.id)}
-                      className="bg-[#ffff00] hover:bg-[#e6e600] text-slate-900 font-bold py-1 px-3 rounded text-xs transition-colors shadow-sm"
+                      className="bg-amber-400 hover:bg-amber-500 text-slate-900 font-bold py-1 px-3 rounded-none text-sm transition-colors shadow-none"
                     >
                       Add Inventory
                     </button>
                   </div>
                   
-                  <span className="font-bold text-slate-700">Minimum Stock :</span>
-                  <span className="text-slate-500">0</span>
+                  <span className="font-normal text-neutral-900 dark:text-neutral-100">Minimum Stock :</span>
+                  <span className="text-neutral-600 dark:text-neutral-400">0</span>
                   
-                  <span className="font-bold text-slate-700">Selling Price :</span>
-                  <span className="text-slate-500 font-bold">€{product.selling_price.toFixed(2)}</span>
+                  <span className="font-normal text-neutral-900 dark:text-neutral-100">Selling Price :</span>
+                  <span className="text-neutral-900 dark:text-neutral-100 font-bold">€{product.selling_price.toFixed(2)}</span>
                   
-                  <span className="font-bold text-slate-700">Minimum Selling Price :</span>
-                  <span className="text-slate-500 font-bold">€0.00</span>
+                  <span className="font-normal text-neutral-900 dark:text-neutral-100">Minimum Selling Price :</span>
+                  <span className="text-neutral-900 dark:text-neutral-100 font-bold">€0.00</span>
                   
-                  <span className="font-bold text-slate-700">Taxable :</span>
-                  <span className="text-slate-500">Yes</span>
+                  <span className="font-normal text-neutral-900 dark:text-neutral-100">Taxable :</span>
+                  <span className="text-neutral-600 dark:text-neutral-400">Yes</span>
                 </div>
               </div>
             </div>
@@ -228,34 +237,34 @@ export default function ProductDetails({
         {activeTab === 'activity' && (
           <div className="flex flex-col h-full">
             {/* Activity Log Header */}
-            <div className="p-3 bg-[#e9ecef] border-b border-slate-300 flex justify-between items-center">
-              <h3 className="text-sm font-bold text-slate-700">Activity Log</h3>
+            <div className="p-3 bg-neutral-200 dark:bg-neutral-900 border-b border-neutral-300 dark:border-neutral-800 flex justify-between items-center rounded-none">
+              <h3 className="text-base font-bold text-black dark:text-white uppercase">Activity Log</h3>
               <div className="flex gap-2">
-                <select className="bg-white border border-slate-300 rounded px-2 py-1 text-xs text-slate-600 focus:outline-none focus:ring-1 focus:ring-[#3498db]">
+                <select className="bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 rounded-none px-2 py-1 text-sm text-neutral-900 dark:text-neutral-100 focus:outline-none">
                   <option>All Activities</option>
                 </select>
-                <button className="bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 font-medium py-1 px-3 rounded text-xs transition-all shadow-sm">
+                <button className="bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-900 text-neutral-900 dark:text-neutral-100 font-bold py-1 px-3 rounded-none text-sm transition-all shadow-none">
                   Add New Note
                 </button>
               </div>
             </div>
 
             {/* Activity Log Table */}
-            <div className="flex-1 overflow-auto">
+            <div className="flex-1 overflow-auto bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800">
               <table className="w-full text-left border-collapse">
                 <thead>
-                  <tr className="bg-[#f8f9fa] border-b border-slate-300 text-[11px] font-bold text-slate-700 uppercase tracking-wider">
-                    <th className="px-4 py-2 border-r border-slate-300 w-24">Date</th>
-                    <th className="px-4 py-2 border-r border-slate-300 w-24">Time</th>
-                    <th className="px-4 py-2 border-r border-slate-300 w-48">User</th>
-                    <th className="px-4 py-2 border-r border-slate-300 w-64">Activity</th>
-                    <th className="px-4 py-2">Details</th>
+                  <tr className="bg-neutral-100 dark:bg-neutral-955 border-b border-neutral-300 dark:border-neutral-800 text-[12px] font-bold text-black dark:text-white uppercase tracking-wider">
+                    <th className="px-2 py-1 border-r border-neutral-300 dark:border-neutral-800 w-24">Date</th>
+                    <th className="px-2 py-1 border-r border-neutral-300 dark:border-neutral-800 w-24">Time</th>
+                    <th className="px-2 py-1 border-r border-neutral-300 dark:border-neutral-800 w-48">User</th>
+                    <th className="px-2 py-1 border-r border-neutral-300 dark:border-neutral-800 w-64">Activity</th>
+                    <th className="px-2 py-1">Details</th>
                   </tr>
                 </thead>
-                <tbody>
+                <tbody className="text-sm font-normal">
                   {activities.length === 0 ? (
                     <tr>
-                      <td colSpan={5} className="px-4 py-8 text-center text-slate-400 italic text-sm">
+                      <td colSpan={5} className="px-2 py-8 text-center text-neutral-400 dark:text-neutral-500 italic text-sm">
                         No activities recorded for this product
                       </td>
                     </tr>
@@ -263,17 +272,17 @@ export default function ProductDetails({
                     activities.map((activity, idx) => (
                       <tr 
                         key={activity.id} 
-                        className={`border-b border-slate-200 text-xs hover:bg-slate-50 transition-colors ${idx % 2 === 1 ? 'bg-[#f8f9fa]' : ''}`}
+                        className={`border-b border-neutral-200 dark:border-neutral-800 text-sm hover:bg-neutral-100 dark:hover:bg-neutral-900 transition-colors bg-white dark:bg-black text-neutral-900 dark:text-neutral-100`}
                       >
-                        <td className="px-4 py-2 border-r border-slate-200 text-slate-600">
+                        <td className="px-2 py-1 border-r border-neutral-200 dark:border-neutral-800 text-neutral-600 dark:text-neutral-400">
                           {new Date(activity.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit' }).replace(/\//g, '-')}
                         </td>
-                        <td className="px-4 py-2 border-r border-slate-200 text-slate-600">
+                        <td className="px-2 py-1 border-r border-neutral-200 dark:border-neutral-800 text-neutral-600 dark:text-neutral-400">
                           {new Date(activity.created_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }).toLowerCase()}
                         </td>
-                        <td className="px-4 py-2 border-r border-slate-200 text-slate-600">{activity.user_name || 'System'}</td>
-                        <td className="px-4 py-2 border-r border-slate-200 text-slate-700 font-medium">{activity.activity}</td>
-                        <td className="px-4 py-2 text-slate-600">{activity.details}</td>
+                        <td className="px-2 py-1 border-r border-neutral-200 dark:border-neutral-800 text-neutral-600 dark:text-neutral-400">{activity.user_name || 'System'}</td>
+                        <td className="px-2 py-1 border-r border-neutral-200 dark:border-neutral-800 text-neutral-700 dark:text-neutral-300 font-normal">{activity.activity}</td>
+                        <td className="px-2 py-1 text-neutral-600 dark:text-neutral-400">{activity.details}</td>
                       </tr>
                     ))
                   )}
@@ -282,18 +291,18 @@ export default function ProductDetails({
             </div>
 
             {/* Activity Log Footer */}
-            <div className="p-2 bg-[#f8f9fa] border-t border-slate-300 flex justify-between items-center text-[11px] text-slate-600">
+            <div className="p-2 bg-white dark:bg-black border-t border-neutral-300 dark:border-neutral-800 flex justify-between items-center text-[12px] text-neutral-500 dark:text-neutral-400">
               <div className="flex items-center gap-2">
-                <select className="bg-white border border-slate-300 rounded px-1 py-0.5 focus:outline-none">
+                <select className="bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 rounded-none px-1 py-0.5 focus:outline-none">
                   <option>20</option>
                 </select>
                 <span className="font-bold">1-{activities.length}/{activities.length}</span>
               </div>
               
               <div className="flex items-center gap-1">
-                <button className="px-1.5 py-0.5 border border-slate-300 rounded hover:bg-slate-50">«</button>
-                <button className="px-2 py-0.5 bg-[#3498db] text-white rounded font-bold">1</button>
-                <button className="px-1.5 py-0.5 border border-slate-300 rounded hover:bg-slate-50">»</button>
+                <button className="px-1.5 py-0.5 border border-neutral-300 dark:border-neutral-800 rounded-none hover:bg-neutral-200 dark:hover:bg-neutral-900">«</button>
+                <button className="px-2 py-0.5 bg-neutral-300 dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 rounded-none font-bold">1</button>
+                <button className="px-1.5 py-0.5 border border-neutral-300 dark:border-neutral-800 rounded-none hover:bg-neutral-200 dark:hover:bg-neutral-900">»</button>
               </div>
             </div>
           </div>

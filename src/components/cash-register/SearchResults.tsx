@@ -5,62 +5,110 @@ interface SearchResultsProps {
   results: Product[];
   searchQuery: string;
   onAddProduct: (product: Product) => void;
+  onQuickAddClick?: (searchTerm: string) => void;
+  activeIndex?: number;
 }
 
 export const SearchResults: React.FC<SearchResultsProps> = ({
   results,
   searchQuery,
-  onAddProduct
+  onAddProduct,
+  onQuickAddClick,
+  activeIndex = 0
 }) => {
-  if (results.length === 0) return null;
+  const hasQuery = searchQuery.trim().length >= 2;
+
+  if (results.length === 0) {
+    if (!hasQuery || !onQuickAddClick) return null;
+
+    return (
+      <div className="absolute top-full left-0 right-0 z-[60] bg-white border border-gray-300 p-4 mt-1 text-sm text-black">
+        <div className="text-center">
+          <p className="mb-2">No products found matching "{searchQuery}"</p>
+          <button
+            type="button"
+            onClick={() => onQuickAddClick(searchQuery)}
+            className="px-3 py-1 bg-black text-white hover:bg-gray-800 text-xs font-normal uppercase transition-colors border-0 cursor-pointer"
+          >
+            Add "{searchQuery}"
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   const highlightText = (text: string, highlight: string) => {
     if (!highlight.trim()) return text;
-    const regex = new RegExp(`(${highlight})`, 'gi');
-    const parts = text.split(regex);
-    return parts.map((part, i) => 
-      regex.test(part) ? (
-        <span key={i} className="text-teal-500 font-bold">{part}</span>
-      ) : (
-        part
-      )
-    );
+    
+    // Normalize spaces and hyphens to match interchangeably (e.g. "type c" matches "type-c")
+    const escaped = highlight
+      .trim()
+      .replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&') // Escape regex chars
+      .replace(/\s+/g, '[ -]?');                 // Match spaces, hyphens or nothing between words
+      
+    try {
+      const regex = new RegExp(`(${escaped})`, 'gi');
+      const parts = text.split(regex);
+      return parts.map((part, i) => 
+        regex.test(part) ? (
+          <mark 
+            key={i} 
+            style={{ 
+              backgroundColor: '#fef08a', // warm clean yellow
+              color: '#000000', 
+              fontWeight: 'normal',
+              padding: '0 2px',
+              borderRadius: '2px'
+            }}
+          >
+            {part}
+          </mark>
+        ) : (
+          part
+        )
+      );
+    } catch (e) {
+      return text;
+    }
   };
 
   return (
-    <div className="absolute top-full left-0 right-0 z-[60] bg-[var(--bg-card)] border-x border-b border-[var(--border-base)] rounded-none shadow-2xl overflow-hidden animate-in slide-in-from-top-1 duration-200">
-      <div className="pt-2">
+    <div className="absolute top-full left-0 right-0 z-[60] bg-white border border-gray-300 mt-1 shadow-md text-[15px] text-black font-sans">
+      <div className="max-h-60 overflow-y-auto">
         {results.map((product, idx) => (
           <button
             key={`${product.id}-${idx}`}
             onClick={() => onAddProduct(product)}
-            className="w-full text-left px-5 py-2.5 hover:bg-[var(--bg-hover)] transition-colors flex items-center gap-2 text-sm font-normal text-[var(--text-main)] group"
+            className={`w-full text-left px-4 py-2 hover:bg-gray-200 transition-colors flex items-center justify-between gap-4 border-0 border-b border-gray-100 cursor-pointer text-black font-normal ${
+              idx === activeIndex ? 'bg-gray-200' : 'bg-white'
+            }`}
           >
-            <div className="flex-1 min-w-0 flex items-center gap-2">
-              <div className="flex flex-col">
-                <p className="truncate font-medium group-hover:text-[var(--text-main)]">
-                  {highlightText(product.product_name, searchQuery)}
-                </p>
-                {(product as any).imei && (
-                  <p className="text-[10px] font-bold text-blue-600 dark:text-blue-400 font-mono flex items-center gap-1">
-                    <span className="bg-blue-500/10 px-1 rounded">IMEI: {(product as any).imei}</span>
-                  </p>
-                )}
-              </div>
-              <span className="text-slate-300">|</span>
-              <p className="text-[11px] text-[var(--text-main)] font-mono uppercase tracking-tighter">
-                {product.sku_code || 'N/A'} • {product.product_type === 'serialized' ? 'UNIT' : `${product.total_stock || 0} STOCK`}
-              </p>
-            </div>
-            <div className="shrink-0 flex items-center gap-3">
-              <span className="text-[var(--text-main)] font-bold">€{product.selling_price.toFixed(2)}</span>
-              <span className="text-blue-600 font-black text-xl leading-none opacity-0 group-hover:opacity-100 transition-opacity">+</span>
+            <div className="flex-1 min-w-0 text-[15px] flex items-center gap-2 text-black">
+              <span className="font-normal truncate">
+                {highlightText(product.product_name, searchQuery)}
+              </span>
+              <span className="text-gray-400">-</span>
+              <span className="text-gray-600 font-mono whitespace-nowrap">
+                SKU: {product.sku_code || 'N/A'}
+              </span>
+              {((product as any).imei || (product as any).serial) && (
+                <>
+                  <span className="text-gray-400">-</span>
+                  <span className="text-gray-600 font-mono whitespace-nowrap">
+                    {(product as any).imei || (product as any).serial}
+                  </span>
+                </>
+              )}
+              <span className="text-gray-400">-</span>
+              <span className="text-gray-600 font-mono whitespace-nowrap">
+                Qty: {product.product_type === 'serialized' ? '1' : product.total_stock || 0}
+              </span>
             </div>
           </button>
         ))}
       </div>
-      <div className="bg-[var(--bg-app)] px-5 py-2 border-t border-[var(--border-base)] text-[10px] text-[var(--text-muted)] italic">
-        Press enter to add the first result or click an item
+      <div className="bg-gray-50 px-4 py-1.5 border-t border-gray-200 text-xs text-gray-500">
+        Press Enter to add first result or click an item
       </div>
     </div>
   );

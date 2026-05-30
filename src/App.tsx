@@ -8,17 +8,14 @@ import {
   LayoutGrid, 
   Smartphone,
   Search,
-  ChevronDown,
-  ShoppingBag,
-  ClipboardList,
-  Banknote,
-  ArrowLeftRight,
-  Shield,
-  LogOut,
   Sun,
-  Moon
+  Moon,
+  ShoppingBag,
+  Banknote,
+  ArrowLeftRight
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { Routes, Route, useNavigate, useParams, useLocation, Navigate, useSearchParams } from 'react-router-dom';
 import CashRegister from './components/CashRegister';
 import ProductList from './components/ProductList';
 import InvoiceList from './components/InvoiceList';
@@ -50,122 +47,221 @@ import AdminLoginPage from './components/auth/AdminLoginPage';
 import PublicProfile from './components/PublicProfile';
 import { AuthProvider, useAuth } from './context/AuthContext';
 
-type View = 'home' | 'dashboard' | 'register' | 'repairs' | 'invoices' | 'invoice-details' | 'customers' | 'customer-details' | 'products' | 'devices' | 'device-details' | 'sku-device-details' | 'create-product' | 'product-details' | 'add-inventory' | 'purchase-orders' | 'purchase-order-detail' | 'manage-data' | 'end-of-day' | 'getting-started' | 'transfers';
-type AuthView = 'login' | 'signup' | 'forgot' | 'reset' | 'admin-login';
-
 const slugify = (text: string) => {
   return text
     .toString()
     .toLowerCase()
-    .replace(/\s+/g, '-')           // Replace spaces with -
-    .replace(/[^\w\-]+/g, '')       // Remove all non-word chars
-    .replace(/\-\-+/g, '-')         // Replace multiple - with single -
-    .replace(/^-+/, '')             // Trim - from start
-    .replace(/-+$/, '');            // Trim - from end
+    .replace(/\s+/g, '-')
+    .replace(/[^\w\-]+/g, '')
+    .replace(/\-\-+/g, '-')
+    .replace(/^-+/, '')
+    .replace(/-+$/, '');
 };
+
+// ─── Route Wrapper Components ─────────────────────────────────────────────────
+
+const PublicProfileRoute = () => {
+  const { slug } = useParams();
+  const navigate = useNavigate();
+  return <PublicProfile slug={slug!} onBack={() => navigate('/')} />;
+};
+
+const CashRegisterRoute = () => {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const branchSlug = slugify(useAuth().currentUser?.branch_name || 'branch');
+  const initiateDeposit = location.state?.initiateDeposit || false;
+  const preSelectedCustomerId = location.state?.customerId || null;
+
+  return (
+    <CashRegister 
+      preSelectedCustomerId={preSelectedCustomerId}
+      initiateDeposit={initiateDeposit}
+      onViewCustomers={() => navigate(`/${branchSlug}/customers`)} 
+      onSelectCustomer={(id) => navigate(`/${branchSlug}/customers/${id}`)}
+      onSelectProduct={(id) => navigate(`/${branchSlug}/products/${id}`)}
+    />
+  );
+};
+
+const ProductListRoute = () => {
+  const navigate = useNavigate();
+  const branchSlug = slugify(useAuth().currentUser?.branch_name || 'branch');
+  return (
+    <ProductList 
+      onCreateProduct={() => navigate(`/${branchSlug}/create-product`)} 
+      onSelectProduct={(id) => navigate(`/${branchSlug}/products/${id}`)}
+    />
+  );
+};
+
+const ProductDetailsRoute = () => {
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const branchSlug = slugify(useAuth().currentUser?.branch_name || 'branch');
+  return (
+    <ProductDetails 
+      productId={Number(id)} 
+      onBack={() => navigate(`/${branchSlug}/products`)}
+      onAddInventory={(id) => navigate(`/${branchSlug}/add-inventory/${id}`)}
+      onViewDevices={(id) => navigate(`/${branchSlug}/sku-devices/${id}`, { state: { from: `/${branchSlug}/products/${id}` } })}
+    />
+  );
+};
+
+const AddInventoryRoute = () => {
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const branchSlug = slugify(useAuth().currentUser?.branch_name || 'branch');
+  return (
+    <AddInventory 
+      productId={Number(id)} 
+      onBack={() => navigate(`/${branchSlug}/products/${id}`)}
+      onSuccess={() => navigate(`/${branchSlug}/products/${id}`)}
+    />
+  );
+};
+
+const InvoiceListRoute = () => {
+  const navigate = useNavigate();
+  const branchSlug = slugify(useAuth().currentUser?.branch_name || 'branch');
+  return (
+    <InvoiceList 
+      onSelectInvoice={(id) => navigate(`/${branchSlug}/invoices/${id}`)} 
+      onSelectCustomer={(id) => navigate(`/${branchSlug}/customers/${id}`)}
+    />
+  );
+};
+
+const InvoiceDetailsRoute = () => {
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const branchSlug = slugify(useAuth().currentUser?.branch_name || 'branch');
+  return (
+    <InvoiceDetails 
+      invoiceId={Number(id)} 
+      onBack={() => navigate(`/${branchSlug}/invoices`)} 
+      onSelectCustomer={(customerId) => navigate(`/${branchSlug}/customers/${customerId}`)}
+    />
+  );
+};
+
+const CustomerListRoute = () => {
+  const navigate = useNavigate();
+  const branchSlug = slugify(useAuth().currentUser?.branch_name || 'branch');
+  return (
+    <CustomerList 
+      onSelectCustomer={(id) => navigate(`/${branchSlug}/customers/${id}`)} 
+    />
+  );
+};
+
+const CustomerDetailsRoute = () => {
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const branchSlug = slugify(useAuth().currentUser?.branch_name || 'branch');
+  return (
+    <CustomerDetails 
+      customerId={Number(id)} 
+      onBack={() => navigate(`/${branchSlug}/customers`)} 
+      onSelectInvoice={(invId) => navigate(`/${branchSlug}/invoices/${invId}`)}
+      onCreateInvoice={() => navigate(`/${branchSlug}/register`)}
+      onCreateRepair={() => navigate(`/${branchSlug}/repairs`, { state: { customerId: Number(id) } })}
+      onDeposit={() => navigate(`/${branchSlug}/register`, { state: { initiateDeposit: true, customerId: Number(id) } })}
+    />
+  );
+};
+
+const RepairListRoute = () => {
+  const location = useLocation();
+  const customerId = location.state?.customerId || null;
+  return <RepairList preSelectedCustomerId={customerId} />;
+};
+
+const DeviceInventoryRoute = () => {
+  const navigate = useNavigate();
+  const branchSlug = slugify(useAuth().currentUser?.branch_name || 'branch');
+  return (
+    <DeviceInventory 
+      onSelectPO={(poNumber) => {
+        fetch(`/api/purchase-orders/by-number/${poNumber}`)
+          .then(res => res.json())
+          .then(data => {
+            if (data.id) {
+              navigate(`/${branchSlug}/purchase-orders/${data.id}`);
+            }
+          });
+      }}
+      onSelectProduct={(skuId) => navigate(`/${branchSlug}/sku-devices/${skuId}`, { state: { from: `/${branchSlug}/devices` } })}
+      onSelectDevice={(id) => navigate(`/${branchSlug}/devices/${id}`)}
+    />
+  );
+};
+
+const DeviceDetailRoute = () => {
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const branchSlug = slugify(useAuth().currentUser?.branch_name || 'branch');
+  return (
+    <DeviceDetailView 
+      deviceId={Number(id)} 
+      onBack={() => navigate(`/${branchSlug}/devices`)} 
+      onOpenPrinterSettings={() => navigate(`/${branchSlug}/getting-started?tab=manage-label-printer`)}
+    />
+  );
+};
+
+const SkuDeviceDetailsRoute = () => {
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const branchSlug = slugify(useAuth().currentUser?.branch_name || 'branch');
+  const backUrl = location.state?.from || `/${branchSlug}/devices`;
+  return (
+    <SkuDeviceDetails 
+      skuId={Number(id)} 
+      onBack={() => navigate(backUrl)} 
+    />
+  );
+};
+
+const PurchaseOrderListRoute = () => {
+  const navigate = useNavigate();
+  const branchSlug = slugify(useAuth().currentUser?.branch_name || 'branch');
+  return (
+    <PurchaseOrderList 
+      onSelectPO={(id) => navigate(`/${branchSlug}/purchase-orders/${id}`)}
+    />
+  );
+};
+
+const PurchaseOrderDetailRoute = () => {
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const branchSlug = slugify(useAuth().currentUser?.branch_name || 'branch');
+  return (
+    <PurchaseOrderDetail 
+      poId={Number(id)}
+      onBack={() => navigate(`/${branchSlug}/purchase-orders`)}
+    />
+  );
+};
+
+const GettingStartedRoute = () => {
+  const [searchParams] = useSearchParams();
+  const tab = searchParams.get('tab') || undefined;
+  return <GettingStarted initialTab={tab} />;
+};
+
+// ─── Main Application Components ──────────────────────────────────────────────
 
 function AppInner() {
   const { currentUser, isAdmin, logout, loading } = useAuth();
-  const [authView, setAuthView] = useState<AuthView>('login');
-  const [resetToken, setResetToken] = useState<string | null>(null);
+  const navigate = useNavigate();
+  const location = useLocation();
+  const [searchParams] = useSearchParams();
+  
   const [showAdminPortal, setShowAdminPortal] = useState(false);
-  const [currentView, setCurrentView] = useState<View>('home');
-  const [selectedDeviceId, setSelectedDeviceId] = useState<number | null>(null);
-  const [selectedProductId, setSelectedProductId] = useState<number | null>(null);
-  const [selectedCustomerId, setSelectedCustomerId] = useState<number | null>(null);
-  const [selectedInvoiceId, setSelectedInvoiceId] = useState<number | null>(null);
-  const [selectedPoId, setSelectedPoId] = useState<number | null>(null);
-  const [selectedPoNumber, setSelectedPoNumber] = useState<string | null>(null);
-  const [gettingStartedTab, setGettingStartedTab] = useState<string | undefined>(undefined);
-  const [previousView, setPreviousView] = useState<View | null>(null);
-  const [initiateDeposit, setInitiateDeposit] = useState(false);
-  const [publicSlug, setPublicSlug] = useState<string | null>(null);
-
-  // Helper to sync app state with URL in real-time
-  useEffect(() => {
-    if (!currentUser) return;
-    
-    const branchSlug = slugify(currentUser.branch_name || 'branch');
-    const expectedPath = `/${branchSlug}/${currentView}`;
-    
-    if (window.location.pathname !== expectedPath) {
-      window.history.pushState(null, '', expectedPath);
-    }
-  }, [currentUser, currentView]);
-
-  // Initial parse on app load / login
-  useEffect(() => {
-    const path = window.location.pathname.slice(1);
-    const standardPaths = ['', 'login', 'signup', 'forgot', 'reset', 'admin-login'];
-    
-    if (!currentUser) {
-      if (path && !standardPaths.includes(path)) {
-        if (path.includes('/')) {
-          // If the path contains a slash (e.g., 'ipear-in-tesco/home'), it is a protected route.
-          // Since the user is not logged in, redirect them to '/' (login/home) immediately.
-          window.history.pushState(null, '', '/');
-          setPublicSlug(null);
-        } else {
-          setPublicSlug(path);
-        }
-      } else {
-        setPublicSlug(null);
-      }
-      return;
-    }
-    
-    // User is logged in - parse branch and view slug
-    const pathParts = window.location.pathname.split('/').filter(Boolean);
-    const validViews: View[] = [
-      'home', 'dashboard', 'register', 'repairs', 'invoices', 
-      'invoice-details', 'customers', 'customer-details', 'products', 
-      'devices', 'device-details', 'sku-device-details', 'create-product', 
-      'product-details', 'add-inventory', 'purchase-orders', 
-      'purchase-order-detail', 'manage-data', 'end-of-day', 
-      'getting-started', 'transfers'
-    ];
-    
-    if (pathParts.length >= 2) {
-      const urlView = pathParts[1] as View;
-      if (validViews.includes(urlView)) {
-        setCurrentView(urlView);
-      } else {
-        setCurrentView('home');
-      }
-    } else {
-      setCurrentView('home');
-    }
-  }, [currentUser]);
-
-  // Support native browser Back/Forward button clicks (popstate)
-  useEffect(() => {
-    const handlePopState = () => {
-      if (!currentUser) return;
-      
-      const pathParts = window.location.pathname.split('/').filter(Boolean);
-      const validViews: View[] = [
-        'home', 'dashboard', 'register', 'repairs', 'invoices', 
-        'invoice-details', 'customers', 'customer-details', 'products', 
-        'devices', 'device-details', 'sku-device-details', 'create-product', 
-        'product-details', 'add-inventory', 'purchase-orders', 
-        'purchase-order-detail', 'manage-data', 'end-of-day', 
-        'getting-started', 'transfers'
-      ];
-      
-      if (pathParts.length >= 2) {
-        const urlView = pathParts[1] as View;
-        if (validViews.includes(urlView)) {
-          setCurrentView(urlView);
-          return;
-        }
-      }
-      setCurrentView('home');
-    };
-    
-    window.addEventListener('popstate', handlePopState);
-    return () => window.removeEventListener('popstate', handlePopState);
-  }, [currentUser]);
-
   const [isDarkMode, setIsDarkMode] = useState(() => {
     const saved = localStorage.getItem('theme');
     return saved === 'dark' || (!saved && window.matchMedia('(prefers-color-scheme: dark)').matches);
@@ -181,13 +277,6 @@ function AppInner() {
     }
   }, [isDarkMode]);
 
-  // Check for reset token in URL
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const token = params.get('reset_token');
-    if (token) { setResetToken(token); setAuthView('reset'); }
-  }, []);
-
   if (loading) {
     return (
       <div className="min-h-screen bg-[var(--bg-app)] flex flex-col items-center justify-center p-6">
@@ -197,34 +286,42 @@ function AppInner() {
     );
   }
 
-  // Public Profile handling
-  if (publicSlug && !currentUser) {
-    return <PublicProfile slug={publicSlug} onBack={() => { setPublicSlug(null); window.history.pushState({}, '', '/'); }} />;
-  }
-
-  // Auth flow
+  // Auth flow for non-logged-in users
   if (!currentUser) {
-    if (authView === 'signup') return <SignupPage onGoLogin={() => setAuthView('login')} />;
-    if (authView === 'forgot') return <ForgotPassword onBack={() => setAuthView('login')} />;
-    if (authView === 'reset' && resetToken) return <ResetPassword token={resetToken} onGoLogin={() => { setResetToken(null); setAuthView('login'); window.history.replaceState({}, '', '/'); }} />;
-    if (authView === 'admin-login') return <AdminLoginPage onBack={() => setAuthView('login')} />;
+    const resetToken = searchParams.get('reset_token');
     return (
-      <LoginPage 
-        onGoSignup={() => setAuthView('signup')} 
-        onForgotPassword={() => setAuthView('forgot')} 
-        onAdminLogin={() => setAuthView('admin-login')}
-      />
+      <Routes>
+        <Route path="/signup" element={<SignupPage onGoLogin={() => navigate('/')} />} />
+        <Route path="/forgot" element={<ForgotPassword onBack={() => navigate('/')} />} />
+        <Route path="/reset" element={
+          resetToken ? <ResetPassword token={resetToken} onGoLogin={() => navigate('/')} /> : <Navigate to="/" replace />
+        } />
+        <Route path="/admin-login" element={<AdminLoginPage onBack={() => navigate('/')} />} />
+        <Route path="/:slug" element={<PublicProfileRoute />} />
+        <Route path="/" element={
+          <LoginPage 
+            onGoSignup={() => navigate('/signup')} 
+            onForgotPassword={() => navigate('/forgot')} 
+            onAdminLogin={() => navigate('/admin-login')}
+          />
+        } />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
     );
   }
 
-  const handleSidebarNavigate = (view: View) => {
-    setSelectedCustomerId(null);
-    setSelectedProductId(null);
-    setSelectedInvoiceId(null);
-    setSelectedPoId(null);
-    setSelectedDeviceId(null);
-    setInitiateDeposit(false);
-    setCurrentView(view);
+  // Determine current active view for sidebar highlighting
+  const pathParts = location.pathname.split('/').filter(Boolean);
+  const currentView = pathParts[1] || 'home';
+  const branchSlug = slugify(currentUser.branch_name || 'branch');
+
+  // If user tries to access root or standard auth paths while logged in, redirect to their branch home
+  if (['', 'login', 'signup', 'forgot', 'reset', 'admin-login'].includes(pathParts[0] || '')) {
+    return <Navigate to={`/${branchSlug}/home`} replace />;
+  }
+
+  const handleSidebarNavigate = (view: string) => {
+    navigate(`/${branchSlug}/${view}`);
   };
 
   const menuItems = [
@@ -239,168 +336,6 @@ function AppInner() {
     { id: 'transfers', label: 'Transfers', icon: ArrowLeftRight },
   ];
 
-  const renderView = () => {
-    switch (currentView) {
-      case 'home': return <HomeMenu onNavigate={(view) => handleSidebarNavigate(view as View)} />;
-      case 'dashboard': return <Dashboard />;
-      case 'register': return (
-        <CashRegister 
-          preSelectedCustomerId={selectedCustomerId}
-          initiateDeposit={initiateDeposit}
-          onViewCustomers={() => setCurrentView('customers')} 
-          onSelectCustomer={(id) => {
-            setSelectedCustomerId(id);
-            setCurrentView('customer-details');
-          }}
-          onSelectProduct={(id) => {
-            setSelectedProductId(id);
-            setCurrentView('product-details');
-          }}
-        />
-      );
-      case 'products': return (
-        <ProductList 
-          onCreateProduct={() => setCurrentView('create-product')} 
-          onSelectProduct={(id) => {
-            setSelectedProductId(id);
-            setCurrentView('product-details');
-          }}
-        />
-      );
-      case 'product-details': return (
-        <ProductDetails 
-          productId={selectedProductId!} 
-          onBack={() => setCurrentView('products')}
-          onAddInventory={(id) => {
-            setSelectedProductId(id);
-            setCurrentView('add-inventory');
-          }}
-          onViewDevices={(id) => {
-            setPreviousView('product-details');
-            setSelectedProductId(id);
-            setCurrentView('sku-device-details');
-          }}
-        />
-      );
-      case 'add-inventory': return (
-        <AddInventory 
-          productId={selectedProductId!} 
-          onBack={() => setCurrentView('product-details')}
-          onSuccess={() => setCurrentView('product-details')}
-        />
-      );
-      case 'create-product': return <CreateProduct onCancel={() => setCurrentView('products')} onSave={() => setCurrentView('products')} />;
-      case 'invoices': return (
-        <InvoiceList 
-          onSelectInvoice={(id) => {
-            setSelectedInvoiceId(id);
-            setCurrentView('invoice-details');
-          }} 
-          onSelectCustomer={(id) => {
-            setSelectedCustomerId(id);
-            setCurrentView('customer-details');
-          }}
-        />
-      );
-      case 'invoice-details': return (
-        <InvoiceDetails 
-          invoiceId={selectedInvoiceId!} 
-          onBack={() => setCurrentView('invoices')} 
-          onSelectCustomer={(id) => {
-            setSelectedCustomerId(id);
-            setCurrentView('customer-details');
-          }}
-        />
-      );
-      case 'customers': return (
-        <CustomerList 
-          onSelectCustomer={(id) => {
-            setSelectedCustomerId(id);
-            setCurrentView('customer-details');
-          }} 
-        />
-      );
-      case 'customer-details': return (
-        <CustomerDetails 
-          customerId={selectedCustomerId!} 
-          onBack={() => setCurrentView('customers')} 
-          onSelectInvoice={(id) => {
-            setSelectedInvoiceId(id);
-            setCurrentView('invoice-details');
-          }}
-          onCreateInvoice={() => {
-            setInitiateDeposit(false);
-            setCurrentView('register');
-          }}
-          onCreateRepair={() => setCurrentView('repairs')}
-          onDeposit={() => {
-            setInitiateDeposit(true);
-            setCurrentView('register');
-          }}
-        />
-      );
-      case 'repairs': return <RepairList preSelectedCustomerId={selectedCustomerId} />;
-      case 'devices': return (
-        <DeviceInventory 
-          onSelectPO={(poNumber) => {
-            fetch(`/api/purchase-orders/by-number/${poNumber}`)
-              .then(res => res.json())
-              .then(data => {
-                if (data.id) {
-                  setSelectedPoId(data.id);
-                  setCurrentView('purchase-order-detail');
-                }
-              });
-          }}
-          onSelectProduct={(skuId) => {
-            setPreviousView('devices');
-            setSelectedProductId(skuId);
-            setCurrentView('sku-device-details');
-          }}
-          onSelectDevice={(id) => {
-            setSelectedDeviceId(id);
-            setCurrentView('device-details');
-          }}
-        />
-      );
-      case 'device-details': return (
-        <DeviceDetailView 
-          deviceId={selectedDeviceId!} 
-          onBack={() => setCurrentView('devices')} 
-          onOpenPrinterSettings={() => {
-            setGettingStartedTab('manage-label-printer');
-            setCurrentView('getting-started');
-          }}
-        />
-      );
-      case 'sku-device-details': return (
-        <SkuDeviceDetails 
-          skuId={selectedProductId!} 
-          onBack={() => setCurrentView(previousView || 'devices')} 
-        />
-      );
-      case 'purchase-orders': return (
-        <PurchaseOrderList 
-          onSelectPO={(id) => {
-            setSelectedPoId(id);
-            setCurrentView('purchase-order-detail');
-          }}
-        />
-      );
-      case 'purchase-order-detail': return (
-        <PurchaseOrderDetail 
-          poId={selectedPoId || 1}
-          onBack={() => setCurrentView('purchase-orders')}
-        />
-      );
-      case 'manage-data': return <ManageData />;
-      case 'end-of-day': return <EndOfDay />;
-      case 'getting-started': return <GettingStarted initialTab={gettingStartedTab} />;
-      case 'transfers': return <BranchTransfer />;
-      default: return <Dashboard />;
-    }
-  };
-
   return (
     <div className="flex flex-col h-screen bg-[var(--bg-app)] font-sans text-[var(--text-main)] overflow-hidden transition-colors duration-300">
       {showAdminPortal && isAdmin && <AdminPortal onClose={() => setShowAdminPortal(false)} />}
@@ -410,7 +345,7 @@ function AppInner() {
         <div className="flex h-full items-center">
           <div className="w-28 flex items-center justify-center h-full">
             <button 
-              onClick={() => setCurrentView('home')}
+              onClick={() => navigate(`/${branchSlug}/home`)}
               className="transition-transform hover:scale-110 p-2"
               title="Home Menu"
             >
@@ -419,7 +354,7 @@ function AppInner() {
           </div>
           
           <button 
-            onClick={() => setCurrentView('home')} 
+            onClick={() => navigate(`/${branchSlug}/home`)} 
             className="pl-6 flex flex-col items-start font-sans cursor-pointer hover:opacity-85 transition-opacity"
             title="Home Menu"
           >
@@ -441,7 +376,6 @@ function AppInner() {
         </div>
 
         <div className="flex items-center gap-3 px-6">
-          {/* Theme Toggle */}
           <button 
             onClick={() => setIsDarkMode(!isDarkMode)}
             className="p-2 rounded-full hover:bg-black/5 dark:hover:bg-white/5 transition-colors text-[var(--text-main)] flex items-center justify-center"
@@ -469,7 +403,7 @@ function AppInner() {
           <button 
             onClick={() => {
               logout();
-              window.location.href = '/';
+              navigate('/');
             }}
             className="h-8 overflow-hidden group bg-[var(--bg-card)] text-[var(--text-main)] px-5 rounded-full text-[11px] uppercase tracking-widest transition-all border border-[var(--border-base)] shadow-sm cursor-pointer"
           >
@@ -492,7 +426,7 @@ function AppInner() {
             {menuItems.map((item) => (
               <button
                 key={item.id}
-                onClick={() => handleSidebarNavigate(item.id as View)}
+                onClick={() => handleSidebarNavigate(item.id)}
                 className={`w-full flex flex-col items-center justify-center py-5 px-1 transition-all duration-200 border-l-4 ${
                   currentView === item.id 
                     ? 'bg-white/10 border-[var(--brand-primary)] text-white' 
@@ -504,7 +438,6 @@ function AppInner() {
               </button>
             ))}
           </nav>
-
         </aside>
 
         {/* Main Content Area */}
@@ -512,14 +445,37 @@ function AppInner() {
           <ErrorBoundary>
             <AnimatePresence mode="wait">
               <motion.div
-                key={currentView}
+                key={location.pathname}
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.1 }}
                 className="h-full"
               >
-                {renderView()}
+                <Routes>
+                  <Route path="/:branchSlug/home" element={<HomeMenu onNavigate={handleSidebarNavigate} />} />
+                  <Route path="/:branchSlug/dashboard" element={<Dashboard />} />
+                  <Route path="/:branchSlug/register" element={<CashRegisterRoute />} />
+                  <Route path="/:branchSlug/products" element={<ProductListRoute />} />
+                  <Route path="/:branchSlug/products/:id" element={<ProductDetailsRoute />} />
+                  <Route path="/:branchSlug/create-product" element={<CreateProduct onCancel={() => navigate(`/${branchSlug}/products`)} onSave={() => navigate(`/${branchSlug}/products`)} />} />
+                  <Route path="/:branchSlug/add-inventory/:id" element={<AddInventoryRoute />} />
+                  <Route path="/:branchSlug/invoices" element={<InvoiceListRoute />} />
+                  <Route path="/:branchSlug/invoices/:id" element={<InvoiceDetailsRoute />} />
+                  <Route path="/:branchSlug/customers" element={<CustomerListRoute />} />
+                  <Route path="/:branchSlug/customers/:id" element={<CustomerDetailsRoute />} />
+                  <Route path="/:branchSlug/repairs" element={<RepairListRoute />} />
+                  <Route path="/:branchSlug/devices" element={<DeviceInventoryRoute />} />
+                  <Route path="/:branchSlug/devices/:id" element={<DeviceDetailRoute />} />
+                  <Route path="/:branchSlug/sku-devices/:id" element={<SkuDeviceDetailsRoute />} />
+                  <Route path="/:branchSlug/purchase-orders" element={<PurchaseOrderListRoute />} />
+                  <Route path="/:branchSlug/purchase-orders/:id" element={<PurchaseOrderDetailRoute />} />
+                  <Route path="/:branchSlug/manage-data" element={<ManageData />} />
+                  <Route path="/:branchSlug/end-of-day" element={<EndOfDay />} />
+                  <Route path="/:branchSlug/getting-started" element={<GettingStartedRoute />} />
+                  <Route path="/:branchSlug/transfers" element={<BranchTransfer />} />
+                  <Route path="*" element={<Navigate to={`/${branchSlug}/dashboard`} replace />} />
+                </Routes>
               </motion.div>
             </AnimatePresence>
           </ErrorBoundary>

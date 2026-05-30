@@ -24,17 +24,20 @@ export default function ThermalReceipt({ invoice, settings, company }: Props) {
   const addressLine1 = addressParts.slice(0, 3).join(', ');
   const addressLine2 = addressParts.slice(3).join(', ');
 
+  const cashierName = invoice.payments?.[0]?.user_name || invoice.activities?.[0]?.user_name || 'STAFF';
+
   return (
     <div 
-      className="thermal-receipt bg-white text-black mx-auto font-mono" 
+      className="thermal-receipt bg-white text-black mx-auto" 
       id="thermal-receipt"
       style={{ 
         width: '72mm',
         maxWidth: '72mm',
-        lineHeight: '1.2',
+        lineHeight: '1.35',
         padding: '1mm 2mm',
         boxSizing: 'border-box',
-        fontSize: '11px',
+        fontSize: '12px',
+        fontFamily: "Arial, 'Helvetica Neue', Helvetica, sans-serif",
       }}
     >
       <style dangerouslySetInnerHTML={{ __html: `
@@ -49,107 +52,153 @@ export default function ThermalReceipt({ invoice, settings, company }: Props) {
             color: black !important;
           }
         }
-        .receipt-separator { border-top: 1px dashed #000; margin: 4px 0; }
+        .receipt-separator { height: 12px; }
         .flex-between { display: flex; justify-content: space-between; }
         .text-bold { font-weight: bold; }
         .text-center { text-align: center; }
         .text-right { text-align: right; }
       `}} />
       
-      {/* Header */}
+      {/* ======================================================== */}
+      {/* [Merchant Header] (Centered block: Name, Address, Contact) */}
+      {/* ======================================================== */}
       <div className="text-center mb-2">
-        {settings.show_business_name && <div className="text-bold" style={{ fontSize: '14px', textTransform: 'uppercase' }}>{company.name}</div>}
+        {settings.show_business_name && (
+          <div className="text-bold" style={{ fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '2px' }}>
+            {company.name}
+          </div>
+        )}
         {settings.show_business_address && (
-          <div className="mt-0.5">
+          <div className="mt-0.5" style={{ fontSize: '12px' }}>
             <div>{addressLine1}{addressParts.length > 3 ? ',' : ''}</div>
             {addressLine2 && <div>{addressLine2}</div>}
           </div>
         )}
-        {settings.show_business_phone && <div>Tel: {company.phone}</div>}
-        {settings.show_business_email && <div>{company.email}</div>}
+        {settings.show_business_phone && <div style={{ fontSize: '12px' }}>TEL: {company.phone}</div>}
+        {settings.show_business_email && <div style={{ fontSize: '12px' }}>{company.email}</div>}
       </div>
       
       <div className="receipt-separator" />
       
-      {/* Invoice Info */}
-      <div className="mb-2">
-        {settings.show_date && <div className="flex-between"><span>Date:</span> <span>{new Date(invoice.created_at || now).toLocaleString()}</span></div>}
-        {settings.show_invoice_number && <div className="flex-between"><span>Invoice:</span> <span>{invoice.invoice_number}</span></div>}
-        {settings.show_customer_info && <div className="flex-between"><span>Customer:</span> <span>{invoice.customer?.name || 'Walk-in'}</span></div>}
-      </div>
-      
-      <div className="receipt-separator" />
-      
-      {/* Items Table */}
-      {settings.show_items_table && (
-        <div className="mb-2">
-          <div className="flex-between text-bold mb-1">
-            <span style={{ width: '60%' }}>Item</span>
-            <span style={{ width: '10%', textAlign: 'center' }}>Qty</span>
-            <span style={{ width: '30%', textAlign: 'right' }}>Price</span>
-          </div>
-          {(invoice.items || []).map((item, idx) => (
-            <div key={idx} className="flex-between mb-0.5">
-              <span style={{ width: '60%', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                {item.product_name}
-                {item.imei && <div style={{ fontSize: '9px', opacity: 0.8 }}>IMEI: {item.imei}</div>}
-              </span>
-              <span style={{ width: '10%', textAlign: 'center' }}>{item.quantity}</span>
-              <span style={{ width: '30%', textAlign: 'right' }}>€{(item.total || 0).toFixed(2)}</span>
-            </div>
-          ))}
+      {/* ======================================================== */}
+      {/* [Metadata Row] (Left/Right balanced text: ID, Date, User) */}
+      {/* ======================================================== */}
+      <div className="mb-2" style={{ fontSize: '12px', lineHeight: '1.4' }}>
+        <div className="flex-between">
+          <span>INV ID: <span>{invoice.invoice_number}</span></span> 
+          <span>DATE: {new Date(invoice.created_at || now).toLocaleDateString()}</span>
         </div>
-      )}
+        <div className="flex-between">
+          <span>CASHIER: {cashierName.toUpperCase()}</span> 
+          <span>TIME: {new Date(invoice.created_at || now).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+        </div>
+        {settings.show_customer_info && (
+          <div className="flex-between" style={{ marginTop: '3px', paddingTop: '3px' }}>
+            <span>CUSTOMER:</span>
+            <span>{invoice.customer?.name?.toUpperCase() || 'WALK-IN'}</span>
+          </div>
+        )}
+      </div>
       
       <div className="receipt-separator" />
       
-      {/* Totals */}
-      {settings.show_totals && (
-        <div className="mb-2">
-          <div className="flex-between">
-            <span>Subtotal:</span>
-            <span>€{invoice.subtotal.toFixed(2)}</span>
+      {/* ======================================================== */}
+      {/* [Items Grid Container] (2-column details & summary layout) */}
+      {/* ======================================================== */}
+      <div className="mb-2">
+        {/* Table Header - Bold Heading */}
+        <div className="flex-between text-bold mb-2" style={{ fontSize: '12px', paddingBottom: '3px' }}>
+          <span style={{ width: '70%' }}>DESCRIPTION</span>
+          <span style={{ width: '30%', textAlign: 'right' }}>TOTAL</span>
+        </div>
+
+        {/* Dynamic Item Rows - Regular weight */}
+        {(invoice.items || []).map((item, idx) => (
+          <div key={idx} className="flex-between mb-3 animate-in fade-in" style={{ fontSize: '12px', alignLines: 'top' }}>
+            <span style={{ width: '70%', overflow: 'hidden', textOverflow: 'ellipsis', display: 'flex', flexDirection: 'column' }}>
+              <span>{item.product_name?.toUpperCase()}</span>
+              <span style={{ fontSize: '12px', color: '#000', marginTop: '2px', fontFamily: 'monospace' }}>
+                SKU: {item.sku_code || 'N/A'} {item.imei && ` • IMEI: ${item.imei}`}
+              </span>
+              <span style={{ fontSize: '12px', color: '#000', marginTop: '1px' }}>
+                QTY: {item.quantity} x €{item.price.toFixed(2)}
+              </span>
+            </span>
+            <span style={{ width: '30%', textAlign: 'right', display: 'flex', alignItems: 'flex-start', justifyContent: 'flex-end' }}>
+              €{(item.total || 0).toFixed(2)}
+            </span>
           </div>
-          <div className="flex-between text-bold" style={{ fontSize: '13px', marginTop: '2px' }}>
-            <span>TOTAL:</span>
+        ))}
+
+        <div style={{ marginTop: '10px', height: '10px' }} />
+
+        {/* ======================================== */}
+        {/* Summaries inside the Grid Table Container - Regular weight */}
+        {/* ======================================== */}
+        <div style={{ fontSize: '12px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+          {/* Taxable Total */}
+          <div className="flex-between">
+            <span style={{ paddingLeft: '20%' }}>TAXABLE TOTAL:</span>
+            <span>€{(invoice.subtotal - (invoice.tax_total || 0)).toFixed(2)}</span>
+          </div>
+
+          {/* Tax */}
+          <div className="flex-between">
+            <span style={{ paddingLeft: '20%' }}>TAX (23%):</span>
+            <span>€{(invoice.tax_total || 0).toFixed(2)}</span>
+          </div>
+
+          {/* Grand Total - Bold heading */}
+          <div className="flex-between text-bold" style={{ fontSize: '12px', padding: '3px 0' }}>
+            <span style={{ paddingLeft: '20%' }}>GRAND TOTAL:</span>
             <span>€{invoice.grand_total.toFixed(2)}</span>
           </div>
-          {(invoice.paid_amount || 0) > 0 && (
-            <div className="flex-between">
-              <span>PAID:</span>
-              <span>€{(invoice.paid_amount || 0).toFixed(2)}</span>
+
+          {/* Payment Ledger Line - Regular weight */}
+          {invoice.payments && invoice.payments.length > 0 ? (
+            invoice.payments.map((p, idx) => (
+              <div key={idx} className="flex-between" style={{ color: '#000' }}>
+                <span style={{ paddingLeft: '20%' }}>{p.method?.toUpperCase()}:</span>
+                <span>€{(p.amount || 0).toFixed(2)}</span>
+              </div>
+            ))
+          ) : (
+            <div className="flex-between" style={{ color: '#000' }}>
+              <span style={{ paddingLeft: '20%' }}>{invoice.payment_method?.toUpperCase() || 'CASH'}:</span>
+              <span>€{invoice.grand_total.toFixed(2)}</span>
             </div>
           )}
+
+          {/* Remaining Due (if any) - Regular weight */}
           {(invoice.due_amount || 0) > 0 && (
-            <div className="flex-between text-bold" style={{ color: '#000' }}>
-              <span>DUE:</span>
-              <span>€{(invoice.due_amount || 0).toFixed(2)}</span>
+            <div className="flex-between text-red-600" style={{ fontSize: '12px' }}>
+              <span style={{ paddingLeft: '20%' }}>DUE:</span>
+              <span>€{invoice.due_amount.toFixed(2)}</span>
             </div>
           )}
         </div>
-      )}
+      </div>
       
-      {/* Payments */}
-      {invoice.payments && invoice.payments.length > 0 && (
-        <div className="mb-2">
-          <div className="text-bold">Payment:</div>
-          {invoice.payments.map((p, idx) => (
-            <div key={idx} className="flex-between">
-              <span>{p.method}</span>
-              <span>€{(p.amount || 0).toFixed(2)}</span>
-            </div>
-          ))}
-        </div>
-      )}
+      <div className="receipt-separator" />
       
-      {/* Footer */}
-      <div className="text-center mt-4">
-        {settings.show_footer && <div style={{ fontStyle: 'italic' }}>{settings.footer_text}</div>}
-        <div style={{ fontSize: '9px', marginTop: '8px', opacity: 0.7 }}>
-          Powered by EPOS
-        </div>
+      {/* ======================================================== */}
+      {/* [Footer Legal Block] (Justified policy paragraph block - Regular weight) */}
+      {/* ======================================================== */}
+      <div style={{ textAlign: 'justify', fontSize: '11px', marginTop: '12px', lineHeight: '1.35', color: '#111' }}>
+        {settings.footer_text || (
+          <>
+            THANK YOU FOR YOUR PURCHASE! ALL MOBILE PHONE SALES ARE FINAL. 
+            ACCESSORIES AND CORRESPONDING CHARGERS MAY BE EXCHANGED WITHIN 7 DAYS WITH A VALID 
+            RECEIPT AND ORIGINAL PACKAGING. A 30-DAY IN-HOUSE WARRANTY APPLIES TO DIAGNOSED REPAIRS 
+            FROM THE EXECUTED INVOICE DATE.
+          </>
+        )}
+        {settings.show_powered_by && (
+          <div className="text-center" style={{ fontSize: '10px', marginTop: '16px', opacity: 0.7, paddingTop: '10px' }}>
+            Powered by iCover EPOS
+          </div>
+        )}
       </div>
     </div>
   );
 }
-

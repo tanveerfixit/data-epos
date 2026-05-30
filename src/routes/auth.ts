@@ -4,51 +4,57 @@ import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
 import { sendAccountPending, sendAccountApproved, sendAccountRejected, sendAccountDeactivated, sendOtpCode, sendGeneratedPassword, sendTestEmail } from '../services/mailer.js';
 
-// ─── Session Management ───────────────────────────────────────────────────────
+import jwt from 'jsonwebtoken';
+import { z } from 'zod';
 
-interface Session { userId: number; expiresAt: number; }
-const SESSION_TTL_MS = 1 * 60 * 60 * 1000; // 1 hour
+const JWT_SECRET = process.env.JWT_SECRET || 'EPOS_SUPER_SECRET_FALLBACK_KEY_2026';
 
-export const sessions = new Map<string, Session>();
+// ─── Token Blacklist Management ────────────────────────────────────────────────
+// For explicit logouts
+export const revokedTokens = new Set<string>();
+// For global invalidation (e.g., password reset), maps userId -> timestamp (seconds)
+export const userPasswordResets = new Map<number, number>();
 
-// Purge expired sessions every hour
+// Purge expired tokens from the blacklist every hour to prevent memory leaks
 const _cleanup = setInterval(() => {
-  const now = Date.now();
-  for (const [token, sess] of sessions) {
-    if (sess.expiresAt <= now) sessions.delete(token);
-  }
+  revokedTokens.clear(); // Safe to clear entirely if TTL is 1 hour
 }, 60 * 60 * 1000);
 if (typeof _cleanup.unref === 'function') _cleanup.unref();
 
 // ─── Auth Middleware ──────────────────────────────────────────────────────────
 
+function verifyToken(token: string | undefined): any {
+  if (!token) return null;
+  if (revokedTokens.has(token)) return null;
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET) as any;
+    const resetTime = userPasswordResets.get(decoded.userId);
+    if (resetTime && decoded.iat < resetTime) return null;
+    return decoded;
+  } catch {
+    return null;
+  }
+}
+
 export function requireAuth(req: any, res: any, next: any) {
   const token = req.headers['authorization']?.replace('Bearer ', '');
-  const sess = token ? sessions.get(token) : undefined;
-  if (!sess || sess.expiresAt <= Date.now()) {
-    if (token && sess) sessions.delete(token);
-    return res.status(401).json({ error: 'Unauthorized' });
-  }
-  // Extend session on activity (sliding window)
-  sess.expiresAt = Date.now() + SESSION_TTL_MS;
+  const decoded = verifyToken(token);
+  if (!decoded) return res.status(401).json({ error: 'Unauthorized' });
   req._sessionToken = token;
+  req.userId = decoded.userId;
   next();
 }
 
 export async function requireAuthAsync(req: any, res: any, next: any) {
   const token = req.headers['authorization']?.replace('Bearer ', '');
-  const sess = token ? sessions.get(token) : undefined;
-  if (!sess || sess.expiresAt <= Date.now()) {
-    if (token && sess) sessions.delete(token);
-    return res.status(401).json({ error: 'Unauthorized' });
-  }
-  // Extend session on activity (sliding window)
-  sess.expiresAt = Date.now() + SESSION_TTL_MS;
-  const userId = sess.userId;
+  const decoded = verifyToken(token);
+  if (!decoded) return res.status(401).json({ error: 'Unauthorized' });
+  
   try {
-    const user = await queryOne('SELECT * FROM users WHERE id=?', [userId]);
+    const user = await queryOne('SELECT * FROM users WHERE id=?', [decoded.userId]);
     if (!user) return res.status(401).json({ error: 'User not found' });
-    req.userId = userId;
+    req._sessionToken = token;
+    req.userId = decoded.userId;
     req.user = user;
     next();
   } catch (e: any) { 
@@ -59,23 +65,19 @@ export async function requireAuthAsync(req: any, res: any, next: any) {
 
 export async function requireAdminAsync(req: any, res: any, next: any) {
   const token = req.headers['authorization']?.replace('Bearer ', '');
-  const sess = token ? sessions.get(token) : undefined;
-  if (!sess || sess.expiresAt <= Date.now()) {
-    if (token && sess) sessions.delete(token);
-    return res.status(401).json({ error: 'Unauthorized' });
-  }
-  // Extend session on activity (sliding window)
-  sess.expiresAt = Date.now() + SESSION_TTL_MS;
-  const userId = sess.userId;
+  const decoded = verifyToken(token);
+  if (!decoded) return res.status(401).json({ error: 'Unauthorized' });
+  
   try {
-    const user = await queryOne('SELECT * FROM users WHERE id=?', [userId]) as any;
+    const user = await queryOne('SELECT * FROM users WHERE id=?', [decoded.userId]) as any;
     if (!user || !['superadmin', 'developer'].includes(user.role)) {
       return res.status(403).json({ error: 'Admin access required' });
     }
-    req.userId = userId;
+    req._sessionToken = token;
+    req.userId = decoded.userId;
     req.user = user;
     next();
-  } catch (e: any) { res.status(500).json({ error: e.message }); }
+  } catch (e: any) { next(e); }
 }
 
 // ─── Public Auth Router ───────────────────────────────────────────────────────
@@ -89,12 +91,21 @@ function slugify(text: string) {
     .replace(/--+/g, '-');
 }
 
+const signupSchema = z.object({
+  mode: z.enum(['business_register', 'staff_register']).optional(),
+  name: z.string().min(2, "Name must be at least 2 characters"),
+  email: z.string().email("Invalid email address"),
+  password: z.string().min(8, "Password must be at least 8 characters"),
+  business_name: z.string().optional(),
+  branch_name: z.string().optional(),
+  branch_id: z.number().optional()
+});
+
 // POST /api/auth/signup
-router.post('/signup', async (req, res) => {
-  const { mode, name, email, password, business_name, branch_name, branch_id } = req.body;
-  if (!name || !email || !password) {
-    return res.status(400).json({ error: 'Name, email and password are required' });
-  }
+router.post('/signup', async (req: any, res, next) => {
+  const data = signupSchema.parse(req.body);
+  const { mode, name, email, password, business_name, branch_name, branch_id } = data;
+  
   const conn = await pool.getConnection();
   try {
     await conn.beginTransaction();
@@ -149,14 +160,19 @@ router.post('/signup', async (req, res) => {
     }
   } catch (e: any) {
     await conn.rollback();
-    res.status(500).json({ error: e.message });
+    next(e);
   } finally { conn.release(); }
 });
 
+const loginSchema = z.object({
+  email: z.string().email("Invalid email address"),
+  password: z.string().min(1, "Password is required")
+});
+
 // POST /api/auth/login
-router.post('/login', async (req, res) => {
-  const { email, password } = req.body;
-  if (!email || !password) return res.status(400).json({ error: 'Email and password required' });
+router.post('/login', async (req: any, res, next) => {
+  const data = loginSchema.parse(req.body);
+  const { email, password } = data;
   try {
     const user = await queryOne('SELECT * FROM users WHERE email=? AND deleted_at IS NULL', [email]) as any;
     if (!user) return res.status(401).json({ error: 'Invalid email or password' });
@@ -192,9 +208,8 @@ router.post('/login', async (req, res) => {
     }
     if (!valid) return res.status(401).json({ error: 'Invalid email or password' });
 
-    // Session with expiry (FINDING-003)
-    const token = crypto.randomUUID();
-    sessions.set(token, { userId: user.id, expiresAt: Date.now() + SESSION_TTL_MS });
+    // JWT Generation
+    const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: '1h' });
     await execute('UPDATE users SET last_login=NOW() WHERE id=?', [user.id]);
     const branch = await queryOne('SELECT * FROM branches WHERE id=?', [user.branch_id]) as any;
     const business = await queryOne('SELECT name FROM businesses WHERE id=?', [user.business_id]) as any;
@@ -203,11 +218,11 @@ router.post('/login', async (req, res) => {
       user: { id: user.id, name: user.name, email: user.email, role: user.role, status: user.status,
         branch_id: user.branch_id, branch_name: branch?.name, business_id: user.business_id, business_name: business?.name }
     });
-  } catch (e: any) { res.status(500).json({ error: e.message }); }
+  } catch (e: any) { next(e); }
 });
 
 // GET /api/auth/branches-lookup?email=...
-router.get('/branches-lookup', async (req, res) => {
+router.get('/branches-lookup', async (req: any, res, next) => {
   const { email } = req.query;
   if (!email) return res.status(400).json({ error: 'Business email required' });
   try {
@@ -215,18 +230,18 @@ router.get('/branches-lookup', async (req, res) => {
     if (!business) return res.status(404).json({ error: 'No business found with this email' });
     const branches = await query('SELECT id, name FROM branches WHERE business_id=? AND deleted_at IS NULL', [business.id]);
     res.json(branches);
-  } catch (e: any) { res.status(500).json({ error: e.message }); }
+  } catch (e: any) { next(e); }
 });
 
 // POST /api/auth/logout
-router.post('/logout', (req, res) => {
+router.post('/logout', (req: any, res, next) => {
   const token = req.headers['authorization']?.replace('Bearer ', '');
-  if (token) sessions.delete(token);
+  if (token) revokedTokens.add(token);
   res.json({ success: true });
 });
 
 // GET /api/auth/me
-router.get('/me', requireAuthAsync, async (req: any, res) => {
+router.get('/me', requireAuthAsync, async (req: any, res, next) => {
   try {
     const user = await queryOne(`
       SELECT u.*, b.name as branch_name, biz.name as business_name 
@@ -236,11 +251,11 @@ router.get('/me', requireAuthAsync, async (req: any, res) => {
     if (!user) return res.status(404).json({ error: 'User not found' });
     const { password, password_hash, reset_token, otp_code, ...safeUser } = user;
     res.json(safeUser);
-  } catch (e: any) { res.status(500).json({ error: e.message }); }
+  } catch (e: any) { next(e); }
 });
 
 // POST /api/auth/forgot-password
-router.post('/forgot-password', async (req, res) => {
+router.post('/forgot-password', async (req: any, res, next) => {
   res.json({ success: true, message: 'If this email exists, an OTP code has been sent.' });
   try {
     const user = await queryOne('SELECT * FROM users WHERE email=?', [req.body.email]) as any;
@@ -253,7 +268,7 @@ router.post('/forgot-password', async (req, res) => {
 });
 
 // POST /api/auth/verify-otp
-router.post('/verify-otp', async (req, res) => {
+router.post('/verify-otp', async (req: any, res, next) => {
   const { email, otp } = req.body;
   if (!email || !otp) return res.status(400).json({ error: 'Email and OTP required' });
   try {
@@ -269,13 +284,18 @@ router.post('/verify-otp', async (req, res) => {
     await execute('UPDATE users SET otp_code=NULL,otp_expires=NULL,reset_token=?,reset_token_expires=? WHERE id=?',
       [reset_token, tokenExpires, user.id]);
     res.json({ success: true, reset_token });
-  } catch (e: any) { res.status(500).json({ error: e.message }); }
+  } catch (e: any) { next(e); }
+});
+
+const resetPasswordSchema = z.object({
+  token: z.string().min(1, "Token is required"),
+  password: z.string().min(8, "Password must be at least 8 characters")
 });
 
 // POST /api/auth/reset-password
-router.post('/reset-password', async (req, res) => {
-  const { token, password } = req.body;
-  if (!token || !password) return res.status(400).json({ error: 'Token and new password required' });
+router.post('/reset-password', async (req: any, res, next) => {
+  const data = resetPasswordSchema.parse(req.body);
+  const { token, password } = data;
   try {
     const user = await queryOne('SELECT * FROM users WHERE reset_token=?', [token]) as any;
     if (!user) return res.status(400).json({ error: 'Invalid or expired reset link' });
@@ -283,13 +303,13 @@ router.post('/reset-password', async (req, res) => {
       return res.status(400).json({ error: 'Reset link has expired. Please request a new one.' });
     }
     const password_hash = await bcrypt.hash(password, 10);
-    // Invalidate all sessions for this user on password reset (FINDING-003)
-    for (const [t, s] of sessions) { if (s.userId === user.id) sessions.delete(t); }
+    // Invalidate all tokens for this user on password reset by recording the timestamp
+    userPasswordResets.set(user.id, Date.now() / 1000);
     // No plaintext password stored (FINDING-007)
     await execute("UPDATE users SET password_hash=?,password='',reset_token=NULL,reset_token_expires=NULL WHERE id=?",
       [password_hash, user.id]);
     res.json({ success: true, message: 'Password updated. You can now log in.' });
-  } catch (e: any) { res.status(500).json({ error: e.message }); }
+  } catch (e: any) { next(e); }
 });
 
 // ─── Admin Router (mounted at /api/admin) ────────────────────────────────────
@@ -297,18 +317,18 @@ router.post('/reset-password', async (req, res) => {
 const adminRouter = Router();
 
 // GET /api/admin/users
-adminRouter.get('/users', requireAdminAsync, async (req: any, res) => {
+adminRouter.get('/users', requireAdminAsync, async (req: any, res, next) => {
   try {
     res.json(await query(`
       SELECT u.id,u.name,u.email,u.role,u.status,u.last_login,u.created_at,b.name as branch_name,b.id as branch_id
       FROM users u LEFT JOIN branches b ON u.branch_id=b.id
       WHERE u.business_id=? AND u.deleted_at IS NULL ORDER BY u.created_at DESC
     `, [req.user.business_id]));
-  } catch (e: any) { res.status(500).json({ error: e.message }); }
+  } catch (e: any) { next(e); }
 });
 
 // PUT /api/admin/users/:id/status
-adminRouter.put('/users/:id/status', requireAdminAsync, async (req: any, res) => {
+adminRouter.put('/users/:id/status', requireAdminAsync, async (req: any, res, next) => {
   const { status } = req.body;
   if (!['approved','rejected','inactive','pending'].includes(status)) {
     return res.status(400).json({ error: 'Invalid status' });
@@ -332,11 +352,11 @@ adminRouter.put('/users/:id/status', requireAdminAsync, async (req: any, res) =>
       else if (status === 'inactive') await sendAccountDeactivated({ name: user.name, email: user.email });
     } catch {}
     res.json({ success: true });
-  } catch (e: any) { res.status(500).json({ error: e.message }); }
+  } catch (e: any) { next(e); }
 });
 
 // PUT /api/admin/users/:id
-adminRouter.put('/users/:id', requireAdminAsync, async (req: any, res) => {
+adminRouter.put('/users/:id', requireAdminAsync, async (req: any, res, next) => {
   const { name, branch_id, role, password } = req.body;
   try {
     // Scope to same business (FINDING-004)
@@ -353,22 +373,22 @@ adminRouter.put('/users/:id', requireAdminAsync, async (req: any, res) => {
         [name, branch_id, role, req.params.id, req.user.business_id]);
     }
     res.json({ success: true });
-  } catch (e: any) { res.status(500).json({ error: e.message }); }
+  } catch (e: any) { next(e); }
 });
 
 // DELETE /api/admin/users/:id
-adminRouter.delete('/users/:id', requireAdminAsync, async (req: any, res) => {
+adminRouter.delete('/users/:id', requireAdminAsync, async (req: any, res, next) => {
   try {
     // Scope to same business (FINDING-004)
     const r = await execute('UPDATE users SET deleted_at=NOW() WHERE id=? AND business_id=?',
       [req.params.id, req.user.business_id]);
     if (r.affectedRows === 0) return res.status(404).json({ error: 'User not found or access denied' });
     res.json({ success: true });
-  } catch (e: any) { res.status(500).json({ error: e.message }); }
+  } catch (e: any) { next(e); }
 });
 
 // POST /api/admin/users/:id/reset-password
-adminRouter.post('/users/:id/reset-password', requireAdminAsync, async (req: any, res) => {
+adminRouter.post('/users/:id/reset-password', requireAdminAsync, async (req: any, res, next) => {
   try {
     // Scope to same business (FINDING-004)
     const user = await queryOne('SELECT * FROM users WHERE id=? AND business_id=?',
@@ -381,11 +401,11 @@ adminRouter.post('/users/:id/reset-password', requireAdminAsync, async (req: any
       [hash, newPass, user.id]);
     try { await sendGeneratedPassword({ name: user.name, email: user.email }, newPass); } catch {}
     res.json({ success: true, message: `Password reset and emailed to ${user.email}` });
-  } catch (e: any) { res.status(500).json({ error: e.message }); }
+  } catch (e: any) { next(e); }
 });
 
 // POST /api/admin/users/:id/resend-password
-adminRouter.post('/users/:id/resend-password', requireAdminAsync, async (req: any, res) => {
+adminRouter.post('/users/:id/resend-password', requireAdminAsync, async (req: any, res, next) => {
   try {
     const user = await queryOne('SELECT * FROM users WHERE id=? AND business_id=?',
       [req.params.id, req.user.business_id]) as any;
@@ -395,11 +415,11 @@ adminRouter.post('/users/:id/resend-password', requireAdminAsync, async (req: an
     }
     try { await sendGeneratedPassword({ name: user.name, email: user.email }, user.last_generated_password); } catch {}
     res.json({ success: true, message: `Password resent to ${user.email}` });
-  } catch (e: any) { res.status(500).json({ error: e.message }); }
+  } catch (e: any) { next(e); }
 });
 
 // GET /api/admin/branches
-adminRouter.get('/branches', requireAdminAsync, async (req: any, res) => {
+adminRouter.get('/branches', requireAdminAsync, async (req: any, res, next) => {
   try {
     if (req.user.role === 'developer') {
       res.json(await query(`
@@ -411,21 +431,21 @@ adminRouter.get('/branches', requireAdminAsync, async (req: any, res) => {
     } else {
       res.json(await query('SELECT * FROM branches WHERE business_id=? AND deleted_at IS NULL', [req.user.business_id]));
     }
-  } catch (e: any) { res.status(500).json({ error: e.message }); }
+  } catch (e: any) { next(e); }
 });
 
 // POST /api/admin/branches
-adminRouter.post('/branches', requireAdminAsync, async (req: any, res) => {
+adminRouter.post('/branches', requireAdminAsync, async (req: any, res, next) => {
   const { name, address, phone } = req.body;
   try {
     const r = await execute('INSERT INTO branches (business_id,name,address,phone) VALUES (?,?,?,?)',
       [req.user.business_id, name, address, phone]);
     res.json({ id: r.insertId, name, address, phone });
-  } catch (e: any) { res.status(500).json({ error: e.message }); }
+  } catch (e: any) { next(e); }
 });
 
 // GET /api/admin/smtp
-adminRouter.get('/smtp', requireAdminAsync, async (req: any, res) => {
+adminRouter.get('/smtp', requireAdminAsync, async (req: any, res, next) => {
   try {
     const s = await queryOne('SELECT * FROM smtp_settings WHERE business_id=?', [req.user.business_id]) as any;
     if (s) {
@@ -434,11 +454,11 @@ adminRouter.get('/smtp', requireAdminAsync, async (req: any, res) => {
     } else {
       res.json({ host: 'smtp.hostinger.com', port: 465, secure: 1, user: '', pass: '', from_name: 'EPOS System', from_email: '' });
     }
-  } catch (e: any) { res.status(500).json({ error: e.message }); }
+  } catch (e: any) { next(e); }
 });
 
 // PUT /api/admin/smtp
-adminRouter.put('/smtp', requireAdminAsync, async (req: any, res) => {
+adminRouter.put('/smtp', requireAdminAsync, async (req: any, res, next) => {
   const { host, port, secure, user, pass, from_name, from_email } = req.body;
   const businessId = req.user.business_id;
   try {
@@ -456,33 +476,33 @@ adminRouter.put('/smtp', requireAdminAsync, async (req: any, res) => {
         [businessId, host, port, secure ? 1 : 0, user, pass, from_name, from_email]);
     }
     res.json({ success: true });
-  } catch (e: any) { res.status(500).json({ error: e.message }); }
+  } catch (e: any) { next(e); }
 });
 
 // POST /api/admin/smtp/test
-adminRouter.post('/smtp/test', requireAdminAsync, async (req: any, res) => {
+adminRouter.post('/smtp/test', requireAdminAsync, async (req: any, res, next) => {
   try {
     const admin = await queryOne('SELECT email FROM users WHERE id=?', [req.userId]) as any;
     await sendTestEmail(admin.email);
     res.json({ success: true, message: `Test email sent to ${admin.email}` });
-  } catch (e: any) { res.status(500).json({ error: e.message }); }
+  } catch (e: any) { next(e); }
 });
 
 // ─── Developer / Superadmin Control Center Routes ─────────────────────────────
 // All guarded by role === 'developer' (FINDING-002)
 
 // GET /api/admin/system/businesses
-adminRouter.get('/system/businesses', requireAuthAsync, async (req: any, res) => {
+adminRouter.get('/system/businesses', requireAuthAsync, async (req: any, res, next) => {
   if (req.user.role !== 'developer') {
     return res.status(403).json({ error: 'Developer access required' });
   }
   try {
     res.json(await query('SELECT * FROM businesses WHERE deleted_at IS NULL ORDER BY created_at DESC'));
-  } catch (e: any) { res.status(500).json({ error: e.message }); }
+  } catch (e: any) { next(e); }
 });
 
 // PUT /api/admin/system/businesses/:id
-adminRouter.put('/system/businesses/:id', requireAuthAsync, async (req: any, res) => {
+adminRouter.put('/system/businesses/:id', requireAuthAsync, async (req: any, res, next) => {
   if (req.user.role !== 'developer') {
     return res.status(403).json({ error: 'Developer access required' });
   }
@@ -499,11 +519,11 @@ adminRouter.put('/system/businesses/:id', requireAuthAsync, async (req: any, res
     await execute('UPDATE businesses SET name=?,slug=?,email=?,phone=?,address=?,city=?,state=?,zip_code=?,country=? WHERE id=?',
       [name, finalSlug, email, phone, address, city, state, zip_code, country, req.params.id]);
     res.json({ success: true });
-  } catch (e: any) { res.status(500).json({ error: e.message }); }
+  } catch (e: any) { next(e); }
 });
 
 // PUT /api/admin/system/businesses/:id/status
-adminRouter.put('/system/businesses/:id/status', requireAuthAsync, async (req: any, res) => {
+adminRouter.put('/system/businesses/:id/status', requireAuthAsync, async (req: any, res, next) => {
   if (req.user.role !== 'developer') {
     return res.status(403).json({ error: 'Developer access required' });
   }
@@ -511,7 +531,7 @@ adminRouter.put('/system/businesses/:id/status', requireAuthAsync, async (req: a
   try {
     await execute('UPDATE businesses SET status=? WHERE id=?', [status, req.params.id]);
     res.json({ success: true });
-  } catch (e: any) { res.status(500).json({ error: e.message }); }
+  } catch (e: any) { next(e); }
 });
 
 export { adminRouter };

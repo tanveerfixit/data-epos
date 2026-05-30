@@ -36,7 +36,11 @@ export default function InvoiceDetails({ invoiceId, onBack, onSelectCustomer }: 
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  if (!invoice) return <div className="p-8">Loading...</div>;
+  if (!invoice) return (
+    <div className="flex items-center justify-center h-full bg-neutral-100 dark:bg-neutral-950 text-neutral-900 dark:text-neutral-100 font-mono p-8 text-lg">
+      *** LOADING SYSTEM DATA ***
+    </div>
+  );
 
   const handleThermalPrint = () => {
     setShowPrintMenu(false);
@@ -98,13 +102,13 @@ export default function InvoiceDetails({ invoiceId, onBack, onSelectCustomer }: 
   };
 
   return (
-    <div className="flex flex-col h-full bg-[#f4f7f9] overflow-auto">
+    <div className="flex flex-col h-full bg-neutral-100 text-neutral-900 dark:bg-neutral-950 dark:text-neutral-100 font-mono text-base px-2 py-2 select-none w-full overflow-auto" style={{ fontSize: '17px' }}>
       {/* Header */}
-      <div className="p-4 flex justify-between items-center bg-white border-b border-slate-200 sticky top-0 z-10">
+      <div className="p-4 flex justify-between items-center bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 sticky top-0 z-10 rounded-none shadow-none mb-2">
         <div className="flex items-center gap-4">
-          <h2 className="text-xl font-medium text-slate-700">View Invoice - {invoice.invoice_number}</h2>
+          <h2 className="text-xl font-bold text-black dark:text-white uppercase">View Invoice - {invoice.invoice_number}</h2>
           {invoice.status === 'void' && (
-            <span className="bg-red-100 text-red-600 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider border border-red-200">
+            <span className="bg-red-100 dark:bg-red-950/40 text-red-600 dark:text-red-400 px-3 py-0.5 rounded-none text-sm font-bold uppercase tracking-wider border border-red-200 dark:border-red-900/50">
               Void / Refunded
             </span>
           )}
@@ -112,7 +116,7 @@ export default function InvoiceDetails({ invoiceId, onBack, onSelectCustomer }: 
         <div className="flex gap-2">
           <button 
             onClick={onBack}
-            className="bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 font-medium py-1.5 px-4 rounded text-sm flex items-center gap-2 transition-all shadow-sm"
+            className="bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-900 text-neutral-900 dark:text-neutral-100 font-normal py-1 px-3 rounded-none text-base flex items-center gap-2 transition-all shadow-none"
           >
             <List size={16} />
             Sales Invoices
@@ -122,7 +126,7 @@ export default function InvoiceDetails({ invoiceId, onBack, onSelectCustomer }: 
           <div className="relative" ref={printMenuRef}>
             <button 
               onClick={() => setShowPrintMenu(!showPrintMenu)}
-              className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-1.5 px-4 rounded text-sm flex items-center gap-2 transition-all shadow-sm"
+              className="bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-900 text-neutral-900 dark:text-neutral-100 font-normal py-1 px-3 rounded-none text-base flex items-center gap-2 transition-all shadow-none"
             >
               <Printer size={16} />
               Print
@@ -130,29 +134,29 @@ export default function InvoiceDetails({ invoiceId, onBack, onSelectCustomer }: 
             </button>
 
             {showPrintMenu && (
-              <div className="absolute right-0 top-full mt-1 w-48 bg-white rounded-lg shadow-xl border border-slate-200 z-50 overflow-hidden">
+              <div className="absolute right-0 top-full mt-1 w-48 bg-white dark:bg-black rounded-none shadow-none border border-neutral-300 dark:border-neutral-800 z-50 overflow-hidden">
                 <button
                   onClick={handleThermalPrint}
-                  className="w-full flex items-center gap-3 px-4 py-3 text-sm text-slate-700 hover:bg-indigo-50 hover:text-indigo-700 transition-colors"
+                  className="w-full flex items-center gap-3 px-4 py-2 text-base text-neutral-900 dark:text-neutral-100 hover:bg-neutral-200 dark:hover:bg-neutral-900 transition-colors rounded-none"
                 >
-                  <Printer size={15} className="text-indigo-500" />
-                  <span className="font-medium">Thermal Print</span>
+                  <Printer size={15} className="text-neutral-500" />
+                  <span className="font-normal">Thermal Print</span>
                 </button>
-                <div className="border-t border-slate-100" />
+                <div className="border-t border-neutral-300 dark:border-neutral-800" />
                 <button
                   onClick={handleA4Print}
-                  className="w-full flex items-center gap-3 px-4 py-3 text-sm text-slate-700 hover:bg-blue-50 hover:text-blue-700 transition-colors"
+                  className="w-full flex items-center gap-3 px-4 py-2 text-base text-neutral-900 dark:text-neutral-100 hover:bg-neutral-200 dark:hover:bg-neutral-900 transition-colors rounded-none"
                 >
-                  <FileText size={15} className="text-blue-500" />
-                  <span className="font-medium">A4 Print</span>
+                  <FileText size={15} className="text-neutral-500" />
+                  <span className="font-normal">A4 Print</span>
                 </button>
-                <div className="border-t border-slate-100" />
+                <div className="border-t border-neutral-300 dark:border-neutral-800" />
                 <button
                   onClick={handleEmailInvoice}
-                  className="w-full flex items-center gap-3 px-4 py-3 text-sm text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 transition-colors"
+                  className="w-full flex items-center gap-3 px-4 py-2 text-base text-neutral-900 dark:text-neutral-100 hover:bg-neutral-200 dark:hover:bg-neutral-900 transition-colors rounded-none"
                 >
-                  <Mail size={15} className="text-emerald-500" />
-                  <span className="font-medium">Email Invoice</span>
+                  <Mail size={15} className="text-neutral-500" />
+                  <span className="font-normal">Email Invoice</span>
                 </button>
               </div>
             )}
@@ -164,128 +168,128 @@ export default function InvoiceDetails({ invoiceId, onBack, onSelectCustomer }: 
         {/* Info Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* Customer Info */}
-          <div className="bg-white border border-slate-200 rounded shadow-sm overflow-hidden">
-            <div className="bg-[#e9ecef] px-4 py-2 border-b border-slate-200 flex items-center gap-2">
-              <User size={16} className="text-slate-600" />
-              <h3 className="text-sm font-bold text-slate-700">Customer info</h3>
+          <div className="bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 rounded-none shadow-none overflow-hidden">
+            <div className="bg-neutral-200 dark:bg-neutral-900 px-4 py-2 border-b border-neutral-300 dark:border-neutral-800 flex items-center gap-2">
+              <User size={16} className="text-neutral-900 dark:text-neutral-100" />
+              <h3 className="text-base font-bold text-black dark:text-white uppercase">Customer info</h3>
             </div>
-            <div className="p-4 space-y-3 text-sm">
-              <div className="flex border-b border-slate-100 pb-2">
-                <span className="w-24 font-bold text-slate-700">Customer:</span>
+            <div className="p-4 space-y-3 text-base font-normal text-neutral-900 dark:text-neutral-100">
+              <div className="flex border-b border-neutral-200 dark:border-neutral-800 pb-2">
+                <span className="w-24 font-normal text-neutral-900 dark:text-neutral-100">Customer:</span>
                 {invoice.customer_id ? (
                   <button 
                     onClick={() => onSelectCustomer?.(invoice.customer_id!)}
-                    className="text-blue-500 flex items-center gap-1 hover:underline"
+                    className="text-blue-500 flex items-center gap-1 hover:underline font-normal text-base"
                   >
                     {invoice.customer?.name}
                     <ExternalLink size={12} />
                   </button>
                 ) : (
-                  <span className="text-slate-500">Unassigned</span>
+                  <span className="text-neutral-500">Unassigned</span>
                 )}
               </div>
-              <div className="flex border-b border-slate-100 pb-2">
-                <span className="w-24 font-bold text-slate-700">Email:</span>
-                <span className="text-slate-600">{invoice.customer?.email || ''}</span>
+              <div className="flex border-b border-neutral-200 dark:border-neutral-800 pb-2">
+                <span className="w-24 font-normal text-neutral-900 dark:text-neutral-100">Email:</span>
+                <span className="text-neutral-600 dark:text-neutral-400">{invoice.customer?.email || ''}</span>
               </div>
               <div className="flex">
-                <span className="w-24 font-bold text-slate-700">Phone No.:</span>
-                <span className="text-slate-600">{invoice.customer?.phone || ''}</span>
+                <span className="w-24 font-normal text-neutral-900 dark:text-neutral-100">Phone No.:</span>
+                <span className="text-neutral-600 dark:text-neutral-400">{invoice.customer?.phone || ''}</span>
               </div>
             </div>
           </div>
 
           {/* Order Info */}
-          <div className="bg-white border border-slate-200 rounded shadow-sm overflow-hidden">
-            <div className="bg-[#e9ecef] px-4 py-2 border-b border-slate-200 flex items-center gap-2">
-              <Info size={16} className="text-slate-600" />
-              <h3 className="text-sm font-bold text-slate-700">Order Info</h3>
+          <div className="bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 rounded-none shadow-none overflow-hidden">
+            <div className="bg-neutral-200 dark:bg-neutral-900 px-4 py-2 border-b border-neutral-300 dark:border-neutral-800 flex items-center gap-2">
+              <Info size={16} className="text-neutral-900 dark:text-neutral-100" />
+              <h3 className="text-base font-bold text-black dark:text-white uppercase">Order Info</h3>
             </div>
-            <div className="p-4 space-y-3 text-sm">
-              <div className="flex border-b border-slate-100 pb-2">
-                <span className="w-32 font-bold text-slate-700">Invoice No.</span>
-                <span className="text-slate-600">{invoice.invoice_number}</span>
+            <div className="p-4 space-y-3 text-base font-normal text-neutral-900 dark:text-neutral-100">
+              <div className="flex border-b border-neutral-200 dark:border-neutral-800 pb-2">
+                <span className="w-32 font-normal text-neutral-900 dark:text-neutral-100">Invoice No.</span>
+                <span className="text-neutral-600 dark:text-neutral-400">{invoice.invoice_number}</span>
               </div>
-              <div className="flex border-b border-slate-100 pb-2">
-                <span className="w-32 font-bold text-slate-700">Sales Person:</span>
-                <span className="text-slate-600">Phone Lab</span>
+              <div className="flex border-b border-neutral-200 dark:border-neutral-800 pb-2">
+                <span className="w-32 font-normal text-neutral-900 dark:text-neutral-100">Sales Person:</span>
+                <span className="text-neutral-600 dark:text-neutral-400">Phone Lab</span>
               </div>
               <div className="flex">
-                <span className="w-32 font-bold text-slate-700">Date:</span>
-                <span className="text-slate-600">{formatDate(invoice.created_at)}</span>
+                <span className="w-32 font-normal text-neutral-900 dark:text-neutral-100">Date:</span>
+                <span className="text-neutral-600 dark:text-neutral-400">{formatDate(invoice.created_at)}</span>
               </div>
             </div>
           </div>
         </div>
 
         {/* Items Table */}
-        <div className="bg-white border border-slate-300 rounded shadow-sm overflow-hidden">
+        <div className="bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 rounded-none shadow-none overflow-hidden">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="bg-[#e9ecef] border-b border-slate-300 text-[11px] font-bold text-slate-700 uppercase tracking-wider">
-                <th className="px-4 py-2 border-r border-slate-300 w-12 text-center">#</th>
-                <th className="px-4 py-2 border-r border-slate-300">Description</th>
-                <th className="px-4 py-2 border-r border-slate-300 text-center w-32">Time/Qty</th>
-                <th className="px-4 py-2 border-r border-slate-300 text-right w-32">Unit Price</th>
+              <tr className="bg-neutral-200 dark:bg-neutral-900 border-b border-neutral-300 dark:border-neutral-800 text-[13px] font-bold text-black dark:text-white uppercase tracking-wider">
+                <th className="px-4 py-2 border-r border-neutral-300 dark:border-neutral-800 w-12 text-center">#</th>
+                <th className="px-4 py-2 border-r border-neutral-300 dark:border-neutral-800">Description</th>
+                <th className="px-4 py-2 border-r border-neutral-300 dark:border-neutral-800 text-center w-32">Time/Qty</th>
+                <th className="px-4 py-2 border-r border-neutral-300 dark:border-neutral-800 text-right w-32">Unit Price</th>
                 <th className="px-4 py-2 text-right w-32">Total</th>
               </tr>
             </thead>
             <tbody>
               {invoice.items.map((item, idx) => (
-                <tr key={idx} className="border-b border-slate-200 text-sm">
-                  <td className="px-4 py-2 border-r border-slate-200 text-center text-slate-500">{idx + 1}</td>
-                  <td className="px-4 py-2 border-r border-slate-200">
+                <tr key={idx} className="border-b border-neutral-200 dark:border-neutral-800 text-base font-normal">
+                  <td className="px-4 py-2 border-r border-neutral-200 dark:border-neutral-800 text-center text-neutral-500">{idx + 1}</td>
+                  <td className="px-4 py-2 border-r border-neutral-200 dark:border-neutral-800">
                     <div className="flex items-center gap-1">
-                      <span className="text-slate-800">{item.product_name}</span>
+                      <span className="text-neutral-900 dark:text-neutral-100 font-normal">{item.product_name}</span>
                       {item.imei && (
-                        <span className="text-blue-500 flex items-center gap-1">
+                        <span className="text-blue-500 flex items-center gap-1 font-normal">
                           ({item.imei})
                           <ExternalLink size={12} />
                         </span>
                       )}
                     </div>
                   </td>
-                  <td className="px-4 py-2 border-r border-slate-200 text-center text-slate-600">{item.quantity}</td>
-                  <td className="px-4 py-2 border-r border-slate-200 text-right text-slate-600">€{item.price.toFixed(2)}</td>
-                  <td className="px-4 py-2 text-right text-slate-800 font-medium">€{item.total.toFixed(2)}</td>
+                  <td className="px-4 py-2 border-r border-neutral-200 dark:border-neutral-800 text-center text-neutral-600 dark:text-neutral-400">{item.quantity}</td>
+                  <td className="px-4 py-2 border-r border-neutral-200 dark:border-neutral-800 text-right text-neutral-600 dark:text-neutral-400">€{item.price.toFixed(2)}</td>
+                  <td className="px-4 py-2 text-right text-neutral-900 dark:text-neutral-100 font-normal">€{item.total.toFixed(2)}</td>
                 </tr>
               ))}
               
               {/* Totals */}
-              <tr className="bg-white text-sm">
-                <td colSpan={3} className="border-r border-slate-200"></td>
-                <td className="px-4 py-2 border-r border-slate-200 text-right font-bold text-slate-700">Taxable Total :</td>
-                <td className="px-4 py-2 text-right font-bold text-slate-900">€{invoice.subtotal.toFixed(2)}</td>
+              <tr className="bg-white dark:bg-black text-base">
+                <td colSpan={3} className="border-r border-neutral-200 dark:border-neutral-800"></td>
+                <td className="px-4 py-2 border-r border-neutral-200 dark:border-neutral-800 text-right font-bold text-black dark:text-white">Taxable Total :</td>
+                <td className="px-4 py-2 text-right font-bold text-black dark:text-white">€{invoice.subtotal.toFixed(2)}</td>
               </tr>
-              <tr className="bg-white text-sm">
-                <td colSpan={3} className="border-r border-slate-200"></td>
-                <td className="px-4 py-2 border-r border-slate-200 text-right font-bold text-slate-700">Vat0 (0%) :</td>
-                <td className="px-4 py-2 text-right font-bold text-slate-900">€{invoice.tax_total.toFixed(2)}</td>
+              <tr className="bg-white dark:bg-black text-base">
+                <td colSpan={3} className="border-r border-neutral-200 dark:border-neutral-800"></td>
+                <td className="px-4 py-2 border-r border-neutral-200 dark:border-neutral-800 text-right font-bold text-black dark:text-white">Vat0 (0%) :</td>
+                <td className="px-4 py-2 text-right font-bold text-black dark:text-white">€{invoice.tax_total.toFixed(2)}</td>
               </tr>
-              <tr className="bg-white text-sm">
-                <td colSpan={3} className="border-r border-slate-200"></td>
-                <td className="px-4 py-2 border-r border-slate-200 text-right font-bold text-slate-700">Grand Total :</td>
-                <td className="px-4 py-2 text-right font-bold text-slate-900">€{invoice.grand_total.toFixed(2)}</td>
+              <tr className="bg-white dark:bg-black text-base">
+                <td colSpan={3} className="border-r border-neutral-200 dark:border-neutral-800"></td>
+                <td className="px-4 py-2 border-r border-neutral-200 dark:border-neutral-800 text-right font-bold text-black dark:text-white">Grand Total :</td>
+                <td className="px-4 py-2 text-right font-bold text-black dark:text-white">€{invoice.grand_total.toFixed(2)}</td>
               </tr>
               
               {/* Payment Info */}
               {invoice.payments && invoice.payments.length > 0 ? (
                 invoice.payments.map((payment, idx) => (
-                  <tr key={idx} className="bg-white text-xs text-slate-500 italic">
-                    <td colSpan={3} className="border-r border-slate-200"></td>
-                    <td className="px-4 py-2 border-r border-slate-200 text-right">
+                  <tr key={idx} className="bg-white dark:bg-black text-sm text-neutral-500 italic">
+                    <td colSpan={3} className="border-r border-neutral-200 dark:border-neutral-800"></td>
+                    <td className="px-4 py-2 border-r border-neutral-200 dark:border-neutral-800 text-right font-normal">
                       {formatDate(payment.paid_at)} {formatTime(payment.paid_at)} {payment.method} Payment
                     </td>
-                    <td className="px-4 py-2 text-right">€{payment.amount.toFixed(2)}</td>
+                    <td className="px-4 py-2 text-right font-normal">€{payment.amount.toFixed(2)}</td>
                   </tr>
                 ))
               ) : (
-                <tr className="bg-white text-xs text-slate-500 italic">
-                  <td colSpan={3} className="border-r border-slate-200"></td>
-                  <td className="px-4 py-2 border-r border-slate-200 text-right">
+                <tr className="bg-white dark:bg-black text-sm text-neutral-500 italic">
+                  <td colSpan={3} className="border-r border-neutral-200 dark:border-neutral-800"></td>
+                  <td className="px-4 py-2 border-r border-neutral-200 dark:border-neutral-800 text-right font-normal">
                     {formatDate(invoice.created_at)} {formatTime(invoice.created_at)} {invoice.payment_method} Payment
                   </td>
-                  <td className="px-4 py-2 text-right">€{invoice.grand_total.toFixed(2)}</td>
+                  <td className="px-4 py-2 text-right font-normal">€{invoice.grand_total.toFixed(2)}</td>
                 </tr>
               )}
             </tbody>
@@ -297,71 +301,71 @@ export default function InvoiceDetails({ invoiceId, onBack, onSelectCustomer }: 
           {invoice.status !== 'void' ? (
             <button 
               onClick={() => setShowRefundModal(true)}
-              className="bg-amber-400 hover:bg-amber-500 text-slate-900 font-bold py-1.5 px-6 rounded text-sm shadow-sm transition-all"
+              className="bg-amber-400 hover:bg-amber-500 text-neutral-900 font-bold py-1.5 px-6 rounded-none text-base shadow-none transition-all"
             >
               Create Refund
             </button>
           ) : (
-            <div className="text-sm font-bold text-red-500 bg-red-50 px-4 py-2 rounded border border-red-100">
+            <div className="text-base font-bold text-red-600 dark:text-red-400 bg-red-100 dark:bg-red-950/40 px-4 py-2 rounded-none border border-red-200 dark:border-red-900/50">
               This invoice has been refunded.
             </div>
           )}
         </div>
 
         {/* Activity Log */}
-        <div className="bg-white border border-slate-300 rounded shadow-sm overflow-hidden">
-          <div className="bg-[#e9ecef] px-4 py-2 border-b border-slate-200 flex justify-between items-center">
-            <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wider">Activity Log</h3>
+        <div className="bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 rounded-none shadow-none overflow-hidden">
+          <div className="bg-neutral-200 dark:bg-neutral-900 px-4 py-2 border-b border-neutral-300 dark:border-neutral-800 flex justify-between items-center">
+            <h3 className="text-base font-bold text-black dark:text-white uppercase tracking-wider">Activity Log</h3>
             <div className="flex gap-2">
-              <select className="bg-white border border-slate-300 rounded px-2 py-1 text-xs text-slate-600 focus:outline-none">
+              <select className="bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 px-2 py-1 text-sm text-neutral-900 dark:text-neutral-100 focus:outline-none rounded-none">
                 <option>All Activities</option>
               </select>
-              <button className="bg-white border border-slate-300 rounded px-3 py-1 text-xs font-bold text-slate-700 hover:bg-slate-50">
+              <button className="bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 px-3 py-1 text-sm font-bold text-black dark:text-white hover:bg-neutral-200 dark:hover:bg-neutral-900 rounded-none">
                 Add New Note
               </button>
             </div>
           </div>
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="bg-[#f8f9fa] border-b border-slate-200 text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                <th className="px-4 py-2 border-r border-slate-200 w-24">Date</th>
-                <th className="px-4 py-2 border-r border-slate-200 w-24">Time</th>
-                <th className="px-4 py-2 border-r border-slate-200 w-40">User</th>
-                <th className="px-4 py-2 border-r border-slate-200 w-48">Activity</th>
+              <tr className="bg-neutral-100 dark:bg-neutral-950 border-b border-neutral-300 dark:border-neutral-800 text-[12px] font-bold text-black dark:text-white uppercase tracking-wider">
+                <th className="px-4 py-2 border-r border-neutral-300 dark:border-neutral-800 w-24">Date</th>
+                <th className="px-4 py-2 border-r border-neutral-300 dark:border-neutral-800 w-24">Time</th>
+                <th className="px-4 py-2 border-r border-neutral-300 dark:border-neutral-800 w-40">User</th>
+                <th className="px-4 py-2 border-r border-neutral-300 dark:border-neutral-800 w-48">Activity</th>
                 <th className="px-4 py-2">Details</th>
               </tr>
             </thead>
-            <tbody className="text-xs">
+            <tbody className="text-sm font-normal">
               {invoice.activities && invoice.activities.length > 0 ? (
                 invoice.activities.map((activity) => (
-                  <tr key={activity.id} className="border-b border-slate-100 bg-[#f8f9fa] hover:bg-slate-50">
-                    <td className="px-4 py-2 border-r border-slate-200">{formatDate(activity.created_at)}</td>
-                    <td className="px-4 py-2 border-r border-slate-200">{formatTime(activity.created_at)}</td>
-                    <td className="px-4 py-2 border-r border-slate-200">{activity.user_name || 'System'}</td>
-                    <td className="px-4 py-2 border-r border-slate-200 font-bold">{activity.activity}</td>
+                  <tr key={activity.id} className="border-b border-neutral-200 dark:border-neutral-800 bg-white dark:bg-black hover:bg-neutral-100 dark:hover:bg-neutral-900">
+                    <td className="px-4 py-2 border-r border-neutral-300 dark:border-neutral-800">{formatDate(activity.created_at)}</td>
+                    <td className="px-4 py-2 border-r border-neutral-300 dark:border-neutral-800">{formatTime(activity.created_at)}</td>
+                    <td className="px-4 py-2 border-r border-neutral-300 dark:border-neutral-800">{activity.user_name || 'System'}</td>
+                    <td className="px-4 py-2 border-r border-neutral-300 dark:border-neutral-800 font-normal">{activity.activity}</td>
                     <td className="px-4 py-2">{activity.details}</td>
                   </tr>
                 ))
               ) : (
                 <tr>
-                  <td colSpan={5} className="px-4 py-8 text-center text-slate-400 italic">
+                  <td colSpan={5} className="px-4 py-8 text-center text-neutral-400 dark:text-neutral-500 italic">
                     No activities recorded for this invoice.
                   </td>
                 </tr>
               )}
             </tbody>
           </table>
-          <div className="p-2 bg-white border-t border-slate-200 flex justify-between items-center text-[10px] text-slate-500">
+          <div className="p-2 bg-white dark:bg-black border-t border-neutral-300 dark:border-neutral-800 flex justify-between items-center text-[12px] text-neutral-500 dark:text-neutral-400">
             <div className="flex items-center gap-2">
-              <select className="bg-white border border-slate-300 rounded px-1 py-0.5 focus:outline-none">
+              <select className="bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 px-1 py-0.5 focus:outline-none rounded-none">
                 <option>auto</option>
               </select>
               <span className="font-bold">1-1/1</span>
             </div>
             <div className="flex items-center gap-1">
-              <button className="px-1.5 py-0.5 border border-slate-300 rounded hover:bg-slate-50">«</button>
-              <button className="px-2 py-0.5 bg-[#3498db] text-white rounded font-bold">1</button>
-              <button className="px-1.5 py-0.5 border border-slate-300 rounded hover:bg-slate-50">»</button>
+              <button className="px-1.5 py-0.5 border border-neutral-300 dark:border-neutral-800 rounded-none hover:bg-neutral-200 dark:hover:bg-neutral-900">«</button>
+              <button className="px-2 py-0.5 bg-neutral-300 dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 rounded-none font-bold">1</button>
+              <button className="px-1.5 py-0.5 border border-neutral-300 dark:border-neutral-800 rounded-none hover:bg-neutral-200 dark:hover:bg-neutral-900">»</button>
             </div>
           </div>
         </div>
@@ -369,41 +373,41 @@ export default function InvoiceDetails({ invoiceId, onBack, onSelectCustomer }: 
 
       {/* Refund Modal */}
       {showRefundModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-2xl w-full max-w-md overflow-hidden">
-            <div className="p-4 border-b border-slate-200 flex justify-between items-center">
-              <h3 className="text-lg font-bold text-slate-800">Create Refund</h3>
-              <button onClick={() => setShowRefundModal(false)} className="text-slate-400 hover:text-slate-600">
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 w-full max-w-md overflow-hidden shadow-none rounded-none">
+            <div className="p-4 bg-neutral-200 dark:bg-neutral-900 border-b border-neutral-300 dark:border-neutral-800 flex justify-between items-center">
+              <h3 className="text-xl font-bold text-black dark:text-white uppercase">Create Refund</h3>
+              <button onClick={() => setShowRefundModal(false)} className="text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300">
                 <Plus className="rotate-45" size={24} />
               </button>
             </div>
-            <div className="p-6 space-y-4">
-              <p className="text-sm text-slate-600">Are you sure you want to create a refund for invoice <span className="font-bold">{invoice.invoice_number}</span>?</p>
-              <div className="text-2xl font-bold text-center text-red-500">
+            <div className="p-6 space-y-4 bg-white dark:bg-black">
+              <p className="text-base text-neutral-900 dark:text-neutral-100 font-normal">Are you sure you want to create a refund for invoice <span className="font-bold text-black dark:text-white">{invoice.invoice_number}</span>?</p>
+              <div className="text-3xl font-bold text-center text-red-600 dark:text-red-400">
                 €{invoice.grand_total.toFixed(2)}
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-bold text-slate-700">Refund Method</label>
+                <label className="text-base font-bold text-black dark:text-white uppercase">Refund Method</label>
                 <select 
                   value={refundMethod}
                   onChange={(e) => setRefundMethod(e.target.value as any)}
-                  className="w-full border border-slate-300 rounded py-2 px-3 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  className="w-full bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 rounded-none py-2 px-3 text-base text-neutral-900 dark:text-neutral-100 focus:outline-none focus:ring-0"
                 >
                   <option value="Cash">Cash</option>
                   <option value="Debit Card">Debit Card</option>
                 </select>
               </div>
             </div>
-            <div className="p-4 bg-slate-50 border-t border-slate-200 flex justify-end gap-3">
+            <div className="p-4 bg-neutral-100 dark:bg-neutral-950 border-t border-neutral-300 dark:border-neutral-800 flex justify-end gap-3">
               <button 
                 onClick={() => setShowRefundModal(false)}
-                className="px-4 py-2 border border-slate-300 rounded font-bold text-slate-700 hover:bg-white"
+                className="px-4 py-2 bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 font-bold text-neutral-900 dark:text-neutral-100 hover:bg-neutral-200 dark:hover:bg-neutral-900 rounded-none text-base"
               >
                 Cancel
               </button>
               <button 
                 onClick={handleRefund}
-                className="px-6 py-2 bg-red-600 text-white rounded font-bold hover:bg-red-700"
+                className="px-6 py-2 bg-red-600 text-white rounded-none font-bold hover:bg-red-700 text-base"
               >
                 Confirm Refund
               </button>

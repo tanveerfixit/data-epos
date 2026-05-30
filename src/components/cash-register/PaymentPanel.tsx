@@ -35,35 +35,27 @@ export const PaymentPanel: React.FC<PaymentPanelProps> = ({
   return (
     <div className="p-5">
       <div className="flex items-center gap-2 mb-4">
-        <CreditCard size={18} className="text-[var(--text-main)]" />
-        <h3 className="font-bold text-[var(--text-main)] text-sm">Payment</h3>
+        <CreditCard size={18} className="text-black" />
+        <h3 className="font-bold text-black text-sm uppercase tracking-wider">Payment</h3>
         {customerBalance > 0 && (
-          <span className="ml-auto text-[10px] font-bold text-[var(--brand-success)] bg-[var(--bg-zebra)] px-2 py-0.5 rounded border border-[var(--brand-success)]">
+          <span className="ml-auto text-xs font-bold text-green-700 bg-green-50 px-2 py-0.5 rounded border border-green-200">
             Wallet: €{customerBalance.toFixed(2)}
           </span>
         )}
       </div>
 
       <div className="space-y-4">
-        <div className="relative bg-[var(--bg-card)] rounded-full flex items-center w-full h-10 border border-[var(--border-base)] select-none overflow-hidden">
-          {/* Sliding Indicator */}
-          <div 
-            className="absolute top-0 bottom-0 left-0 bg-[var(--brand-primary)]/10 border border-[var(--brand-primary)] rounded-full shadow-sm transition-all duration-300 ease-out z-0"
-            style={{
-              width: `calc(100% / ${paymentMethods.length})`,
-              transform: `translateX(calc(${paymentMethods.indexOf(paymentMethod) !== -1 ? paymentMethods.indexOf(paymentMethod) : 0} * 100%))`
-            }}
-          />
-
+        {/* Simplified Payment Method Buttons */}
+        <div className="flex gap-2 w-full">
           {paymentMethods.map((method) => (
             <button
               key={method}
               onClick={() => setPaymentMethod(method)}
               className={`
-                flex-1 relative z-10 h-full text-[10px] font-black uppercase tracking-wider transition-all duration-200 rounded-full
+                flex-1 py-2.5 px-4 text-[15px] font-semibold rounded cursor-pointer transition-colors text-center border
                 ${paymentMethod === method 
-                  ? 'text-[var(--brand-primary)]' 
-                  : 'text-[var(--text-muted-more)] hover:text-[var(--text-main)] hover:bg-[var(--bg-hover)]'}
+                  ? 'bg-blue-600 text-white border-blue-600' 
+                  : 'bg-white text-black border-gray-300 hover:bg-gray-100'}
               `}
             >
               {method}
@@ -71,12 +63,13 @@ export const PaymentPanel: React.FC<PaymentPanelProps> = ({
           ))}
         </div>
 
+        {/* Amount Input and Action Button */}
         <div className="flex gap-2">
           <div className="relative flex-1">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted-more)] font-bold">€</span>
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 font-bold text-lg">€</span>
             <input 
               type="number"
-              className="w-full pl-7 pr-4 py-2.5 bg-[var(--bg-card)] border border-[var(--border-base)] rounded-md text-sm font-mono font-bold focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-[var(--bg-card)] transition-all text-[var(--text-main)] placeholder:text-[var(--text-muted-more)]"
+              className="w-full pl-7 pr-4 py-2.5 bg-white border border-gray-300 rounded text-[16px] font-mono font-bold focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-black placeholder:text-gray-400"
               placeholder="0.00"
               value={paymentAmount}
               onChange={(e) => setPaymentAmount(e.target.value)}
@@ -91,32 +84,32 @@ export const PaymentPanel: React.FC<PaymentPanelProps> = ({
           </div>
           <button 
             onClick={onAddPayment}
-            className="bg-emerald-600 text-white px-4 rounded-md hover:bg-emerald-700 active:scale-95 transition-all shadow-md shadow-emerald-500/10 flex items-center justify-center"
+            className="bg-emerald-600 text-white px-5 rounded hover:bg-emerald-700 transition-colors flex items-center justify-center cursor-pointer border-0 text-lg font-bold"
             title="Take Payment"
           >
-            <Plus size={20} strokeWidth={3} />
+            <Plus size={22} />
           </button>
         </div>
 
         {addedPayments.length > 0 && (
           <div className="space-y-2 pt-2">
             {addedPayments.map((p, idx) => (
-              <div key={idx} className="flex justify-between items-center bg-[var(--bg-app)] p-2 rounded-md border border-[var(--border-base)] animate-in fade-in slide-in-from-right-1">
+              <div key={idx} className="flex justify-between items-center bg-gray-50 p-2.5 rounded border border-gray-200 text-[15px]">
                 <div className="flex items-center gap-2">
-                  <span className="text-[10px] font-bold bg-[var(--bg-card)] px-1.5 py-0.5 rounded shadow-sm text-[var(--text-muted)] uppercase">{p.method}</span>
-                  <span className="font-mono font-bold text-[var(--text-main)] text-sm">€{p.amount.toFixed(2)}</span>
+                  <span className="font-bold bg-white px-1.5 py-0.5 rounded border border-gray-300 text-gray-700 uppercase text-xs">{p.method}</span>
+                  <span className="font-mono font-bold text-black">€{p.amount.toFixed(2)}</span>
                 </div>
                 <button 
                   onClick={() => onRemovePayment(idx)}
-                  className="text-[var(--text-muted-more)] hover:text-red-500 transition-colors"
+                  className="text-gray-400 hover:text-red-600 transition-colors cursor-pointer border-0 bg-transparent"
                 >
-                  <Trash2 size={14} />
+                  <Trash2 size={16} />
                 </button>
               </div>
             ))}
-            <div className="flex justify-between items-center px-2 pt-1">
-              <span className="text-[10px] font-bold text-[var(--text-muted-more)] uppercase tracking-wider">Remaining</span>
-              <span className={`font-mono font-bold text-sm ${remainingAmount > 0 ? 'text-[var(--brand-warning)]' : 'text-[var(--brand-success)]'}`}>
+            <div className="flex justify-between items-center px-2 pt-1 text-[15px]">
+              <span className="font-bold text-gray-500 uppercase tracking-wider text-xs">Remaining</span>
+              <span className={`font-mono font-bold ${remainingAmount > 0 ? 'text-yellow-600' : 'text-green-600'}`}>
                 €{Math.max(0, remainingAmount).toFixed(2)}
               </span>
             </div>

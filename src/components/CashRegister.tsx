@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import ThermalReceipt from './ThermalReceipt';
 import { Product, Customer, Invoice } from '../types';
+import { safeCustomerName } from '../utils/customerName';
 
 // Import refactored components
 import { ProductSearchBar } from './cash-register/ProductSearchBar';
@@ -19,6 +20,7 @@ import { UpdateCartModal } from './cash-register/UpdateCartModal';
 import CustomerFormModal from './CustomerFormModal';
 import { CartItem, PaymentEntry, Activity } from './cash-register/types';
 import { useThermalSettings } from '../hooks/useThermalSettings';
+import { useAuth } from '../context/AuthContext';
 
 interface CashRegisterProps {
   onViewCustomers?: () => void;
@@ -29,8 +31,22 @@ interface CashRegisterProps {
 }
 
 export default function CashRegister({ onViewCustomers, onSelectCustomer, preSelectedCustomerId, initiateDeposit, onSelectProduct }: CashRegisterProps) {
+  const { currentUser } = useAuth();
+
   // State
   const [searchQuery, setSearchQuery] = useState('');
+  const [activeSearchIndex, setActiveSearchIndex] = useState(0);
+
+  // Quick Add State
+  const [showQuickAdd, setShowQuickAdd] = useState(false);
+  const [quickName, setQuickName] = useState('');
+  const [quickBarcode, setQuickBarcode] = useState('');
+  const [quickCost, setQuickCost] = useState('');
+  const [quickSelling, setQuickSelling] = useState('');
+  const [quickCategoryId, setQuickCategoryId] = useState('');
+  const [quickStock, setQuickStock] = useState('0');
+  const [quickAddLoading, setQuickAddLoading] = useState(false);
+  const [categories, setCategories] = useState<any[]>([]);
   const [searchResults, setSearchResults] = useState<Product[]>([]);
   const [cart, setCart] = useState<CartItem[]>(() => {
     const saved = localStorage.getItem('epos_cart');
@@ -62,6 +78,7 @@ export default function CashRegister({ onViewCustomers, onSelectCustomer, preSel
   const [showNewCustomerModal, setShowNewCustomerModal] = useState(false);
   const [showDiscardConfirm, setShowDiscardConfirm] = useState(false);
   const walkInCustomerRef = useRef<Customer | null>(null);
+  const searchContainerRef = useRef<HTMLDivElement>(null);
 
   // IMEI Selector State
   const [showImeiSelector, setShowImeiSelector] = useState(false);
@@ -102,6 +119,17 @@ export default function CashRegister({ onViewCustomers, onSelectCustomer, preSel
       .then(res => res.json())
       .then(data => setDepositProductInfo(data))
       .catch(err => console.error('Error fetching deposit product:', err));
+  }, []);
+
+  useEffect(() => {
+    fetch('/api/categories')
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data)) {
+          setCategories(data);
+        }
+      })
+      .catch(err => console.error('Error fetching categories:', err));
   }, []);
 
   useEffect(() => {
@@ -168,8 +196,22 @@ export default function CashRegister({ onViewCustomers, onSelectCustomer, preSel
       return () => clearTimeout(delayDebounceFn);
     } else {
       setSearchResults([]);
+      setActiveSearchIndex(0);
     }
   }, [searchQuery]);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (searchContainerRef.current && !searchContainerRef.current.contains(event.target as Node)) {
+        setSearchQuery('');
+        setSearchResults([]);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
 
   useEffect(() => {
     if (customerSearch.length >= 2) {
@@ -183,14 +225,94 @@ export default function CashRegister({ onViewCustomers, onSelectCustomer, preSel
   }, [customerSearch]);
 
   // Handlers
+  const openQuickAdd = (term: string) => {
+    const trimmed = term.trim();
+    if (/^\d{6,}$/.test(trimmed)) {
+      setQuickBarcode(trimmed);
+      setQuickName('');
+    } else {
+      setQuickName(trimmed);
+      setQuickBarcode('');
+    }
+    setQuickCost('');
+    setQuickSelling('');
+    setQuickStock('0');
+    if (categories.length > 0) {
+      setQuickCategoryId(categories[0].id.toString());
+    } else {
+      setQuickCategoryId('');
+    }
+    setShowQuickAdd(true);
+  };
+
+  const handleQuickAddSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!quickName.trim()) return alert('Please enter a product name');
+    
+    // Safely parse European number formats (e.g. 10,50 -> 10.50)
+    const parsePrice = (val: string) => Number(val.replace(',', '.'));
+    const parsedSelling = parsePrice(quickSelling);
+    const parsedCost = parsePrice(quickCost);
+
+    if (isNaN(parsedSelling) || parsedSelling < 0) {
+      return alert('Please enter a valid selling price');
+    }
+
+    setQuickAddLoading(true);
+    try {
+      const payload = {
+        name: quickName.trim(),
+        category_id: quickCategoryId ? Number(quickCategoryId) : null,
+        manufacturer_id: null,
+        selling_price: parsedSelling,
+        cost_price: isNaN(parsedCost) ? 0 : parsedCost,
+        sku_code: quickBarcode.trim() || undefined,
+        barcode: quickBarcode.trim() || undefined,
+        branch_id: currentUser?.branch_id || 1,
+        quantity: parseInt(quickStock) || 0
+      };
+
+      const res = await fetch('/api/products/quick-add', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      if (!res.ok) {
+        const errData = await res.json();
+        throw new Error(errData.error || 'Failed to quick add product');
+      }
+
+      const fullProduct = await res.json();
+
+      addToCart({
+        ...fullProduct,
+        allow_overselling: true,
+        total_stock: payload.quantity > 0 ? payload.quantity : 0
+      });
+
+      addActivity('Quick Add Product', `Product "${quickName}" created and added to cart`, 'stock');
+      setShowQuickAdd(false);
+      setSearchQuery('');
+      setSearchResults([]);
+    } catch (err: any) {
+      console.error('Quick Add error:', err);
+      alert(err.message || 'An error occurred during quick add');
+    } finally {
+      setQuickAddLoading(false);
+    }
+  };
+
   const fetchProducts = async () => {
     try {
       const response = await fetch(`/api/search?q=${encodeURIComponent(searchQuery)}&type=products`);
       if (response.ok) {
         const data = await response.json();
         setSearchResults(Array.isArray(data) ? data : []);
+        setActiveSearchIndex(0);
       } else {
         setSearchResults([]);
+        setActiveSearchIndex(0);
       }
     } catch (error) {
       console.error('Error fetching products:', error);
@@ -442,7 +564,7 @@ export default function CashRegister({ onViewCustomers, onSelectCustomer, preSel
         const customer = await response.json();
         setSelectedCustomer(customer);
         setShowNewCustomerModal(false);
-        addActivity('New Customer', `${customer.name} registered`, 'customer');
+        addActivity('New Customer', `${safeCustomerName(customer)} registered`, 'customer');
       }
     } catch (error) {
       console.error('Error saving customer:', error);
@@ -591,18 +713,28 @@ export default function CashRegister({ onViewCustomers, onSelectCustomer, preSel
         {/* Left Side: Product Search & Cart */}
         <div className="flex-1 flex flex-col pt-6 pb-6 pr-6 border-r border-[var(--border-base)] min-w-0">
           {/* Search Bar & Results (Floating setup) */}
-          <div className="shrink-0 mb-3 relative z-50">
+          <div ref={searchContainerRef} className="shrink-0 mb-3 relative z-50">
             <ProductSearchBar 
               searchQuery={searchQuery}
               setSearchQuery={setSearchQuery}
               onClear={() => setSearchQuery('')}
               onKeyDown={(e) => {
                 const filteredResults = searchResults.filter(p => !p.device_id || !cart.some(c => c.device_id === p.device_id));
-                if (e.key === 'Enter' && filteredResults.length > 0) {
+                if (e.key === 'ArrowDown') {
                   e.preventDefault();
-                  addToCart(filteredResults[0]);
+                  setActiveSearchIndex(prev => Math.min(prev + 1, filteredResults.length - 1));
+                } else if (e.key === 'ArrowUp') {
+                  e.preventDefault();
+                  setActiveSearchIndex(prev => Math.max(prev - 1, 0));
+                } else if (e.key === 'Enter') {
+                  e.preventDefault();
+                  if (filteredResults.length > 0) {
+                    const selectedItem = filteredResults[activeSearchIndex] || filteredResults[0];
+                    addToCart(selectedItem);
+                  }
                 }
               }}
+              onQuickAddClick={() => openQuickAdd(searchQuery)}
             />
             
             {/* Search Results (Floating) */}
@@ -610,6 +742,8 @@ export default function CashRegister({ onViewCustomers, onSelectCustomer, preSel
               results={searchResults.filter(p => !p.device_id || !cart.some(c => c.device_id === p.device_id))}
               searchQuery={searchQuery}
               onAddProduct={addToCart}
+              onQuickAddClick={(term) => openQuickAdd(term)}
+              activeIndex={activeSearchIndex}
             />
           </div>
 
@@ -753,6 +887,133 @@ export default function CashRegister({ onViewCustomers, onSelectCustomer, preSel
           }}
           onSave={handleUpdateCartItem}
         />
+      )}
+
+      {showQuickAdd && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[110] p-4 animate-in fade-in duration-200">
+          <div className="bg-[var(--bg-card)] rounded-xl shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-300 border border-[var(--border-base)] flex flex-col">
+            {/* Modal Header */}
+            <div className="px-6 py-4 border-b border-[var(--border-base)] bg-[var(--bg-app)] flex justify-between items-center">
+              <div className="flex items-center gap-2">
+                <div className="w-2.5 h-2.5 bg-emerald-500 rounded-full animate-ping" />
+                <h3 className="text-lg font-bold text-[var(--text-main)] uppercase tracking-wide">⚡ Quick Add Product</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowQuickAdd(false)}
+                className="text-[var(--text-muted)] hover:text-[var(--text-main)] transition-colors border-0 bg-transparent p-0 cursor-pointer"
+              >
+                <XCircle size={20} />
+              </button>
+            </div>
+            
+            {/* Modal Form */}
+            <form onSubmit={handleQuickAddSubmit} className="p-6 space-y-4 flex-1">
+              <div className="space-y-1.5">
+                <label className="block text-xs font-bold text-[var(--text-muted)] uppercase">Product Name *</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. iPhone 13 Pro Case"
+                  className="w-full bg-[var(--bg-app)] border border-[var(--border-base)] rounded px-3 py-2 text-sm text-[var(--text-main)] focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 outline-none"
+                  value={quickName}
+                  onChange={(e) => setQuickName(e.target.value)}
+                  autoFocus
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-bold text-[var(--text-muted)] uppercase">SKU / Barcode</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. SKU12345"
+                    className="w-full bg-[var(--bg-app)] border border-[var(--border-base)] rounded px-3 py-2 text-sm text-[var(--text-main)] focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 outline-none"
+                    value={quickBarcode}
+                    onChange={(e) => setQuickBarcode(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-bold text-[var(--text-muted)] uppercase">Category *</label>
+                  <select
+                    required
+                    className="w-full bg-[var(--bg-app)] border border-[var(--border-base)] rounded px-3 py-2 text-sm text-[var(--text-main)] focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 outline-none bg-transparent"
+                    value={quickCategoryId}
+                    onChange={(e) => setQuickCategoryId(e.target.value)}
+                  >
+                    <option value="" className="bg-[var(--bg-card)]">Choose Category</option>
+                    {categories.map((c) => (
+                      <option key={c.id} value={c.id} className="bg-[var(--bg-card)]">
+                        {c.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-4">
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-bold text-[var(--text-muted)] uppercase">Cost Price (€)</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    placeholder="0.00"
+                    className="w-full bg-[var(--bg-app)] border border-[var(--border-base)] rounded px-3 py-2 text-sm text-[var(--text-main)] focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 outline-none"
+                    value={quickCost}
+                    onChange={(e) => setQuickCost(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-bold text-[var(--text-muted)] uppercase">Selling Price (€) *</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    required
+                    placeholder="0.00"
+                    className="w-full bg-[var(--bg-app)] border border-[var(--border-base)] rounded px-3 py-2 text-sm text-[var(--text-main)] focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 outline-none"
+                    value={quickSelling}
+                    onChange={(e) => setQuickSelling(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-bold text-[var(--text-muted)] uppercase">Initial Stock</label>
+                  <input
+                    type="number"
+                    min="0"
+                    className="w-full bg-[var(--bg-app)] border border-[var(--border-base)] rounded px-3 py-2 text-sm text-[var(--text-main)] focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 outline-none"
+                    value={quickStock}
+                    onChange={(e) => setQuickStock(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <div className="pt-4 flex gap-3 border-t border-[var(--border-base)]">
+                <button
+                  type="button"
+                  onClick={() => setShowQuickAdd(false)}
+                  className="flex-1 py-2.5 rounded font-bold text-[var(--text-muted)] bg-[var(--bg-app)] hover:bg-[var(--bg-hover)] transition-all border border-[var(--border-base)] cursor-pointer"
+                  disabled={quickAddLoading}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 py-2.5 rounded font-bold text-white bg-emerald-600 hover:bg-emerald-700 transition-all shadow-lg active:scale-95 flex items-center justify-center gap-2 cursor-pointer border-0"
+                  disabled={quickAddLoading}
+                >
+                  {quickAddLoading ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    'Save & Add to Cart'
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
       )}
 
       {/* Hidden Print Container */}

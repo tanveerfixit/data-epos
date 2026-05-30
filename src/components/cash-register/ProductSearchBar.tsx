@@ -1,18 +1,20 @@
 import React from 'react';
-import { Search, X, Camera } from 'lucide-react';
+import { Search, X, Camera, Plus } from 'lucide-react';
 
 interface ProductSearchBarProps {
   searchQuery: string;
   setSearchQuery: (query: string) => void;
   onClear: () => void;
   onKeyDown?: (e: React.KeyboardEvent<HTMLInputElement>) => void;
+  onQuickAddClick?: () => void;
 }
 
 export const ProductSearchBar: React.FC<ProductSearchBarProps> = ({
   searchQuery,
   setSearchQuery,
   onClear,
-  onKeyDown
+  onKeyDown,
+  onQuickAddClick
 }) => {
   return (
     <div className="relative group">
@@ -21,7 +23,7 @@ export const ProductSearchBar: React.FC<ProductSearchBarProps> = ({
       </div>
       <input
         type="text"
-        className="block w-full pl-12 pr-28 py-3.5 border border-[var(--border-base)] rounded-none bg-[var(--bg-card)] transition-all text-lg hover:shadow-md focus:shadow-md focus:outline-none placeholder:text-[var(--text-muted)] text-[var(--text-main)]"
+        className="block w-full pl-12 pr-32 py-3.5 border border-[var(--border-base)] rounded-none bg-[var(--bg-card)] transition-all text-lg hover:shadow-md focus:shadow-md focus:outline-none placeholder:text-[var(--text-muted)] text-[var(--text-main)]"
         placeholder="Search products by name, SKU or scan barcode..."
         value={searchQuery}
         onChange={(e) => setSearchQuery(e.target.value)}
@@ -40,6 +42,16 @@ export const ProductSearchBar: React.FC<ProductSearchBarProps> = ({
         <button className="text-blue-500 hover:text-blue-600 transition-colors" title="Search by Lens">
           <Camera className="h-5 w-5" />
         </button>
+        {onQuickAddClick && (
+          <button 
+            type="button"
+            onClick={onQuickAddClick}
+            className="text-emerald-500 hover:text-emerald-600 transition-colors"
+            title="Quick Add Product"
+          >
+            <Plus className="h-5 w-5" />
+          </button>
+        )}
       </div>
     </div>
   );

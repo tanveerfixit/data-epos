@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Plus, Smartphone, User, CreditCard, Banknote, Wallet, MoreHorizontal } from 'lucide-react';
 import { Customer } from '../types';
+import { safeCustomerName } from '../utils/customerName';
 
 interface RepairIntakeFormProps {
   onClose: () => void;
@@ -55,8 +56,8 @@ export default function RepairIntakeForm({ onClose, onSuccess, initialCustomerId
         setFormData(prev => ({ 
           ...prev, 
           customer_id: match.id, 
-          first_name: match.first_name || match.name.split(' ')[0] || '',
-          last_name: match.last_name || match.name.split(' ').slice(1).join(' ') || '',
+          first_name: match.first_name || match.name || '',
+          last_name: match.last_name || '',
           phone: match.phone 
         }));
       } else {
@@ -119,7 +120,7 @@ export default function RepairIntakeForm({ onClose, onSuccess, initialCustomerId
         </div>
 
         {/* Form Content */}
-        <form onSubmit={handleSubmit} className="flex-1 overflow-auto p-8 space-y-4">
+        <form onSubmit={handleSubmit} autoComplete="off" className="flex-1 overflow-auto p-8 space-y-4">
           
           <div className="text-[11px] font-bold text-[var(--text-muted-more)] uppercase tracking-wider mb-4 border-b border-[var(--border-base)] pb-1">
             Customer Information
@@ -141,6 +142,7 @@ export default function RepairIntakeForm({ onClose, onSuccess, initialCustomerId
               <input
                 required
                 type="text"
+                autoComplete="off"
                 className="flex-1 border border-[var(--border-input)] rounded px-3 py-1.5 text-sm focus:border-[var(--brand-primary)] focus:outline-none focus:ring-4 focus:ring-blue-500/10"
                 placeholder="08X XXX XXXX"
                 value={searchPhone}
@@ -153,7 +155,7 @@ export default function RepairIntakeForm({ onClose, onSuccess, initialCustomerId
             <div className="flex items-center">
               <div className="w-1/3"></div>
               <div className="w-2/3 px-3 py-1 bg-emerald-50 border border-emerald-100 rounded text-[11px] text-emerald-700 font-bold">
-                Existing Customer: {selectedCustomer.name}
+                Existing Customer: {safeCustomerName(selectedCustomer)}
               </div>
             </div>
           )}
@@ -163,6 +165,7 @@ export default function RepairIntakeForm({ onClose, onSuccess, initialCustomerId
             <input
               required
               type="text"
+              autoComplete="off"
               className="w-2/3 border border-[var(--border-input)] rounded px-3 py-1.5 text-sm focus:border-[var(--brand-primary)] focus:outline-none focus:ring-4 focus:ring-blue-500/10 disabled:bg-[var(--bg-hover)]"
               placeholder="First Name"
               value={formData.first_name}
@@ -175,6 +178,7 @@ export default function RepairIntakeForm({ onClose, onSuccess, initialCustomerId
             <label className="w-1/3 text-sm font-bold text-[var(--text-main)]">Last Name</label>
             <input
               type="text"
+              autoComplete="off"
               className="w-2/3 border border-[var(--border-input)] rounded px-3 py-1.5 text-sm focus:border-[var(--brand-primary)] focus:outline-none focus:ring-4 focus:ring-blue-500/10 disabled:bg-[var(--bg-hover)]"
               placeholder="Last Name"
               value={formData.last_name}

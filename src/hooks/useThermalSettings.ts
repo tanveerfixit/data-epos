@@ -14,6 +14,7 @@ export interface ThermalPrinterSettings {
   show_items_table: boolean;
   show_totals: boolean;
   show_footer: boolean;
+  show_powered_by: boolean;
   footer_text: string;
 }
 
@@ -55,6 +56,7 @@ export function useThermalSettings() {
             show_items_table: !!settingsData.show_items_table,
             show_totals: !!settingsData.show_totals,
             show_footer: !!settingsData.show_footer,
+            show_powered_by: !!settingsData.show_powered_by,
           });
         }
 

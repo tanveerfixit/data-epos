@@ -467,12 +467,19 @@ async function initSchema() {
         show_items_table TINYINT(1) DEFAULT 1,
         show_totals TINYINT(1) DEFAULT 1,
         show_footer TINYINT(1) DEFAULT 1,
+        show_powered_by TINYINT(1) DEFAULT 1,
         footer_text TEXT,
         FOREIGN KEY (business_id) REFERENCES businesses(id) ON DELETE CASCADE,
         FOREIGN KEY (branch_id) REFERENCES branches(id) ON DELETE CASCADE,
         UNIQUE KEY idx_business_branch (business_id, branch_id)
       )
     `);
+    try {
+      await conn.query("ALTER TABLE thermal_printer_settings ADD COLUMN show_powered_by TINYINT(1) DEFAULT 1 AFTER show_footer");
+      console.log("[MySQL] Migration: added show_powered_by to thermal_printer_settings");
+    } catch (e) {
+      if (!e.message?.includes("Duplicate column")) throw e;
+    }
     await conn.query(`
       CREATE TABLE IF NOT EXISTS drawers (
         id INT AUTO_INCREMENT PRIMARY KEY,
@@ -716,6 +723,32 @@ async function initSchema() {
       if (!e.message?.includes("Duplicate column") && !e.message?.includes("Duplicate key")) throw e;
     }
     await conn.query("SET FOREIGN_KEY_CHECKS = 1");
+    try {
+      await conn.query(`
+        UPDATE customers 
+        SET name = TRIM(REPLACE(name, 'null', ''))
+        WHERE name LIKE '%null%'
+      `);
+      await conn.query(`
+        UPDATE customers 
+        SET last_name = NULL 
+        WHERE last_name = 'null'
+      `);
+      await conn.query(`
+        UPDATE customers 
+        SET first_name = NULL 
+        WHERE first_name = 'null'
+      `);
+      await conn.query(`
+        UPDATE customers 
+        SET name = TRIM(CONCAT(COALESCE(first_name, ''), ' ', COALESCE(last_name, '')))
+        WHERE (name IS NULL OR name = '' OR name = ' ')
+          AND (first_name IS NOT NULL OR last_name IS NOT NULL)
+      `);
+      console.log('[MySQL] Migration: cleaned up customer names containing "null"');
+    } catch (e) {
+      console.warn("[MySQL] Customer name cleanup migration warning:", e.message);
+    }
     console.log("[MySQL] Schema initialised successfully");
   } finally {
     conn.release();
@@ -857,14 +890,14 @@ var init_mysql = __esm({
   "src/mysql.ts"() {
     dotenv.config();
     if (!process.env.DB_PASS) {
-      console.warn("[SECURITY WARNING] DB_PASS is not set. Using hardcoded fallback. Set this in your .env file before going to production.");
+      throw new Error("[SECURITY FATAL] DB_PASS is not set in the .env file. Refusing to start with insecure credentials.");
     }
     pool = mysql.createPool({
       host: process.env.DB_HOST || "srv2113.hstgr.io",
       port: Number(process.env.DB_PORT) || 3306,
       database: process.env.DB_NAME || "u583652021_clare",
       user: process.env.DB_USER || "u583652021_clare_user",
-      password: process.env.DB_PASS || "Tani@8877!!",
+      password: process.env.DB_PASS,
       waitForConnections: true,
       connectionLimit: 10,
       queueLimit: 0,
@@ -985,35 +1018,43 @@ __export(auth_exports, {
   requireAdminAsync: () => requireAdminAsync,
   requireAuth: () => requireAuth,
   requireAuthAsync: () => requireAuthAsync,
-  sessions: () => sessions
+  revokedTokens: () => revokedTokens,
+  userPasswordResets: () => userPasswordResets
 });
 import { Router } from "express";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
+import jwt from "jsonwebtoken";
+import { z } from "zod";
+function verifyToken(token) {
+  if (!token) return null;
+  if (revokedTokens.has(token)) return null;
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const resetTime = userPasswordResets.get(decoded.userId);
+    if (resetTime && decoded.iat < resetTime) return null;
+    return decoded;
+  } catch {
+    return null;
+  }
+}
 function requireAuth(req, res, next) {
   const token = req.headers["authorization"]?.replace("Bearer ", "");
-  const sess = token ? sessions.get(token) : void 0;
-  if (!sess || sess.expiresAt <= Date.now()) {
-    if (token && sess) sessions.delete(token);
-    return res.status(401).json({ error: "Unauthorized" });
-  }
-  sess.expiresAt = Date.now() + SESSION_TTL_MS;
+  const decoded = verifyToken(token);
+  if (!decoded) return res.status(401).json({ error: "Unauthorized" });
   req._sessionToken = token;
+  req.userId = decoded.userId;
   next();
 }
 async function requireAuthAsync(req, res, next) {
   const token = req.headers["authorization"]?.replace("Bearer ", "");
-  const sess = token ? sessions.get(token) : void 0;
-  if (!sess || sess.expiresAt <= Date.now()) {
-    if (token && sess) sessions.delete(token);
-    return res.status(401).json({ error: "Unauthorized" });
-  }
-  sess.expiresAt = Date.now() + SESSION_TTL_MS;
-  const userId = sess.userId;
+  const decoded = verifyToken(token);
+  if (!decoded) return res.status(401).json({ error: "Unauthorized" });
   try {
-    const user = await queryOne("SELECT * FROM users WHERE id=?", [userId]);
+    const user = await queryOne("SELECT * FROM users WHERE id=?", [decoded.userId]);
     if (!user) return res.status(401).json({ error: "User not found" });
-    req.userId = userId;
+    req._sessionToken = token;
+    req.userId = decoded.userId;
     req.user = user;
     next();
   } catch (e) {
@@ -1023,48 +1064,49 @@ async function requireAuthAsync(req, res, next) {
 }
 async function requireAdminAsync(req, res, next) {
   const token = req.headers["authorization"]?.replace("Bearer ", "");
-  const sess = token ? sessions.get(token) : void 0;
-  if (!sess || sess.expiresAt <= Date.now()) {
-    if (token && sess) sessions.delete(token);
-    return res.status(401).json({ error: "Unauthorized" });
-  }
-  sess.expiresAt = Date.now() + SESSION_TTL_MS;
-  const userId = sess.userId;
+  const decoded = verifyToken(token);
+  if (!decoded) return res.status(401).json({ error: "Unauthorized" });
   try {
-    const user = await queryOne("SELECT * FROM users WHERE id=?", [userId]);
+    const user = await queryOne("SELECT * FROM users WHERE id=?", [decoded.userId]);
     if (!user || !["superadmin", "developer"].includes(user.role)) {
       return res.status(403).json({ error: "Admin access required" });
     }
-    req.userId = userId;
+    req._sessionToken = token;
+    req.userId = decoded.userId;
     req.user = user;
     next();
   } catch (e) {
-    res.status(500).json({ error: e.message });
+    next(e);
   }
 }
 function slugify(text) {
   return text.toString().toLowerCase().trim().replace(/\s+/g, "-").replace(/[^\w-]+/g, "").replace(/--+/g, "-");
 }
-var SESSION_TTL_MS, sessions, _cleanup, router, adminRouter, auth_default;
+var JWT_SECRET, revokedTokens, userPasswordResets, _cleanup, router, signupSchema, loginSchema, resetPasswordSchema, adminRouter, auth_default;
 var init_auth = __esm({
   "src/routes/auth.ts"() {
     init_mysql();
     init_mailer();
-    SESSION_TTL_MS = 1 * 60 * 60 * 1e3;
-    sessions = /* @__PURE__ */ new Map();
+    JWT_SECRET = process.env.JWT_SECRET || "EPOS_SUPER_SECRET_FALLBACK_KEY_2026";
+    revokedTokens = /* @__PURE__ */ new Set();
+    userPasswordResets = /* @__PURE__ */ new Map();
     _cleanup = setInterval(() => {
-      const now = Date.now();
-      for (const [token, sess] of sessions) {
-        if (sess.expiresAt <= now) sessions.delete(token);
-      }
+      revokedTokens.clear();
     }, 60 * 60 * 1e3);
     if (typeof _cleanup.unref === "function") _cleanup.unref();
     router = Router();
-    router.post("/signup", async (req, res) => {
-      const { mode, name, email, password, business_name, branch_name, branch_id } = req.body;
-      if (!name || !email || !password) {
-        return res.status(400).json({ error: "Name, email and password are required" });
-      }
+    signupSchema = z.object({
+      mode: z.enum(["business_register", "staff_register"]).optional(),
+      name: z.string().min(2, "Name must be at least 2 characters"),
+      email: z.string().email("Invalid email address"),
+      password: z.string().min(8, "Password must be at least 8 characters"),
+      business_name: z.string().optional(),
+      branch_name: z.string().optional(),
+      branch_id: z.number().optional()
+    });
+    router.post("/signup", async (req, res, next) => {
+      const data = signupSchema.parse(req.body);
+      const { mode, name, email, password, business_name, branch_name, branch_id } = data;
       const conn = await pool.getConnection();
       try {
         await conn.beginTransaction();
@@ -1116,14 +1158,18 @@ var init_auth = __esm({
         }
       } catch (e) {
         await conn.rollback();
-        res.status(500).json({ error: e.message });
+        next(e);
       } finally {
         conn.release();
       }
     });
-    router.post("/login", async (req, res) => {
-      const { email, password } = req.body;
-      if (!email || !password) return res.status(400).json({ error: "Email and password required" });
+    loginSchema = z.object({
+      email: z.string().email("Invalid email address"),
+      password: z.string().min(1, "Password is required")
+    });
+    router.post("/login", async (req, res, next) => {
+      const data = loginSchema.parse(req.body);
+      const { email, password } = data;
       try {
         const user = await queryOne("SELECT * FROM users WHERE email=? AND deleted_at IS NULL", [email]);
         if (!user) return res.status(401).json({ error: "Invalid email or password" });
@@ -1153,8 +1199,7 @@ var init_auth = __esm({
           }
         }
         if (!valid) return res.status(401).json({ error: "Invalid email or password" });
-        const token = crypto.randomUUID();
-        sessions.set(token, { userId: user.id, expiresAt: Date.now() + SESSION_TTL_MS });
+        const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: "1h" });
         await execute("UPDATE users SET last_login=NOW() WHERE id=?", [user.id]);
         const branch = await queryOne("SELECT * FROM branches WHERE id=?", [user.branch_id]);
         const business = await queryOne("SELECT name FROM businesses WHERE id=?", [user.business_id]);
@@ -1173,10 +1218,10 @@ var init_auth = __esm({
           }
         });
       } catch (e) {
-        res.status(500).json({ error: e.message });
+        next(e);
       }
     });
-    router.get("/branches-lookup", async (req, res) => {
+    router.get("/branches-lookup", async (req, res, next) => {
       const { email } = req.query;
       if (!email) return res.status(400).json({ error: "Business email required" });
       try {
@@ -1185,15 +1230,15 @@ var init_auth = __esm({
         const branches = await query("SELECT id, name FROM branches WHERE business_id=? AND deleted_at IS NULL", [business.id]);
         res.json(branches);
       } catch (e) {
-        res.status(500).json({ error: e.message });
+        next(e);
       }
     });
-    router.post("/logout", (req, res) => {
+    router.post("/logout", (req, res, next) => {
       const token = req.headers["authorization"]?.replace("Bearer ", "");
-      if (token) sessions.delete(token);
+      if (token) revokedTokens.add(token);
       res.json({ success: true });
     });
-    router.get("/me", requireAuthAsync, async (req, res) => {
+    router.get("/me", requireAuthAsync, async (req, res, next) => {
       try {
         const user = await queryOne(`
       SELECT u.*, b.name as branch_name, biz.name as business_name 
@@ -1204,10 +1249,10 @@ var init_auth = __esm({
         const { password, password_hash, reset_token, otp_code, ...safeUser } = user;
         res.json(safeUser);
       } catch (e) {
-        res.status(500).json({ error: e.message });
+        next(e);
       }
     });
-    router.post("/forgot-password", async (req, res) => {
+    router.post("/forgot-password", async (req, res, next) => {
       res.json({ success: true, message: "If this email exists, an OTP code has been sent." });
       try {
         const user = await queryOne("SELECT * FROM users WHERE email=?", [req.body.email]);
@@ -1222,7 +1267,7 @@ var init_auth = __esm({
       } catch {
       }
     });
-    router.post("/verify-otp", async (req, res) => {
+    router.post("/verify-otp", async (req, res, next) => {
       const { email, otp } = req.body;
       if (!email || !otp) return res.status(400).json({ error: "Email and OTP required" });
       try {
@@ -1240,12 +1285,16 @@ var init_auth = __esm({
         );
         res.json({ success: true, reset_token });
       } catch (e) {
-        res.status(500).json({ error: e.message });
+        next(e);
       }
     });
-    router.post("/reset-password", async (req, res) => {
-      const { token, password } = req.body;
-      if (!token || !password) return res.status(400).json({ error: "Token and new password required" });
+    resetPasswordSchema = z.object({
+      token: z.string().min(1, "Token is required"),
+      password: z.string().min(8, "Password must be at least 8 characters")
+    });
+    router.post("/reset-password", async (req, res, next) => {
+      const data = resetPasswordSchema.parse(req.body);
+      const { token, password } = data;
       try {
         const user = await queryOne("SELECT * FROM users WHERE reset_token=?", [token]);
         if (!user) return res.status(400).json({ error: "Invalid or expired reset link" });
@@ -1253,20 +1302,18 @@ var init_auth = __esm({
           return res.status(400).json({ error: "Reset link has expired. Please request a new one." });
         }
         const password_hash = await bcrypt.hash(password, 10);
-        for (const [t, s] of sessions) {
-          if (s.userId === user.id) sessions.delete(t);
-        }
+        userPasswordResets.set(user.id, Date.now() / 1e3);
         await execute(
           "UPDATE users SET password_hash=?,password='',reset_token=NULL,reset_token_expires=NULL WHERE id=?",
           [password_hash, user.id]
         );
         res.json({ success: true, message: "Password updated. You can now log in." });
       } catch (e) {
-        res.status(500).json({ error: e.message });
+        next(e);
       }
     });
     adminRouter = Router();
-    adminRouter.get("/users", requireAdminAsync, async (req, res) => {
+    adminRouter.get("/users", requireAdminAsync, async (req, res, next) => {
       try {
         res.json(await query(`
       SELECT u.id,u.name,u.email,u.role,u.status,u.last_login,u.created_at,b.name as branch_name,b.id as branch_id
@@ -1274,10 +1321,10 @@ var init_auth = __esm({
       WHERE u.business_id=? AND u.deleted_at IS NULL ORDER BY u.created_at DESC
     `, [req.user.business_id]));
       } catch (e) {
-        res.status(500).json({ error: e.message });
+        next(e);
       }
     });
-    adminRouter.put("/users/:id/status", requireAdminAsync, async (req, res) => {
+    adminRouter.put("/users/:id/status", requireAdminAsync, async (req, res, next) => {
       const { status } = req.body;
       if (!["approved", "rejected", "inactive", "pending"].includes(status)) {
         return res.status(400).json({ error: "Invalid status" });
@@ -1303,10 +1350,10 @@ var init_auth = __esm({
         }
         res.json({ success: true });
       } catch (e) {
-        res.status(500).json({ error: e.message });
+        next(e);
       }
     });
-    adminRouter.put("/users/:id", requireAdminAsync, async (req, res) => {
+    adminRouter.put("/users/:id", requireAdminAsync, async (req, res, next) => {
       const { name, branch_id, role, password } = req.body;
       try {
         const existing = await queryOne(
@@ -1328,10 +1375,10 @@ var init_auth = __esm({
         }
         res.json({ success: true });
       } catch (e) {
-        res.status(500).json({ error: e.message });
+        next(e);
       }
     });
-    adminRouter.delete("/users/:id", requireAdminAsync, async (req, res) => {
+    adminRouter.delete("/users/:id", requireAdminAsync, async (req, res, next) => {
       try {
         const r = await execute(
           "UPDATE users SET deleted_at=NOW() WHERE id=? AND business_id=?",
@@ -1340,10 +1387,10 @@ var init_auth = __esm({
         if (r.affectedRows === 0) return res.status(404).json({ error: "User not found or access denied" });
         res.json({ success: true });
       } catch (e) {
-        res.status(500).json({ error: e.message });
+        next(e);
       }
     });
-    adminRouter.post("/users/:id/reset-password", requireAdminAsync, async (req, res) => {
+    adminRouter.post("/users/:id/reset-password", requireAdminAsync, async (req, res, next) => {
       try {
         const user = await queryOne(
           "SELECT * FROM users WHERE id=? AND business_id=?",
@@ -1362,10 +1409,10 @@ var init_auth = __esm({
         }
         res.json({ success: true, message: `Password reset and emailed to ${user.email}` });
       } catch (e) {
-        res.status(500).json({ error: e.message });
+        next(e);
       }
     });
-    adminRouter.post("/users/:id/resend-password", requireAdminAsync, async (req, res) => {
+    adminRouter.post("/users/:id/resend-password", requireAdminAsync, async (req, res, next) => {
       try {
         const user = await queryOne(
           "SELECT * FROM users WHERE id=? AND business_id=?",
@@ -1381,10 +1428,10 @@ var init_auth = __esm({
         }
         res.json({ success: true, message: `Password resent to ${user.email}` });
       } catch (e) {
-        res.status(500).json({ error: e.message });
+        next(e);
       }
     });
-    adminRouter.get("/branches", requireAdminAsync, async (req, res) => {
+    adminRouter.get("/branches", requireAdminAsync, async (req, res, next) => {
       try {
         if (req.user.role === "developer") {
           res.json(await query(`
@@ -1397,10 +1444,10 @@ var init_auth = __esm({
           res.json(await query("SELECT * FROM branches WHERE business_id=? AND deleted_at IS NULL", [req.user.business_id]));
         }
       } catch (e) {
-        res.status(500).json({ error: e.message });
+        next(e);
       }
     });
-    adminRouter.post("/branches", requireAdminAsync, async (req, res) => {
+    adminRouter.post("/branches", requireAdminAsync, async (req, res, next) => {
       const { name, address, phone } = req.body;
       try {
         const r = await execute(
@@ -1409,10 +1456,10 @@ var init_auth = __esm({
         );
         res.json({ id: r.insertId, name, address, phone });
       } catch (e) {
-        res.status(500).json({ error: e.message });
+        next(e);
       }
     });
-    adminRouter.get("/smtp", requireAdminAsync, async (req, res) => {
+    adminRouter.get("/smtp", requireAdminAsync, async (req, res, next) => {
       try {
         const s = await queryOne("SELECT * FROM smtp_settings WHERE business_id=?", [req.user.business_id]);
         if (s) {
@@ -1422,10 +1469,10 @@ var init_auth = __esm({
           res.json({ host: "smtp.hostinger.com", port: 465, secure: 1, user: "", pass: "", from_name: "EPOS System", from_email: "" });
         }
       } catch (e) {
-        res.status(500).json({ error: e.message });
+        next(e);
       }
     });
-    adminRouter.put("/smtp", requireAdminAsync, async (req, res) => {
+    adminRouter.put("/smtp", requireAdminAsync, async (req, res, next) => {
       const { host, port, secure, user, pass, from_name, from_email } = req.body;
       const businessId = req.user.business_id;
       try {
@@ -1450,29 +1497,29 @@ var init_auth = __esm({
         }
         res.json({ success: true });
       } catch (e) {
-        res.status(500).json({ error: e.message });
+        next(e);
       }
     });
-    adminRouter.post("/smtp/test", requireAdminAsync, async (req, res) => {
+    adminRouter.post("/smtp/test", requireAdminAsync, async (req, res, next) => {
       try {
         const admin = await queryOne("SELECT email FROM users WHERE id=?", [req.userId]);
         await sendTestEmail(admin.email);
         res.json({ success: true, message: `Test email sent to ${admin.email}` });
       } catch (e) {
-        res.status(500).json({ error: e.message });
+        next(e);
       }
     });
-    adminRouter.get("/system/businesses", requireAuthAsync, async (req, res) => {
+    adminRouter.get("/system/businesses", requireAuthAsync, async (req, res, next) => {
       if (req.user.role !== "developer") {
         return res.status(403).json({ error: "Developer access required" });
       }
       try {
         res.json(await query("SELECT * FROM businesses WHERE deleted_at IS NULL ORDER BY created_at DESC"));
       } catch (e) {
-        res.status(500).json({ error: e.message });
+        next(e);
       }
     });
-    adminRouter.put("/system/businesses/:id", requireAuthAsync, async (req, res) => {
+    adminRouter.put("/system/businesses/:id", requireAuthAsync, async (req, res, next) => {
       if (req.user.role !== "developer") {
         return res.status(403).json({ error: "Developer access required" });
       }
@@ -1492,10 +1539,10 @@ var init_auth = __esm({
         );
         res.json({ success: true });
       } catch (e) {
-        res.status(500).json({ error: e.message });
+        next(e);
       }
     });
-    adminRouter.put("/system/businesses/:id/status", requireAuthAsync, async (req, res) => {
+    adminRouter.put("/system/businesses/:id/status", requireAuthAsync, async (req, res, next) => {
       if (req.user.role !== "developer") {
         return res.status(403).json({ error: "Developer access required" });
       }
@@ -1504,7 +1551,7 @@ var init_auth = __esm({
         await execute("UPDATE businesses SET status=? WHERE id=?", [status, req.params.id]);
         res.json({ success: true });
       } catch (e) {
-        res.status(500).json({ error: e.message });
+        next(e);
       }
     });
     auth_default = router;
@@ -1522,7 +1569,7 @@ var init_public = __esm({
   "src/routes/public.ts"() {
     init_mysql();
     router2 = Router2();
-    router2.get("/business/:slug", async (req, res) => {
+    router2.get("/business/:slug", async (req, res, next) => {
       const { slug } = req.params;
       try {
         const business = await queryOne(`
@@ -1539,7 +1586,7 @@ var init_public = __esm({
           branches: Array.isArray(branches) ? branches : [branches].filter(Boolean)
         });
       } catch (e) {
-        res.status(500).json({ error: e.message });
+        next(e);
       }
     });
     public_default = router2;
@@ -1552,12 +1599,13 @@ __export(products_exports, {
   default: () => products_default
 });
 import { Router as Router3 } from "express";
-var router3, products_default;
+import { z as z2 } from "zod";
+var router3, createProductSchema, quickAddSchema, products_default;
 var init_products = __esm({
   "src/routes/products.ts"() {
     init_mysql();
     router3 = Router3();
-    router3.get("/", async (req, res) => {
+    router3.get("/", async (req, res, next) => {
       try {
         const page = parseInt(req.query.page) || 1;
         const limit = parseInt(req.query.limit) || 20;
@@ -1619,10 +1667,10 @@ var init_products = __esm({
         });
       } catch (e) {
         console.error("[GetProducts] Error:", e.message);
-        res.status(500).json({ error: e.message });
+        next(e);
       }
     });
-    router3.get("/special/get-deposit-product", async (req, res) => {
+    router3.get("/special/get-deposit-product", async (req, res, next) => {
       const businessId = req.user?.business_id;
       if (!businessId) return res.status(401).json({ error: "Business context missing" });
       const depositSkuCode = `DEPOSIT-WALLET-${businessId}`;
@@ -1680,12 +1728,12 @@ var init_products = __esm({
         res.status(500).json({ error: e.message || "Failed to initialize deposit product" });
       }
     });
-    router3.get("/:id", async (req, res) => {
+    router3.get("/:id", async (req, res, next) => {
       try {
         const businessId = req.user.business_id;
         const product = await queryOne(`
       SELECT s.id, p.name as product_name, s.sku_code, s.barcode,
-             s.selling_price, s.cost_price, p.product_type,
+             s.selling_price, s.cost_price, p.product_type, p.allow_overselling,
              c.name as category_name, m.name as manufacturer_name,
              p.id as product_id, p.category_id, p.manufacturer_id
       FROM product_skus s
@@ -1703,10 +1751,10 @@ var init_products = __esm({
     `, [req.params.id, businessId]);
         res.json({ ...product, stock });
       } catch (e) {
-        res.status(500).json({ error: e.message });
+        next(e);
       }
     });
-    router3.put("/:id", async (req, res) => {
+    router3.put("/:id", async (req, res, next) => {
       const { product_name, category_id, manufacturer_id, sku_code, barcode, selling_price, cost_price, product_type } = req.body;
       const skuId = req.params.id;
       const businessId = req.user.business_id;
@@ -1742,13 +1790,25 @@ var init_products = __esm({
         res.json({ success: true });
       } catch (e) {
         await conn.rollback();
-        res.status(500).json({ error: e.message });
+        next(e);
       } finally {
         conn.release();
       }
     });
-    router3.post("/", async (req, res) => {
-      const { name, category_id, manufacturer_id, selling_price, cost_price, product_type, sku_code, barcode, allow_overselling } = req.body;
+    createProductSchema = z2.object({
+      name: z2.string().min(1, "Product name is required"),
+      category_id: z2.number().nullable().optional(),
+      manufacturer_id: z2.number().nullable().optional(),
+      selling_price: z2.number().or(z2.string().transform(Number)).optional(),
+      cost_price: z2.number().or(z2.string().transform(Number)).optional(),
+      product_type: z2.string().optional(),
+      sku_code: z2.string().optional(),
+      barcode: z2.string().optional(),
+      allow_overselling: z2.boolean().optional()
+    });
+    router3.post("/", async (req, res, next) => {
+      const data = createProductSchema.parse(req.body);
+      const { name, category_id, manufacturer_id, selling_price, cost_price, product_type, sku_code, barcode, allow_overselling } = data;
       const businessId = req.user.business_id;
       const conn = await pool.getConnection();
       try {
@@ -1776,21 +1836,92 @@ var init_products = __esm({
         res.json({ id: skuId });
       } catch (e) {
         await conn.rollback();
-        res.status(500).json({ error: e.message });
+        next(e);
       } finally {
         conn.release();
       }
     });
-    router3.delete("/:id", async (req, res) => {
+    quickAddSchema = z2.object({
+      name: z2.string().min(1, "Product name is required"),
+      category_id: z2.number().nullable().optional(),
+      manufacturer_id: z2.number().nullable().optional(),
+      selling_price: z2.number().or(z2.string().transform(Number)).optional(),
+      cost_price: z2.number().or(z2.string().transform(Number)).optional(),
+      sku_code: z2.string().optional(),
+      barcode: z2.string().optional(),
+      branch_id: z2.number().optional(),
+      quantity: z2.number().or(z2.string().transform(Number)).optional()
+    });
+    router3.post("/quick-add", async (req, res, next) => {
+      const data = quickAddSchema.parse(req.body);
+      const { name, category_id, manufacturer_id, selling_price, cost_price, sku_code, barcode, branch_id, quantity } = data;
+      const businessId = req.user.business_id;
+      const activeBranchId = branch_id || req.user.branch_id;
+      const stockQty = parseInt(quantity) || 0;
+      const conn = await pool.getConnection();
+      try {
+        await conn.beginTransaction();
+        const [pr] = await conn.execute(
+          "INSERT INTO products (business_id,name,category_id,manufacturer_id,product_type,allow_overselling) VALUES (?,?,?,?,?,?)",
+          [businessId, name, category_id || null, manufacturer_id || null, "stock", 1]
+        );
+        const productId = pr.insertId;
+        let finalSku = sku_code?.trim() || "SKU-" + Math.random().toString(36).substring(2, 9).toUpperCase();
+        const [sr] = await conn.execute(
+          "INSERT INTO product_skus (product_id,sku_code,barcode,cost_price,selling_price) VALUES (?,?,?,?,?)",
+          [productId, finalSku, barcode || finalSku, cost_price || 0, selling_price || 0]
+        );
+        const skuId = sr.insertId;
+        await conn.execute(
+          "INSERT INTO product_activity (sku_id,user_id,activity,details) VALUES (?,?,?,?)",
+          [skuId, req.userId, "Product Created", `Product "${name}" quick-added with SKU ${finalSku}`]
+        );
+        await conn.execute(
+          "INSERT INTO activity_logs (product_id,user_id,activity_type,description) VALUES (?,?,?,?)",
+          [skuId, req.userId, "Product Created", `Product "${name}" quick-added with SKU ${finalSku}`]
+        );
+        if (stockQty > 0) {
+          await conn.execute(
+            "INSERT INTO branch_stock (branch_id,sku_id,quantity) VALUES (?,?,?) ON DUPLICATE KEY UPDATE quantity=quantity+VALUES(quantity)",
+            [activeBranchId, skuId, stockQty]
+          );
+          await conn.execute(
+            "INSERT INTO inventory_movements (business_id,branch_id,sku_id,movement_type,quantity,unit_cost,reference_type,reference_id) VALUES (?,?,?,?,?,?,?,?)",
+            [businessId, activeBranchId, skuId, "adjustment", stockQty, cost_price || 0, "quick_add", skuId]
+          );
+        }
+        const [prodRows] = await conn.execute(`
+      SELECT s.id, p.name as product_name, s.sku_code, s.barcode,
+             s.selling_price, s.cost_price, p.product_type, p.allow_overselling,
+             c.name as category_name, m.name as manufacturer_name,
+             p.id as product_id, p.category_id, p.manufacturer_id,
+             (SELECT SUM(quantity) FROM branch_stock WHERE sku_id = s.id) as total_stock
+      FROM product_skus s
+      JOIN products p ON s.product_id = p.id
+      LEFT JOIN categories c ON p.category_id = c.id
+      LEFT JOIN manufacturers m ON p.manufacturer_id = m.id
+      WHERE s.id = ? AND p.business_id = ?
+    `, [skuId, businessId]);
+        await conn.commit();
+        const fullProduct = prodRows[0];
+        res.json(fullProduct);
+      } catch (e) {
+        await conn.rollback();
+        next(e);
+      } finally {
+        conn.release();
+      }
+    });
+    router3.delete("/:id", async (req, res, next) => {
       try {
         const businessId = req.user.business_id;
         await execute("UPDATE products SET deleted_at=NOW() WHERE business_id=? AND id=(SELECT product_id FROM product_skus WHERE id=?)", [businessId, req.params.id]);
         res.json({ success: true });
       } catch (e) {
-        res.status(500).json({ error: e.message });
+        next(e);
       }
     });
-    router3.get("/:id/activity", async (req, res) => {
+    router3.get("/:id/activity", async (req, res, next) => {
       try {
         const acts = await query(`
       SELECT a.*, u.name as user_name FROM product_activity a
@@ -1801,10 +1932,10 @@ var init_products = __esm({
     `, [req.params.id, req.user.business_id]);
         res.json(acts);
       } catch (e) {
-        res.status(500).json({ error: e.message });
+        next(e);
       }
     });
-    router3.get("/:skuId/devices", async (req, res) => {
+    router3.get("/:skuId/devices", async (req, res, next) => {
       try {
         const devices = await query(`
       SELECT d.id, d.imei, d.color, d.gb, d.\`condition\`, d.status, d.created_at, inv.invoice_number
@@ -1815,10 +1946,10 @@ var init_products = __esm({
     `, [req.params.skuId, req.user.business_id]);
         res.json(devices);
       } catch (e) {
-        res.status(500).json({ error: e.message });
+        next(e);
       }
     });
-    router3.get("/:skuId/available-devices", async (req, res) => {
+    router3.get("/:skuId/available-devices", async (req, res, next) => {
       try {
         const devices = await query(
           `SELECT id,imei,cost_price,status,created_at FROM devices WHERE sku_id=? AND status='in_stock' AND business_id=?`,
@@ -1826,21 +1957,21 @@ var init_products = __esm({
         );
         res.json(devices);
       } catch (e) {
-        res.status(500).json({ error: e.message });
+        next(e);
       }
     });
-    router3.get("/categories/all", async (req, res) => {
+    router3.get("/categories/all", async (req, res, next) => {
       try {
         res.json(await query("SELECT * FROM categories WHERE business_id=?", [req.user.business_id]));
       } catch (e) {
-        res.status(500).json({ error: e.message });
+        next(e);
       }
     });
-    router3.get("/manufacturers/all", async (req, res) => {
+    router3.get("/manufacturers/all", async (req, res, next) => {
       try {
         res.json(await query("SELECT * FROM manufacturers WHERE business_id=?", [req.user.business_id]));
       } catch (e) {
-        res.status(500).json({ error: e.message });
+        next(e);
       }
     });
     products_default = router3;
@@ -1853,12 +1984,13 @@ __export(customers_exports, {
   default: () => customers_default
 });
 import { Router as Router4 } from "express";
-var router4, customers_default;
+import { z as z3 } from "zod";
+var router4, customerSchema, depositSchema, customers_default;
 var init_customers = __esm({
   "src/routes/customers.ts"() {
     init_mysql();
     router4 = Router4();
-    router4.get("/", async (req, res) => {
+    router4.get("/", async (req, res, next) => {
       try {
         const isDeveloper = req.user.role === "developer";
         const branchId = req.user.branch_id;
@@ -1866,10 +1998,10 @@ var init_customers = __esm({
         const params = isDeveloper || !branchId ? [req.user.business_id] : [req.user.business_id, branchId];
         res.json(await query(sql, params));
       } catch (e) {
-        res.status(500).json({ error: e.message });
+        next(e);
       }
     });
-    router4.get("/:id", async (req, res) => {
+    router4.get("/:id", async (req, res, next) => {
       try {
         const isSuper = req.user.role === "superadmin";
         const sql = isSuper ? "SELECT * FROM customers WHERE id=? AND business_id=?" : "SELECT * FROM customers WHERE id=? AND business_id=? AND branch_id=?";
@@ -1878,13 +2010,37 @@ var init_customers = __esm({
         if (!c) return res.status(404).json({ error: "Customer not found" });
         res.json(c);
       } catch (e) {
-        res.status(500).json({ error: e.message });
+        next(e);
       }
     });
-    router4.post("/", async (req, res) => {
+    customerSchema = z3.object({
+      name: z3.string().nullable().optional(),
+      phone: z3.string().nullable().optional(),
+      email: z3.string().email("Invalid email").optional().or(z3.literal("")).or(z3.null()),
+      first_name: z3.string().nullable().optional(),
+      last_name: z3.string().nullable().optional(),
+      secondary_phone: z3.string().nullable().optional(),
+      fax: z3.string().nullable().optional(),
+      offers_email: z3.union([z3.boolean(), z3.number().transform((v) => v === 1)]).nullable().optional(),
+      company: z3.string().nullable().optional(),
+      customer_type: z3.string().nullable().optional(),
+      address_line1: z3.string().nullable().optional(),
+      address_line2: z3.string().nullable().optional(),
+      city: z3.string().nullable().optional(),
+      state: z3.string().nullable().optional(),
+      zip_code: z3.string().nullable().optional(),
+      country: z3.string().nullable().optional(),
+      website: z3.string().nullable().optional(),
+      alert_message: z3.string().nullable().optional(),
+      wallet_balance: z3.number().or(z3.string().transform(Number)).nullable().optional()
+    });
+    router4.post("/", async (req, res, next) => {
       try {
-        const b = req.body;
-        const fullName = b.name || `${b.first_name || ""} ${b.last_name || ""}`.trim() || "Unknown";
+        const b = customerSchema.parse(req.body);
+        const stripNull = (v) => v === null || v === void 0 || v === "null" ? "" : String(v).replace(/\bnull\b/gi, "").trim();
+        const derivedFirst = stripNull(b.first_name);
+        const derivedLast = stripNull(b.last_name);
+        const fullName = stripNull(b.name) || `${derivedFirst} ${derivedLast}`.trim() || "Unknown";
         const businessId = req.user?.business_id;
         const branchId = req.user?.branch_id ?? null;
         if (!businessId) return res.status(400).json({ error: "No business context found. Please log in again." });
@@ -1924,12 +2080,12 @@ var init_customers = __esm({
         res.json(newCustomer[0]);
       } catch (e) {
         console.error("[POST /api/customers] Error:", e.message);
-        res.status(500).json({ error: e.message });
+        next(e);
       }
     });
-    router4.put("/:id", async (req, res) => {
+    router4.put("/:id", async (req, res, next) => {
+      const data = customerSchema.parse(req.body);
       const {
-        name,
         phone,
         email,
         address,
@@ -1949,7 +2105,11 @@ var init_customers = __esm({
         website,
         alert_message,
         wallet_balance
-      } = req.body;
+      } = data;
+      const stripNull = (v) => v === null || v === void 0 || v === "null" ? "" : String(v).replace(/\bnull\b/gi, "").trim();
+      const derivedFirst = stripNull(first_name);
+      const derivedLast = stripNull(last_name);
+      const name = stripNull(data.name) || `${derivedFirst} ${derivedLast}`.trim() || "Unknown";
       const conn = await pool.getConnection();
       try {
         await conn.beginTransaction();
@@ -2002,12 +2162,12 @@ var init_customers = __esm({
         res.json({ success: true });
       } catch (e) {
         await conn.rollback();
-        res.status(500).json({ error: e.message });
+        next(e);
       } finally {
         conn.release();
       }
     });
-    router4.delete("/:id", async (req, res) => {
+    router4.delete("/:id", async (req, res, next) => {
       try {
         const isSuper = req.user.role === "superadmin";
         const sql = isSuper ? "UPDATE customers SET deleted_at=NOW() WHERE id=? AND business_id=?" : "UPDATE customers SET deleted_at=NOW() WHERE id=? AND business_id=? AND branch_id=?";
@@ -2016,10 +2176,10 @@ var init_customers = __esm({
         if (r.affectedRows === 0) return res.status(404).json({ error: "Customer not found or access denied" });
         res.json({ success: true });
       } catch (e) {
-        res.status(500).json({ error: e.message });
+        next(e);
       }
     });
-    router4.get("/:id/invoices", async (req, res) => {
+    router4.get("/:id/invoices", async (req, res, next) => {
       try {
         const sql = `
       SELECT i.* FROM invoices i
@@ -2030,10 +2190,10 @@ var init_customers = __esm({
         const params = req.user.role !== "superadmin" ? [req.params.id, req.user.business_id, req.user.branch_id] : [req.params.id, req.user.business_id];
         res.json(await query(sql, params));
       } catch (e) {
-        res.status(500).json({ error: e.message });
+        next(e);
       }
     });
-    router4.get("/:id/payments", async (req, res) => {
+    router4.get("/:id/payments", async (req, res, next) => {
       try {
         res.json(await query(`
       SELECT p.*, i.invoice_number FROM payments p
@@ -2042,10 +2202,10 @@ var init_customers = __esm({
       WHERE p.customer_id=? AND c.business_id=? ORDER BY p.paid_at DESC
     `, [req.params.id, req.user.business_id]));
       } catch (e) {
-        res.status(500).json({ error: e.message });
+        next(e);
       }
     });
-    router4.get("/:id/ledger", async (req, res) => {
+    router4.get("/:id/ledger", async (req, res, next) => {
       try {
         res.json(await query(`
       SELECT p.*, i.invoice_number FROM payments p
@@ -2054,10 +2214,10 @@ var init_customers = __esm({
       WHERE p.customer_id=? AND c.business_id=? ORDER BY p.paid_at DESC
     `, [req.params.id, req.user.business_id]));
       } catch (e) {
-        res.status(500).json({ error: e.message });
+        next(e);
       }
     });
-    router4.get("/:id/activity", async (req, res) => {
+    router4.get("/:id/activity", async (req, res, next) => {
       try {
         const sql = `
       SELECT a.*, u.name as user_name FROM customer_activity a
@@ -2069,11 +2229,17 @@ var init_customers = __esm({
         const params = req.user.role !== "superadmin" ? [req.params.id, req.user.business_id, req.user.branch_id] : [req.params.id, req.user.business_id];
         res.json(await query(sql, params));
       } catch (e) {
-        res.status(500).json({ error: e.message });
+        next(e);
       }
     });
-    router4.post("/:id/payments", async (req, res) => {
-      const { amount, method, note } = req.body;
+    depositSchema = z3.object({
+      amount: z3.number().or(z3.string().transform(Number)),
+      method: z3.string().optional(),
+      note: z3.string().optional()
+    });
+    router4.post("/:id/payments", async (req, res, next) => {
+      const data = depositSchema.parse(req.body);
+      const { amount, method, note } = data;
       const numAmount = Number(amount);
       const conn = await pool.getConnection();
       try {
@@ -2113,7 +2279,7 @@ var init_customers = __esm({
         res.json({ success: true, invoice_number: invoiceNumber });
       } catch (e) {
         await conn.rollback();
-        res.status(500).json({ error: e.message });
+        next(e);
       } finally {
         conn.release();
       }
@@ -2128,12 +2294,13 @@ __export(invoices_exports, {
   default: () => invoices_default
 });
 import { Router as Router5 } from "express";
-var router5, invoices_default;
+import { z as z4 } from "zod";
+var router5, createInvoiceSchema, invoices_default;
 var init_invoices = __esm({
   "src/routes/invoices.ts"() {
     init_mysql();
     router5 = Router5();
-    router5.get("/", async (req, res) => {
+    router5.get("/", async (req, res, next) => {
       try {
         const { startDate, endDate } = req.query;
         const isDeveloper = req.user.role === "developer";
@@ -2155,10 +2322,10 @@ var init_invoices = __esm({
         sql += " ORDER BY i.created_at DESC";
         res.json(await query(sql, params));
       } catch (e) {
-        res.status(500).json({ error: e.message });
+        next(e);
       }
     });
-    router5.get("/:id", async (req, res) => {
+    router5.get("/:id", async (req, res, next) => {
       try {
         const isDeveloper = req.user.role === "developer";
         const branchId = req.user.branch_id;
@@ -2194,11 +2361,37 @@ var init_invoices = __esm({
           customer: { name: invoice.customer_name, phone: invoice.customer_phone, email: invoice.customer_email }
         });
       } catch (e) {
-        res.status(500).json({ error: e.message });
+        next(e);
       }
     });
-    router5.post("/", async (req, res) => {
-      const { customer_id, items, subtotal, tax_total, discount_total, grand_total, payments, activities } = req.body;
+    createInvoiceSchema = z4.object({
+      customer_id: z4.number().nullable().optional(),
+      subtotal: z4.number().or(z4.string().transform(Number)),
+      tax_total: z4.number().or(z4.string().transform(Number)),
+      discount_total: z4.number().or(z4.string().transform(Number)),
+      grand_total: z4.number().or(z4.string().transform(Number)),
+      items: z4.array(z4.object({
+        id: z4.number().optional(),
+        sku_id: z4.number().optional(),
+        device_id: z4.number().nullable().optional(),
+        quantity: z4.number().or(z4.string().transform(Number)),
+        price: z4.number().or(z4.string().transform(Number)),
+        total: z4.number().or(z4.string().transform(Number)),
+        is_deposit: z4.boolean().optional()
+      })).min(1, "Cart is empty"),
+      payments: z4.array(z4.object({
+        method: z4.string(),
+        amount: z4.number().or(z4.string().transform(Number))
+      })).optional(),
+      activities: z4.array(z4.object({
+        action: z4.string().optional(),
+        activity: z4.string().optional(),
+        details: z4.string().optional()
+      })).optional()
+    });
+    router5.post("/", async (req, res, next) => {
+      const data = createInvoiceSchema.parse(req.body);
+      const { customer_id, items, subtotal, tax_total, discount_total, grand_total, payments, activities } = data;
       if (!items || !items.length) return res.status(400).json({ error: "Cart is empty" });
       const conn = await pool.getConnection();
       try {
@@ -2339,12 +2532,12 @@ var init_invoices = __esm({
         if (conn) await conn.rollback().catch(() => {
         });
         console.error("[POST /api/invoices] Error:", e.message);
-        res.status(500).json({ error: e.message });
+        next(e);
       } finally {
         if (conn) conn.release();
       }
     });
-    router5.post("/:id/refund", async (req, res) => {
+    router5.post("/:id/refund", async (req, res, next) => {
       const { method } = req.body;
       const conn = await pool.getConnection();
       try {
@@ -2377,12 +2570,12 @@ var init_invoices = __esm({
         res.json({ success: true });
       } catch (e) {
         await conn.rollback();
-        res.status(500).json({ error: e.message });
+        next(e);
       } finally {
         conn.release();
       }
     });
-    router5.put("/payments/:id", async (req, res) => {
+    router5.put("/payments/:id", async (req, res, next) => {
       try {
         const r = await execute(
           "UPDATE payments p JOIN invoices i ON p.invoice_id=i.id SET p.method=? WHERE p.id=? AND i.business_id=?",
@@ -2391,7 +2584,7 @@ var init_invoices = __esm({
         if (r.affectedRows === 0) return res.status(404).json({ error: "Payment not found or access denied" });
         res.json({ success: true });
       } catch (e) {
-        res.status(500).json({ error: e.message });
+        next(e);
       }
     });
     invoices_default = router5;
@@ -2404,12 +2597,13 @@ __export(reports_exports, {
   default: () => reports_default
 });
 import { Router as Router6 } from "express";
-var router6, reports_default;
+import { z as z5 } from "zod";
+var router6, endOfDaySchema, reports_default;
 var init_reports = __esm({
   "src/routes/reports.ts"() {
     init_mysql();
     router6 = Router6();
-    router6.get("/eod-data", async (req, res) => {
+    router6.get("/eod-data", async (req, res, next) => {
       const date = req.query.date || (/* @__PURE__ */ new Date()).toISOString().split("T")[0];
       try {
         const isSuper = req.user.role === "superadmin";
@@ -2438,10 +2632,28 @@ var init_reports = __esm({
     `, !isSuper ? [date, req.user.business_id, branchId] : [date, req.user.business_id]);
         res.json({ invoicePayments, otherMovements, summary, date });
       } catch (e) {
-        res.status(500).json({ error: e.message });
+        next(e);
       }
     });
-    router6.post("/eod", async (req, res) => {
+    endOfDaySchema = z5.object({
+      report_date: z5.string().optional(),
+      starting_balance: z5.number().or(z5.string().transform(Number)).optional(),
+      cash_counted: z5.number().or(z5.string().transform(Number)).optional(),
+      calculated_cash: z5.number().or(z5.string().transform(Number)).optional(),
+      difference: z5.number().or(z5.string().transform(Number)).optional(),
+      total_sales: z5.number().or(z5.string().transform(Number)).optional(),
+      total_deposits: z5.number().or(z5.string().transform(Number)).optional(),
+      total_cash_in_drawer: z5.number().or(z5.string().transform(Number)).optional(),
+      comments: z5.string().optional(),
+      payment_summaries: z5.array(z5.object({
+        payment_type: z5.string().optional(),
+        calculated: z5.number().or(z5.string().transform(Number)).optional(),
+        counted: z5.number().or(z5.string().transform(Number)).optional(),
+        difference: z5.number().or(z5.string().transform(Number)).optional()
+      })).default([])
+    });
+    router6.post("/eod", async (req, res, next) => {
+      const data = endOfDaySchema.parse(req.body);
       const {
         report_date,
         starting_balance,
@@ -2453,7 +2665,7 @@ var init_reports = __esm({
         total_cash_in_drawer,
         comments,
         payment_summaries
-      } = req.body;
+      } = data;
       const conn = await pool.getConnection();
       try {
         await conn.beginTransaction();
@@ -2489,12 +2701,12 @@ var init_reports = __esm({
         res.json({ success: true, id: reportId });
       } catch (e) {
         await conn.rollback();
-        res.status(500).json({ error: e.message });
+        next(e);
       } finally {
         conn.release();
       }
     });
-    router6.get("/eod-list", async (req, res) => {
+    router6.get("/eod-list", async (req, res, next) => {
       try {
         const isSuper = req.user.role === "superadmin";
         const sql = `
@@ -2506,7 +2718,7 @@ var init_reports = __esm({
         const params = !isSuper ? [req.user.business_id, req.user.branch_id] : [req.user.business_id];
         res.json(await query(sql, params));
       } catch (e) {
-        res.status(500).json({ error: e.message });
+        next(e);
       }
     });
     reports_default = router6;
@@ -2519,12 +2731,13 @@ __export(settings_exports, {
   default: () => settings_default
 });
 import { Router as Router7 } from "express";
-var router7, settings_default;
+import { z as z6 } from "zod";
+var router7, settingsSchema, authSettingsSchema, companySchema, paymentMethodsSchema, printerSettingsSchema, thermalPrinterSettingsSchema, categoryManufacturerSchema, supplierSchema, settings_default;
 var init_settings = __esm({
   "src/routes/settings.ts"() {
     init_mysql();
     router7 = Router7();
-    router7.get("/settings", async (req, res) => {
+    router7.get("/settings", async (req, res, next) => {
       try {
         let s = await queryOne("SELECT * FROM settings WHERE business_id=?", [req.user.business_id]);
         if (!s) {
@@ -2533,11 +2746,18 @@ var init_settings = __esm({
         }
         res.json(s || {});
       } catch (e) {
-        res.status(500).json({ error: e.message });
+        next(e);
       }
     });
-    router7.post("/settings", async (req, res) => {
-      const { timezone, date_format, time_format, language } = req.body;
+    settingsSchema = z6.object({
+      timezone: z6.string().optional(),
+      date_format: z6.string().optional(),
+      time_format: z6.string().optional(),
+      language: z6.string().optional()
+    });
+    router7.post("/settings", async (req, res, next) => {
+      const data = settingsSchema.parse(req.body);
+      const { timezone, date_format, time_format, language } = data;
       try {
         await execute(
           "UPDATE settings SET timezone=?,date_format=?,time_format=?,language=? WHERE business_id=?",
@@ -2545,11 +2765,16 @@ var init_settings = __esm({
         );
         res.json({ success: true });
       } catch (e) {
-        res.status(500).json({ error: e.message });
+        next(e);
       }
     });
-    router7.post("/settings/auth", async (req, res) => {
-      const { allow_signup, allow_signin } = req.body;
+    authSettingsSchema = z6.object({
+      allow_signup: z6.boolean().optional(),
+      allow_signin: z6.boolean().optional()
+    });
+    router7.post("/settings/auth", async (req, res, next) => {
+      const data = authSettingsSchema.parse(req.body);
+      const { allow_signup, allow_signin } = data;
       try {
         await execute(
           "UPDATE settings SET allow_signup=?,allow_signin=? WHERE business_id=?",
@@ -2557,10 +2782,10 @@ var init_settings = __esm({
         );
         res.json({ success: true });
       } catch (e) {
-        res.status(500).json({ error: e.message });
+        next(e);
       }
     });
-    router7.get("/company", async (req, res) => {
+    router7.get("/company", async (req, res, next) => {
       try {
         const branchId = req.user?.branch_id;
         if (branchId) {
@@ -2572,11 +2797,23 @@ var init_settings = __esm({
         const c = await queryOne("SELECT * FROM businesses WHERE id=?", [req.user.business_id]);
         res.json(c || {});
       } catch (e) {
-        res.status(500).json({ error: e.message });
+        next(e);
       }
     });
-    router7.post("/company", async (req, res) => {
-      const { name, email, phone, subdomain, address, city, state, zip_code, country } = req.body;
+    companySchema = z6.object({
+      name: z6.string().optional(),
+      email: z6.string().optional(),
+      phone: z6.string().optional(),
+      subdomain: z6.string().optional(),
+      address: z6.string().optional(),
+      city: z6.string().optional(),
+      state: z6.string().optional(),
+      zip_code: z6.string().optional(),
+      country: z6.string().optional()
+    });
+    router7.post("/company", async (req, res, next) => {
+      const data = companySchema.parse(req.body);
+      const { name, email, phone, subdomain, address, city, state, zip_code, country } = data;
       try {
         await execute(
           "UPDATE businesses SET name=?,email=?,phone=?,subdomain=?,address=?,city=?,state=?,zip_code=?,country=? WHERE id=?",
@@ -2584,18 +2821,25 @@ var init_settings = __esm({
         );
         res.json({ success: true });
       } catch (e) {
-        res.status(500).json({ error: e.message });
+        next(e);
       }
     });
-    router7.get("/payment-methods", async (req, res) => {
+    router7.get("/payment-methods", async (req, res, next) => {
       try {
         res.json(await query("SELECT * FROM payment_methods WHERE business_id=? AND is_active=1 ORDER BY display_order ASC", [req.user.business_id]));
       } catch (e) {
-        res.status(500).json({ error: e.message });
+        next(e);
       }
     });
-    router7.post("/payment-methods", async (req, res) => {
-      const { methods } = req.body;
+    paymentMethodsSchema = z6.object({
+      methods: z6.array(z6.object({
+        id: z6.number().optional(),
+        name: z6.string()
+      })).default([])
+    });
+    router7.post("/payment-methods", async (req, res, next) => {
+      const data = paymentMethodsSchema.parse(req.body);
+      const { methods } = data;
       const conn = await pool.getConnection();
       try {
         await conn.beginTransaction();
@@ -2618,12 +2862,12 @@ var init_settings = __esm({
         res.json({ success: true });
       } catch (e) {
         await conn.rollback();
-        res.status(500).json({ error: e.message });
+        next(e);
       } finally {
         conn.release();
       }
     });
-    router7.get("/printer-settings", async (req, res) => {
+    router7.get("/printer-settings", async (req, res, next) => {
       try {
         const branchId = req.user?.branch_id;
         let s = await queryOne("SELECT * FROM printer_settings WHERE business_id=? AND branch_id=?", [req.user.business_id, branchId]);
@@ -2633,12 +2877,24 @@ var init_settings = __esm({
         }
         res.json(s);
       } catch (e) {
-        res.status(500).json({ error: e.message });
+        next(e);
       }
     });
-    router7.post("/printer-settings", async (req, res) => {
+    printerSettingsSchema = z6.object({
+      label_size: z6.string().optional(),
+      barcode_length: z6.number().or(z6.string().transform(Number)).optional(),
+      margin_top: z6.number().or(z6.string().transform(Number)).optional(),
+      margin_left: z6.number().or(z6.string().transform(Number)).optional(),
+      margin_bottom: z6.number().or(z6.string().transform(Number)).optional(),
+      margin_right: z6.number().or(z6.string().transform(Number)).optional(),
+      orientation: z6.string().optional(),
+      font_size: z6.number().or(z6.string().transform(Number)).optional(),
+      font_family: z6.string().optional()
+    });
+    router7.post("/printer-settings", async (req, res, next) => {
       const branchId = req.user?.branch_id;
-      const { label_size, barcode_length, margin_top, margin_left, margin_bottom, margin_right, orientation, font_size, font_family } = req.body;
+      const data = printerSettingsSchema.parse(req.body);
+      const { label_size, barcode_length, margin_top, margin_left, margin_bottom, margin_right, orientation, font_size, font_family } = data;
       try {
         await execute(
           "UPDATE printer_settings SET label_size=?,barcode_length=?,margin_top=?,margin_left=?,margin_bottom=?,margin_right=?,orientation=?,font_size=?,font_family=? WHERE business_id=? AND branch_id=?",
@@ -2646,10 +2902,10 @@ var init_settings = __esm({
         );
         res.json({ success: true });
       } catch (e) {
-        res.status(500).json({ error: e.message });
+        next(e);
       }
     });
-    router7.get("/thermal-printer-settings", async (req, res) => {
+    router7.get("/thermal-printer-settings", async (req, res, next) => {
       try {
         const branchId = req.user?.branch_id;
         let s = await queryOne("SELECT * FROM thermal_printer_settings WHERE business_id=? AND branch_id=?", [req.user.business_id, branchId]);
@@ -2659,20 +2915,37 @@ var init_settings = __esm({
         }
         res.json(s);
       } catch (e) {
-        res.status(500).json({ error: e.message });
+        next(e);
       }
     });
-    router7.post("/thermal-printer-settings", async (req, res) => {
+    thermalPrinterSettingsSchema = z6.object({
+      font_family: z6.string().optional(),
+      font_size: z6.string().optional(),
+      show_logo: z6.boolean().optional(),
+      show_business_name: z6.boolean().optional(),
+      show_business_address: z6.boolean().optional(),
+      show_business_phone: z6.boolean().optional(),
+      show_business_email: z6.boolean().optional(),
+      show_customer_info: z6.boolean().optional(),
+      show_invoice_number: z6.boolean().optional(),
+      show_date: z6.boolean().optional(),
+      show_items_table: z6.boolean().optional(),
+      show_totals: z6.boolean().optional(),
+      show_footer: z6.boolean().optional(),
+      show_powered_by: z6.boolean().optional(),
+      footer_text: z6.string().optional()
+    });
+    router7.post("/thermal-printer-settings", async (req, res, next) => {
       const branchId = req.user?.branch_id;
-      const m = req.body;
+      const m = thermalPrinterSettingsSchema.parse(req.body);
       try {
         await execute(
           `
       INSERT INTO thermal_printer_settings
         (business_id,branch_id,font_family,font_size,show_logo,show_business_name,show_business_address,
          show_business_phone,show_business_email,show_customer_info,show_invoice_number,show_date,
-         show_items_table,show_totals,show_footer,footer_text)
-      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+         show_items_table,show_totals,show_footer,show_powered_by,footer_text)
+      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
       ON DUPLICATE KEY UPDATE
         branch_id=VALUES(branch_id),font_family=VALUES(font_family),font_size=VALUES(font_size),
         show_logo=VALUES(show_logo),show_business_name=VALUES(show_business_name),
@@ -2680,11 +2953,11 @@ var init_settings = __esm({
         show_business_email=VALUES(show_business_email),show_customer_info=VALUES(show_customer_info),
         show_invoice_number=VALUES(show_invoice_number),show_date=VALUES(show_date),
         show_items_table=VALUES(show_items_table),show_totals=VALUES(show_totals),
-        show_footer=VALUES(show_footer),footer_text=VALUES(footer_text)`,
+        show_footer=VALUES(show_footer),show_powered_by=VALUES(show_powered_by),footer_text=VALUES(footer_text)`,
           [
             req.user.business_id,
             branchId,
-            m.font_family || "monospace",
+            m.font_family || "Arial",
             m.font_size || "12px",
             m.show_logo ? 1 : 0,
             m.show_business_name ? 1 : 0,
@@ -2697,47 +2970,53 @@ var init_settings = __esm({
             m.show_items_table ? 1 : 0,
             m.show_totals ? 1 : 0,
             m.show_footer ? 1 : 0,
+            m.show_powered_by ? 1 : 0,
             m.footer_text || "Thank you for your business!"
           ]
         );
         res.json({ success: true });
       } catch (e) {
-        res.status(500).json({ error: e.message });
+        next(e);
       }
     });
-    router7.get("/categories", async (req, res) => {
+    router7.get("/categories", async (req, res, next) => {
       try {
         res.json(await query("SELECT * FROM categories WHERE business_id=?", [req.user.business_id]));
       } catch (e) {
-        res.status(500).json({ error: e.message });
+        next(e);
       }
     });
-    router7.post("/categories", async (req, res) => {
-      const { name } = req.body;
+    categoryManufacturerSchema = z6.object({
+      name: z6.string().min(1, "Name is required")
+    });
+    router7.post("/categories", async (req, res, next) => {
+      const data = categoryManufacturerSchema.parse(req.body);
+      const { name } = data;
       try {
         const r = await execute("INSERT INTO categories (business_id,name) VALUES (?,?)", [req.user.business_id, name]);
         res.json({ id: r.insertId, name });
       } catch (e) {
-        res.status(500).json({ error: e.message });
+        next(e);
       }
     });
-    router7.get("/manufacturers", async (req, res) => {
+    router7.get("/manufacturers", async (req, res, next) => {
       try {
         res.json(await query("SELECT * FROM manufacturers WHERE business_id=?", [req.user.business_id]));
       } catch (e) {
-        res.status(500).json({ error: e.message });
+        next(e);
       }
     });
-    router7.post("/manufacturers", async (req, res) => {
-      const { name } = req.body;
+    router7.post("/manufacturers", async (req, res, next) => {
+      const data = categoryManufacturerSchema.parse(req.body);
+      const { name } = data;
       try {
         const r = await execute("INSERT INTO manufacturers (business_id,name) VALUES (?,?)", [req.user.business_id, name]);
         res.json({ id: r.insertId, name });
       } catch (e) {
-        res.status(500).json({ error: e.message });
+        next(e);
       }
     });
-    router7.get("/suppliers", async (req, res) => {
+    router7.get("/suppliers", async (req, res, next) => {
       try {
         res.json(await query("SELECT * FROM suppliers WHERE business_id=?", [req.user.business_id]));
       } catch (e) {
@@ -2745,11 +3024,18 @@ var init_settings = __esm({
 ${e.stack}
 `);
         console.error("GET /suppliers error:", e);
-        res.status(500).json({ error: e.message });
+        next(e);
       }
     });
-    router7.post("/suppliers", async (req, res) => {
-      const { name, phone, email, contact_person } = req.body;
+    supplierSchema = z6.object({
+      name: z6.string().min(1, "Name is required"),
+      phone: z6.string().optional(),
+      email: z6.string().optional(),
+      contact_person: z6.string().optional()
+    });
+    router7.post("/suppliers", async (req, res, next) => {
+      const data = supplierSchema.parse(req.body);
+      const { name, phone, email, contact_person } = data;
       try {
         const r = await execute(
           "INSERT INTO suppliers (business_id,name,phone,email,contact_person) VALUES (?,?,?,?,?)",
@@ -2757,22 +3043,22 @@ ${e.stack}
         );
         res.json({ id: r.insertId, name, phone, email, contact_person });
       } catch (e) {
-        res.status(500).json({ error: e.message });
+        next(e);
       }
     });
-    router7.delete("/suppliers/:id", async (req, res) => {
+    router7.delete("/suppliers/:id", async (req, res, next) => {
       try {
         await execute("DELETE FROM suppliers WHERE id=? AND business_id=?", [req.params.id, req.user.business_id]);
         res.json({ success: true });
       } catch (e) {
-        res.status(500).json({ error: e.message });
+        next(e);
       }
     });
-    router7.get("/branches", async (req, res) => {
+    router7.get("/branches", async (req, res, next) => {
       try {
         res.json(await query("SELECT * FROM branches WHERE business_id=?", [req.user.business_id]));
       } catch (e) {
-        res.status(500).json({ error: e.message });
+        next(e);
       }
     });
     settings_default = router7;
@@ -2785,13 +3071,30 @@ __export(inventory_exports, {
   default: () => inventory_default
 });
 import { Router as Router8 } from "express";
-var router8, inventory_default;
+import { z as z7 } from "zod";
+var router8, addInventorySchema, updateDeviceSchema, deviceActivitySchema, transferSchema, createRepairSchema, updateRepairSchema, inventory_default;
 var init_inventory = __esm({
   "src/routes/inventory.ts"() {
     init_mysql();
     router8 = Router8();
-    router8.post("/add", async (req, res) => {
-      const { sku_id, branch_id, quantity, cost_price, selling_price, supplier_id, po_number, items } = req.body;
+    addInventorySchema = z7.object({
+      sku_id: z7.number().or(z7.string().transform(Number)),
+      branch_id: z7.number().or(z7.string().transform(Number)).optional(),
+      quantity: z7.number().or(z7.string().transform(Number)).optional(),
+      cost_price: z7.number().or(z7.string().transform(Number)).optional(),
+      selling_price: z7.number().or(z7.string().transform(Number)).optional(),
+      supplier_id: z7.number().or(z7.string().transform(Number)).nullable().optional(),
+      po_number: z7.string().optional(),
+      items: z7.array(z7.object({
+        imei: z7.string().optional(),
+        color: z7.string().optional(),
+        gb: z7.string().optional(),
+        condition: z7.string().optional()
+      })).optional()
+    });
+    router8.post("/add", async (req, res, next) => {
+      const data = addInventorySchema.parse(req.body);
+      const { sku_id, branch_id, quantity, cost_price, selling_price, supplier_id, po_number, items } = data;
       const activeBranchId = branch_id || req.user.branch_id;
       const conn = await pool.getConnection();
       try {
@@ -2871,12 +3174,12 @@ var init_inventory = __esm({
       } catch (e) {
         await conn.rollback();
         console.error("[inventory/add] Error:", e.message, e.sql || "");
-        res.status(500).json({ error: e.message });
+        next(e);
       } finally {
         conn.release();
       }
     });
-    router8.get("/purchase-orders", async (req, res) => {
+    router8.get("/purchase-orders", async (req, res, next) => {
       try {
         const isSuper = req.user.role === "superadmin";
         const sql = `
@@ -2888,19 +3191,19 @@ var init_inventory = __esm({
         const params = !isSuper ? [req.user.business_id, req.user.branch_id] : [req.user.business_id];
         res.json(await query(sql, params));
       } catch (e) {
-        res.status(500).json({ error: e.message });
+        next(e);
       }
     });
-    router8.get("/purchase-orders/by-number/:number", async (req, res) => {
+    router8.get("/purchase-orders/by-number/:number", async (req, res, next) => {
       try {
         const po = await queryOne("SELECT id FROM purchase_orders WHERE po_number=? AND business_id=?", [req.params.number, req.user.business_id]);
         if (!po) return res.status(404).json({ error: "Purchase order not found" });
         res.json(po);
       } catch (e) {
-        res.status(500).json({ error: e.message });
+        next(e);
       }
     });
-    router8.get("/purchase-orders/:id", async (req, res) => {
+    router8.get("/purchase-orders/:id", async (req, res, next) => {
       try {
         const po = await queryOne(`
       SELECT po.*, s.name as supplier_name, s.email as supplier_email FROM purchase_orders po
@@ -2911,10 +3214,10 @@ var init_inventory = __esm({
         const items = await query("SELECT * FROM purchase_order_items WHERE po_id=?", [req.params.id]);
         res.json({ ...po, items });
       } catch (e) {
-        res.status(500).json({ error: e.message });
+        next(e);
       }
     });
-    router8.get("/devices/search", async (req, res) => {
+    router8.get("/devices/search", async (req, res, next) => {
       const { q, imei, branch_id } = req.query;
       const searchVal = q || imei;
       try {
@@ -2940,10 +3243,10 @@ var init_inventory = __esm({
         res.json(await query(sql, params));
       } catch (e) {
         console.error("[SearchDevices] Error:", e.message);
-        res.status(500).json({ error: e.message });
+        next(e);
       }
     });
-    router8.get("/devices/:id", async (req, res) => {
+    router8.get("/devices/:id", async (req, res, next) => {
       try {
         const device = await queryOne(`
       SELECT d.*, p.name as product_name, s.sku_code, s.barcode
@@ -2955,11 +3258,23 @@ var init_inventory = __esm({
         if (!device) return res.status(404).json({ error: "Device not found" });
         res.json(device);
       } catch (e) {
-        res.status(500).json({ error: e.message });
+        next(e);
       }
     });
-    router8.put("/devices/:id", async (req, res) => {
-      const { color, gb, ram, condition, cost_price, selling_price, unlocked, imei_status, carrier } = req.body;
+    updateDeviceSchema = z7.object({
+      color: z7.string().optional(),
+      gb: z7.string().optional(),
+      ram: z7.string().optional(),
+      condition: z7.string().optional(),
+      cost_price: z7.number().or(z7.string().transform(Number)).optional(),
+      selling_price: z7.number().or(z7.string().transform(Number)).optional(),
+      unlocked: z7.boolean().or(z7.number().transform(Boolean)).optional(),
+      imei_status: z7.string().optional(),
+      carrier: z7.string().optional()
+    });
+    router8.put("/devices/:id", async (req, res, next) => {
+      const data = updateDeviceSchema.parse(req.body);
+      const { color, gb, ram, condition, cost_price, selling_price, unlocked, imei_status, carrier } = data;
       try {
         const old = await queryOne("SELECT * FROM devices WHERE id=? AND business_id=?", [req.params.id, req.user.business_id]);
         if (!old) return res.status(404).json({ error: "Device not found" });
@@ -3000,10 +3315,10 @@ var init_inventory = __esm({
         }
         res.json({ success: true });
       } catch (e) {
-        res.status(500).json({ error: e.message });
+        next(e);
       }
     });
-    router8.get("/devices/:id/activity", async (req, res) => {
+    router8.get("/devices/:id/activity", async (req, res, next) => {
       try {
         const activities = await query(`
       SELECT 'device' as source, a.id, a.user_id, a.activity, a.details, a.created_at, u.name as user_name 
@@ -3024,11 +3339,16 @@ var init_inventory = __esm({
     `, [req.params.id, req.params.id, req.params.id, req.params.id]);
         res.json(activities);
       } catch (e) {
-        res.status(500).json({ error: e.message });
+        next(e);
       }
     });
-    router8.post("/devices/:id/activity", async (req, res) => {
-      const { activity, details } = req.body;
+    deviceActivitySchema = z7.object({
+      activity: z7.string().optional(),
+      details: z7.string().optional()
+    });
+    router8.post("/devices/:id/activity", async (req, res, next) => {
+      const data = deviceActivitySchema.parse(req.body);
+      const { activity, details } = data;
       try {
         const device = await queryOne("SELECT id FROM devices WHERE id=? AND business_id=?", [req.params.id, req.user.business_id]);
         if (!device) return res.status(404).json({ error: "Device not found" });
@@ -3042,19 +3362,19 @@ var init_inventory = __esm({
         );
         res.json({ success: true });
       } catch (e) {
-        res.status(500).json({ error: e.message });
+        next(e);
       }
     });
-    router8.delete("/devices/:id", async (req, res) => {
+    router8.delete("/devices/:id", async (req, res, next) => {
       try {
         const result = await execute("DELETE FROM devices WHERE id=? AND business_id=?", [req.params.id, req.user.business_id]);
         if (result.affectedRows === 0) return res.status(404).json({ error: "Device not found or access denied" });
         res.json({ success: true });
       } catch (e) {
-        res.status(500).json({ error: e.message });
+        next(e);
       }
     });
-    router8.get("/devices", async (req, res) => {
+    router8.get("/devices", async (req, res, next) => {
       const status = req.query.status || "in_stock";
       try {
         const isSuper = req.user.role === "superadmin";
@@ -3072,11 +3392,19 @@ var init_inventory = __esm({
         const params = !isSuper ? [req.user.business_id, status, req.user.branch_id] : [req.user.business_id, status];
         res.json(await query(sql, params));
       } catch (e) {
-        res.status(500).json({ error: e.message });
+        next(e);
       }
     });
-    router8.post("/transfers", async (req, res) => {
-      const { device_id, sku_id, quantity, to_branch_id, notes } = req.body;
+    transferSchema = z7.object({
+      device_id: z7.number().optional(),
+      sku_id: z7.number().optional(),
+      quantity: z7.number().or(z7.string().transform(Number)).optional(),
+      to_branch_id: z7.number().or(z7.string().transform(Number)),
+      notes: z7.string().optional()
+    });
+    router8.post("/transfers", async (req, res, next) => {
+      const data = transferSchema.parse(req.body);
+      const { device_id, sku_id, quantity, to_branch_id, notes } = data;
       if (!to_branch_id) return res.status(400).json({ error: "Destination branch is required" });
       const conn = await pool.getConnection();
       try {
@@ -3109,7 +3437,7 @@ var init_inventory = __esm({
         conn.release();
       }
     });
-    router8.get("/transfers", async (req, res) => {
+    router8.get("/transfers", async (req, res, next) => {
       try {
         const isSuper = req.user.role === "superadmin";
         const sql = `
@@ -3129,10 +3457,10 @@ var init_inventory = __esm({
         const params = !isSuper ? [req.user.business_id, req.user.branch_id, req.user.branch_id] : [req.user.business_id];
         res.json(await query(sql, params));
       } catch (e) {
-        res.status(500).json({ error: e.message });
+        next(e);
       }
     });
-    router8.put("/transfers/:id/complete", async (req, res) => {
+    router8.put("/transfers/:id/complete", async (req, res, next) => {
       const conn = await pool.getConnection();
       try {
         await conn.beginTransaction();
@@ -3155,12 +3483,12 @@ var init_inventory = __esm({
         res.json({ success: true });
       } catch (e) {
         await conn.rollback();
-        res.status(500).json({ error: e.message });
+        next(e);
       } finally {
         conn.release();
       }
     });
-    router8.put("/transfers/:id/cancel", async (req, res) => {
+    router8.put("/transfers/:id/cancel", async (req, res, next) => {
       const conn = await pool.getConnection();
       try {
         await conn.beginTransaction();
@@ -3174,12 +3502,12 @@ var init_inventory = __esm({
         res.json({ success: true });
       } catch (e) {
         await conn.rollback();
-        res.status(500).json({ error: e.message });
+        next(e);
       } finally {
         conn.release();
       }
     });
-    router8.get("/transfers/device/:imei", async (req, res) => {
+    router8.get("/transfers/device/:imei", async (req, res, next) => {
       try {
         const device = await queryOne("SELECT * FROM devices WHERE imei=? AND business_id=?", [req.params.imei, req.user.business_id]);
         if (!device) return res.status(404).json({ error: "No device found with this IMEI" });
@@ -3194,10 +3522,10 @@ var init_inventory = __esm({
         const currentBranch = await queryOne("SELECT * FROM branches WHERE id=?", [device.branch_id]);
         res.json({ device, currentBranch, transfers });
       } catch (e) {
-        res.status(500).json({ error: e.message });
+        next(e);
       }
     });
-    router8.get("/repairs", async (req, res) => {
+    router8.get("/repairs", async (req, res, next) => {
       try {
         const isSuper = req.user.role === "superadmin";
         const sql = `
@@ -3209,10 +3537,25 @@ var init_inventory = __esm({
         const params = !isSuper ? [req.user.business_id, req.user.branch_id] : [req.user.business_id];
         res.json(await query(sql, params));
       } catch (e) {
-        res.status(500).json({ error: e.message });
+        next(e);
       }
     });
-    router8.post("/repairs", async (req, res) => {
+    createRepairSchema = z7.object({
+      customer_id: z7.number().optional(),
+      customer_name: z7.string().optional(),
+      first_name: z7.string().optional(),
+      last_name: z7.string().optional(),
+      phone: z7.string().optional(),
+      device_model: z7.string().optional(),
+      issue: z7.string().optional(),
+      status: z7.string().optional(),
+      total_quote: z7.number().or(z7.string().transform(Number)).optional(),
+      deposit_paid: z7.number().or(z7.string().transform(Number)).optional(),
+      remaining_balance: z7.number().or(z7.string().transform(Number)).optional(),
+      payment_method: z7.string().optional()
+    });
+    router8.post("/repairs", async (req, res, next) => {
+      const data = createRepairSchema.parse(req.body);
       const {
         customer_id,
         customer_name,
@@ -3223,8 +3566,10 @@ var init_inventory = __esm({
         total_quote,
         deposit_paid,
         remaining_balance,
-        payment_method
-      } = req.body;
+        payment_method,
+        first_name,
+        last_name
+      } = data;
       const conn = await pool.getConnection();
       try {
         await conn.beginTransaction();
@@ -3237,7 +3582,6 @@ var init_inventory = __esm({
           if (existing.length > 0) {
             finalCustomerId = existing[0].id;
           } else {
-            const { first_name, last_name } = req.body;
             const combinedName = `${first_name || ""} ${last_name || ""}`.trim();
             if (!combinedName) {
               throw new Error("Customer first name is required for new repair jobs.");
@@ -3321,13 +3665,20 @@ var init_inventory = __esm({
       } catch (e) {
         await conn.rollback();
         console.error("[POST /api/repairs] Error:", e.message);
-        res.status(500).json({ error: e.message });
+        next(e);
       } finally {
         conn.release();
       }
     });
-    router8.put("/repairs/:id", async (req, res) => {
-      const { status, notes, collected_amount, collected_method } = req.body;
+    updateRepairSchema = z7.object({
+      status: z7.string().optional(),
+      notes: z7.string().optional(),
+      collected_amount: z7.number().or(z7.string().transform(Number)).optional(),
+      collected_method: z7.string().optional()
+    });
+    router8.put("/repairs/:id", async (req, res, next) => {
+      const data = updateRepairSchema.parse(req.body);
+      const { status, notes, collected_amount, collected_method } = data;
       const jobId = req.params.id;
       const conn = await pool.getConnection();
       try {
@@ -3419,12 +3770,12 @@ var init_inventory = __esm({
       } catch (e) {
         await conn.rollback();
         console.error("[PUT /api/repairs/:id] Error:", e.message);
-        res.status(500).json({ error: e.message });
+        next(e);
       } finally {
         conn.release();
       }
     });
-    router8.get("/search", async (req, res) => {
+    router8.get("/search", async (req, res, next) => {
       const q = req.query.q;
       const type = req.query.type;
       if (!q || q.length < 2) return res.json([]);
@@ -3464,7 +3815,7 @@ var init_inventory = __esm({
         }
         res.json(results);
       } catch (e) {
-        res.status(500).json({ error: e.message });
+        next(e);
       }
     });
     inventory_default = router8;
@@ -3478,6 +3829,7 @@ import express from "express";
 import { createServer as createViteServer } from "vite";
 import dotenv2 from "dotenv";
 import fs from "fs";
+import { ZodError } from "zod";
 dotenv2.config();
 function logError(message, error) {
   const entry = `[${(/* @__PURE__ */ new Date()).toISOString()}] ${message}: ${error?.message}
@@ -3518,7 +3870,7 @@ async function startServer() {
   app.use("/api/inventory", inventoryRouter);
   app.use("/api", settingsRouter);
   app.use("/api", inventoryRouter);
-  app.post("/api/import-products", requireAuthAsync, async (req, res) => {
+  app.post("/api/import-products", requireAuthAsync, async (req, res, next) => {
     const { products } = req.body;
     const businessId = req.user.business_id;
     const { pool: pool2 } = await Promise.resolve().then(() => (init_mysql(), mysql_exports));
@@ -3589,7 +3941,7 @@ async function startServer() {
       res.json({ success: true });
     } catch (e) {
       await conn.rollback();
-      res.status(500).json({ error: e.message });
+      next(e);
     } finally {
       conn.release();
     }
@@ -3609,6 +3961,14 @@ async function startServer() {
       res.sendFile(path.join(__dirname, "dist", "index.html"));
     });
   }
+  app.use((err, req, res, next) => {
+    if (err instanceof ZodError) {
+      return res.status(400).json({ error: "Validation Error", details: err.errors });
+    }
+    logError("Unhandled API Error", err);
+    console.error("[Global Error Handler]", err);
+    res.status(500).json({ error: "Internal Server Error" });
+  });
   app.listen(PORT, "0.0.0.0", () => {
     console.log(`\u2713 Server running on port ${PORT}`);
   });

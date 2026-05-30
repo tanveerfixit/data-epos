@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft, User, Phone, Mail, MapPin, FileText, CreditCard, History, Save, ChevronDown, Trash2 } from 'lucide-react';
 import { Customer, Invoice, Payment } from '../types';
+import { safeCustomerName } from '../utils/customerName';
 
 interface CustomerDetailsProps {
   customerId: number;
@@ -86,8 +87,6 @@ export default function CustomerDetails({
     }
   };
 
-
-
   const handleArchive = async () => {
     if (!window.confirm('Are you sure you want to archive this customer?')) return;
     
@@ -103,18 +102,22 @@ export default function CustomerDetails({
     }
   };
 
-  if (!customer) return <div className="p-8">Loading...</div>;
+  if (!customer) return (
+    <div className="flex items-center justify-center h-full bg-neutral-100 dark:bg-neutral-950 text-neutral-900 dark:text-neutral-100 font-mono p-8 text-lg">
+      *** LOADING SYSTEM DATA ***
+    </div>
+  );
 
   return (
-    <div className="flex flex-col h-full bg-white overflow-hidden text-slate-800">
+    <div className="flex flex-col h-full bg-neutral-100 text-neutral-900 dark:bg-neutral-950 dark:text-neutral-100 font-mono text-base px-2 py-2 select-none w-full overflow-auto" style={{ fontSize: '17px' }}>
 
       {/* Header Tabs */}
-      <div className="flex justify-between items-end bg-[#f8f9fa] pt-2 px-2 border-b border-slate-200 shrink-0">
-        <div className="flex gap-1 items-end">
+      <div className="flex justify-between items-end bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 pt-2 px-2 shrink-0 rounded-none shadow-none mb-2 flex-wrap md:flex-nowrap">
+        <div className="flex gap-1 items-end overflow-x-auto">
           <button 
             onClick={() => setActiveTab('info')}
-            className={`px-4 py-2 border border-slate-300 border-b-0 text-sm font-medium -mb-px relative transition-colors ${
-              activeTab === 'info' ? 'bg-white text-slate-700' : 'bg-[#e9ecef] text-slate-600 hover:bg-slate-200'
+            className={`px-4 py-1.5 border border-neutral-300 dark:border-neutral-800 border-b-0 text-base font-bold -mb-px relative transition-colors rounded-none ${
+              activeTab === 'info' ? 'bg-neutral-200 dark:bg-neutral-900 text-black dark:text-white' : 'bg-white dark:bg-black text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-950'
             }`}
           >
             Customer Information
@@ -122,8 +125,8 @@ export default function CustomerDetails({
 
           <button 
             onClick={() => setActiveTab('properties')}
-            className={`px-4 py-2 border border-slate-300 border-b-0 text-sm font-medium -mb-px relative transition-colors ${
-              activeTab === 'properties' ? 'bg-white text-slate-700' : 'bg-[#e9ecef] text-slate-600 hover:bg-slate-200'
+            className={`px-4 py-1.5 border border-neutral-300 dark:border-neutral-800 border-b-0 text-base font-bold -mb-px relative transition-colors rounded-none ${
+              activeTab === 'properties' ? 'bg-neutral-200 dark:bg-neutral-900 text-black dark:text-white' : 'bg-white dark:bg-black text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-950'
             }`}
           >
             Customer Properties
@@ -131,8 +134,8 @@ export default function CustomerDetails({
 
           <button 
             onClick={() => setActiveTab('credits')}
-            className={`px-4 py-2 border border-slate-300 border-b-0 text-sm font-medium -mb-px relative transition-colors ${
-              activeTab === 'credits' ? 'bg-white text-slate-700' : 'bg-[#e9ecef] text-slate-600 hover:bg-slate-200'
+            className={`px-4 py-1.5 border border-neutral-300 dark:border-neutral-800 border-b-0 text-base font-bold -mb-px relative transition-colors rounded-none ${
+              activeTab === 'credits' ? 'bg-neutral-200 dark:bg-neutral-900 text-black dark:text-white' : 'bg-white dark:bg-black text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-950'
             }`}
           >
             Wallet & Ledger
@@ -140,8 +143,8 @@ export default function CustomerDetails({
 
           <button 
             onClick={() => setActiveTab('terms')}
-            className={`px-4 py-2 border border-slate-300 border-b-0 text-sm font-medium -mb-px relative transition-colors ${
-              activeTab === 'terms' ? 'bg-white text-slate-700' : 'bg-[#e9ecef] text-slate-600 hover:bg-slate-200'
+            className={`px-4 py-1.5 border border-neutral-300 dark:border-neutral-800 border-b-0 text-base font-bold -mb-px relative transition-colors rounded-none ${
+              activeTab === 'terms' ? 'bg-neutral-200 dark:bg-neutral-900 text-black dark:text-white' : 'bg-white dark:bg-black text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-950'
             }`}
           >
             Payment Terms
@@ -149,8 +152,8 @@ export default function CustomerDetails({
 
           <button 
             onClick={() => setActiveTab('activity')}
-            className={`px-4 py-2 border border-slate-300 border-b-0 text-sm font-medium -mb-px relative transition-colors ${
-              activeTab === 'activity' ? 'bg-white text-slate-700' : 'bg-[#e9ecef] text-slate-600 hover:bg-slate-200'
+            className={`px-4 py-1.5 border border-neutral-300 dark:border-neutral-800 border-b-0 text-base font-bold -mb-px relative transition-colors rounded-none ${
+              activeTab === 'activity' ? 'bg-neutral-200 dark:bg-neutral-900 text-black dark:text-white' : 'bg-white dark:bg-black text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-950'
             }`}
           >
             Activity Log
@@ -160,14 +163,14 @@ export default function CustomerDetails({
         <div className="pb-2 pr-2 flex gap-2">
           <button 
             onClick={handleArchive}
-            className="flex items-center gap-1.5 px-3 py-1 bg-white border border-red-200 text-red-600 text-[11px] font-bold rounded shadow-sm hover:bg-red-50"
+            className="flex items-center gap-1.5 px-3 py-1 bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 text-red-600 dark:text-red-400 text-sm font-bold rounded-none shadow-none hover:bg-neutral-100 dark:hover:bg-neutral-900"
           >
             <Trash2 size={12} />
             Archive
           </button>
           <button 
             onClick={onBack}
-            className="flex items-center gap-1.5 px-3 py-1 bg-white border border-slate-300 text-slate-800 text-[11px] font-bold rounded shadow-sm hover:bg-slate-50"
+            className="flex items-center gap-1.5 px-3 py-1 bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 text-neutral-900 dark:text-neutral-100 text-sm font-bold rounded-none shadow-none hover:bg-neutral-100 dark:hover:bg-neutral-900"
           >
             Customers List
           </button>
@@ -175,47 +178,47 @@ export default function CustomerDetails({
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-auto flex">
+      <div className="flex-1 overflow-auto flex flex-col md:flex-row gap-4">
 
         {/* Left Panel */}
-        <div className="w-[60%] p-6 border-r border-slate-100 flex gap-6 overflow-auto">
+        <div className="w-full md:w-[40%] p-4 border border-neutral-300 dark:border-neutral-800 bg-white dark:bg-black flex gap-6 overflow-auto rounded-none shadow-none">
 
           {/* Avatar */}
           <div className="shrink-0 pt-2">
-            <div className="w-[120px] h-[120px] rounded-full border-[2px] border-black flex items-center justify-center bg-white overflow-hidden">
-              {customer.name ? (
-                <span className="text-4xl font-black text-slate-800">{customer.name.charAt(0)}</span>
+            <div className="w-[120px] h-[120px] rounded-none border border-neutral-300 dark:border-neutral-800 flex items-center justify-center bg-white dark:bg-black overflow-hidden shadow-none">
+              {safeCustomerName(customer) !== 'Unknown' ? (
+                <span className="text-4xl font-bold text-neutral-900 dark:text-neutral-100">{safeCustomerName(customer).charAt(0)}</span>
               ) : (
-                <User size={64} className="text-slate-300" />
+                <User size={64} className="text-neutral-300 dark:text-neutral-700" />
               )}
             </div>
           </div>
 
           {/* Customer Info */}
-          <div className="flex-1 space-y-4 pt-2">
+          <div className="flex-1 space-y-4 pt-2 font-normal text-neutral-900 dark:text-neutral-100">
 
             <div className="space-y-1">
-              <h2 className="text-[#3498db] text-[15px] font-medium uppercase tracking-tight">
+              <h2 className="text-[#3498db] dark:text-[#3498db] text-[17px] font-bold uppercase tracking-tight">
                 {customer.company || 'No Company'}
               </h2>
-              <p className="text-[#3498db] text-[15px] font-medium uppercase tracking-tight">
-                {customer.name}
+              <p className="text-[#3498db] dark:text-[#3498db] text-[17px] font-bold uppercase tracking-tight">
+                {safeCustomerName(customer)}
               </p>
             </div>
 
-            <div className="space-y-2 text-[13px] font-bold text-slate-800">
+            <div className="space-y-2 text-base font-normal text-neutral-900 dark:text-neutral-100">
               <div className="flex items-center gap-2">
-                <Mail size={14} className="text-slate-400" />
+                <Mail size={14} className="text-neutral-500" />
                 {customer.email || 'No email provided'}
               </div>
 
               <div className="flex items-center gap-2">
-                <Phone size={14} className="text-slate-400" />
+                <Phone size={14} className="text-neutral-500" />
                 {customer.phone || 'No phone provided'}
               </div>
             </div>
 
-            <div className="text-[12px] font-bold text-slate-800 leading-snug pt-2">
+            <div className="text-sm font-normal text-neutral-900 dark:text-neutral-100 leading-snug pt-2">
               <p className="mb-1">Customer Type : Individual</p>
               {customer.address_line1 ? (
                 <>
@@ -233,22 +236,22 @@ export default function CustomerDetails({
 
               <button 
                 onClick={() => setIsEditing(!isEditing)}
-                className="bg-[#555] hover:bg-[#444] text-white px-5 py-1.5 text-[11px] font-bold rounded shadow-sm transition-colors"
+                className="bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-900 text-neutral-900 dark:text-neutral-100 px-5 py-1 text-sm font-normal rounded-none shadow-none transition-colors"
               >
                 {isEditing ? 'Cancel' : 'Edit'}
               </button>
 
-              <button className="bg-white hover:bg-slate-50 border border-slate-300 text-slate-500 px-3 py-1.5 text-[11px] font-bold rounded shadow-sm transition-colors">
+              <button className="bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-900 text-neutral-900 dark:text-neutral-100 px-3 py-1 text-sm font-normal rounded-none shadow-none transition-colors">
                 Merge Customers
               </button>
 
-              <button className="bg-[#2ecc71] hover:bg-[#27ae60] text-white px-4 py-1.5 text-[11px] font-bold rounded shadow-sm transition-colors">
+              <button className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-1.5 text-sm font-normal rounded-none shadow-none transition-colors">
                 Trade In
               </button>
 
               <button 
                 onClick={handleArchive}
-                className="bg-[#e74c3c] hover:bg-[#c0392b] text-white px-4 py-1.5 text-[11px] font-bold rounded shadow-sm transition-colors"
+                className="bg-red-600 hover:bg-red-700 text-white px-4 py-1.5 text-sm font-normal rounded-none shadow-none transition-colors"
               >
                 Archive
               </button>
@@ -257,15 +260,15 @@ export default function CustomerDetails({
               <div className="relative">
                 <button 
                   onClick={() => setShowCreateMenu(!showCreateMenu)}
-                  className="bg-[#2ecc71] text-white px-3 py-1.5 text-[11px] font-bold rounded shadow-sm flex items-center justify-between min-w-[110px] hover:bg-[#27ae60] transition-colors"
+                  className="bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-900 text-neutral-900 dark:text-neutral-100 px-3 py-1 text-sm font-normal rounded-none shadow-none flex items-center justify-between min-w-[110px] transition-colors"
                 >
                   Create New
                   <ChevronDown size={14} className={`transition-transform ${showCreateMenu ? 'rotate-180' : ''}`} />
                 </button>
 
                 {showCreateMenu && (
-                  <div className="absolute top-full left-0 w-full flex flex-col z-10 shadow-xl border border-slate-200 mt-1">
-                    <button className="bg-[#3498db] text-white px-3 py-2 text-[11px] text-left hover:bg-blue-600 font-bold border-b border-white/10">
+                  <div className="absolute top-full left-0 w-full flex flex-col z-10 shadow-none border border-neutral-300 dark:border-neutral-800 mt-1 bg-white dark:bg-black rounded-none overflow-hidden">
+                    <button className="bg-white dark:bg-black text-neutral-900 dark:text-neutral-100 px-3 py-2 text-sm text-left hover:bg-neutral-200 dark:hover:bg-neutral-900 font-bold border-b border-neutral-300 dark:border-neutral-800 rounded-none">
                       Create New
                     </button>
 
@@ -274,7 +277,7 @@ export default function CustomerDetails({
                         setShowCreateMenu(false);
                         onCreateInvoice?.();
                       }}
-                      className="bg-[#2ecc71] text-white px-3 py-2 text-[11px] text-left hover:bg-[#27ae60] font-bold border-b border-white/10"
+                      className="bg-white dark:bg-black text-neutral-900 dark:text-neutral-100 px-3 py-2 text-sm text-left hover:bg-neutral-200 dark:hover:bg-neutral-900 font-normal border-b border-neutral-300 dark:border-neutral-800 rounded-none"
                     >
                       Cash Register
                     </button>
@@ -284,7 +287,7 @@ export default function CustomerDetails({
                         setShowCreateMenu(false);
                         onCreateRepair?.();
                       }}
-                      className="bg-[#2ecc71] text-white px-3 py-2 text-[11px] text-left hover:bg-[#27ae60] font-bold border-b border-white/10"
+                      className="bg-white dark:bg-black text-neutral-900 dark:text-neutral-100 px-3 py-2 text-sm text-left hover:bg-neutral-200 dark:hover:bg-neutral-900 font-normal border-b border-neutral-300 dark:border-neutral-800 rounded-none"
                     >
                       Repair Ticket
                     </button>
@@ -293,7 +296,7 @@ export default function CustomerDetails({
                       onClick={() => {
                         setShowCreateMenu(false);
                       }}
-                      className="bg-[#2ecc71] text-white px-3 py-2 text-[11px] text-left hover:bg-[#27ae60] font-bold border-b border-white/10"
+                      className="bg-white dark:bg-black text-neutral-900 dark:text-neutral-100 px-3 py-2 text-sm text-left hover:bg-neutral-200 dark:hover:bg-neutral-900 font-normal border-b border-neutral-300 dark:border-neutral-800 rounded-none"
                     >
                       Order
                     </button>
@@ -303,7 +306,7 @@ export default function CustomerDetails({
                         setShowCreateMenu(false);
                         onDeposit?.();
                       }}
-                      className="bg-[#2ecc71] text-white px-3 py-2 text-[11px] text-left hover:bg-[#27ae60] font-bold"
+                      className="bg-white dark:bg-black text-neutral-900 dark:text-neutral-100 px-3 py-2 text-sm text-left hover:bg-neutral-200 dark:hover:bg-neutral-900 font-normal rounded-none"
                     >
                       Deposit
                     </button>
@@ -321,69 +324,67 @@ export default function CustomerDetails({
         />
       )}
 
-
-
           </div>
         </div>
 
         {/* Right Panel */}
-        <div className="flex-1 bg-white overflow-auto p-6">
+        <div className="flex-1 bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 overflow-auto p-4 rounded-none shadow-none">
           {activeTab === 'info' && (
             <div className="space-y-8">
               {/* Financial Summary Cards */}
               <div className="grid grid-cols-3 gap-4">
-                <div className="bg-slate-50 p-4 rounded border border-slate-200">
-                  <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Total Spent</p>
-                  <p className="text-xl font-black text-slate-800">€{invoices.reduce((sum, inv) => sum + inv.grand_total, 0).toFixed(2)}</p>
+                <div className="bg-neutral-250 dark:bg-neutral-900 p-4 rounded-none border border-neutral-300 dark:border-neutral-800">
+                  <p className="text-[12px] font-bold text-black dark:text-white uppercase mb-1">Total Spent</p>
+                  <p className="text-2xl font-bold text-neutral-900 dark:text-neutral-100">€{invoices.reduce((sum, inv) => sum + inv.grand_total, 0).toFixed(2)}</p>
                 </div>
-                <div className="bg-slate-50 p-4 rounded border border-slate-200">
-                  <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Outstanding</p>
-                  <p className="text-xl font-black text-orange-600">€{invoices.filter(i => i.status !== 'paid').reduce((sum, inv) => sum + inv.grand_total, 0).toFixed(2)}</p>
+                <div className="bg-neutral-250 dark:bg-neutral-900 p-4 rounded-none border border-neutral-300 dark:border-neutral-800">
+                  <p className="text-[12px] font-bold text-black dark:text-white uppercase mb-1">Outstanding</p>
+                  <p className="text-2xl font-bold text-orange-600 dark:text-orange-400">€{invoices.filter(i => i.status !== 'paid').reduce((sum, inv) => sum + inv.grand_total, 0).toFixed(2)}</p>
                 </div>
-                <div className="bg-slate-50 p-4 rounded border border-slate-200">
-                  <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Wallet Balance</p>
-                  <p className="text-xl font-black text-emerald-600">€{(customer.wallet_balance || 0).toFixed(2)}</p>
+                <div className="bg-neutral-250 dark:bg-neutral-900 p-4 rounded-none border border-neutral-300 dark:border-neutral-800">
+                  <p className="text-[12px] font-bold text-black dark:text-white uppercase mb-1">Wallet Balance</p>
+                  <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">€{(customer.wallet_balance || 0).toFixed(2)}</p>
                 </div>
               </div>
 
               <div className="space-y-6">
-                <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider border-b border-slate-100 pb-2">Recent Invoices</h3>
-                <div className="border border-slate-200 rounded overflow-hidden">
+                <h3 className="text-base font-bold text-black dark:text-white uppercase tracking-wider border-b border-neutral-300 dark:border-neutral-800 pb-2">Recent Invoices</h3>
+                <div className="border border-neutral-300 dark:border-neutral-800 rounded-none overflow-hidden">
                   <table className="w-full text-left border-collapse">
-                    <thead className="bg-slate-50">
-                      <tr className="text-[10px] font-bold text-slate-500 uppercase tracking-wider border-b border-slate-200">
+                    <thead className="bg-neutral-200 dark:bg-neutral-900">
+                      <tr className="text-[12px] font-bold text-black dark:text-white uppercase tracking-wider border-b border-neutral-300 dark:border-neutral-800">
                         <th className="px-4 py-2">Invoice #</th>
                         <th className="px-4 py-2">Date</th>
                         <th className="px-4 py-2">Status</th>
                         <th className="px-4 py-2 text-right">Total</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-100">
+                    <tbody className="divide-y divide-neutral-200 dark:divide-neutral-800 font-normal">
                       {invoices.length === 0 ? (
                         <tr>
-                          <td colSpan={4} className="px-4 py-8 text-center text-slate-400 italic text-xs">No invoices found.</td>
+                          <td colSpan={4} className="px-4 py-8 text-center text-neutral-400 dark:text-neutral-500 italic text-sm bg-white dark:bg-black">No invoices found.</td>
                         </tr>
                       ) : (
                         invoices.slice(0, 5).map(inv => (
-                          <tr key={inv.id} className="hover:bg-slate-50 transition-colors text-xs">
-                            <td className="px-4 py-3">
+                          <tr key={inv.id} className="hover:bg-neutral-100 dark:hover:bg-neutral-900 transition-colors text-sm bg-white dark:bg-black text-neutral-900 dark:text-neutral-100 font-normal">
+                            <td className="px-4 py-3 font-normal">
                               <button 
                                 onClick={() => onSelectInvoice?.(inv.id)}
-                                className="font-bold text-blue-600 hover:underline"
+                                className="font-normal text-blue-600 hover:underline"
                               >
                                 {inv.invoice_number}
                               </button>
                             </td>
-                            <td className="px-4 py-3 text-slate-600">{new Date(inv.created_at).toLocaleDateString()}</td>
-                            <td className="px-4 py-3">
-                              <span className={`px-2 py-0.5 rounded text-[9px] font-bold uppercase ${
-                                inv.status === 'paid' ? 'bg-emerald-100 text-emerald-700' : 
-                                inv.status === 'void' ? 'bg-red-100 text-red-700' : 'bg-orange-100 text-orange-700'
+                            <td className="px-4 py-3 text-neutral-600 dark:text-neutral-400 font-normal">{new Date(inv.created_at).toLocaleDateString()}</td>
+                            <td className="px-4 py-3 font-normal">
+                              <span className={`px-2 py-0.5 rounded-none text-[11px] font-bold uppercase ${
+                                inv.status === 'paid' ? 'bg-emerald-100 dark:bg-emerald-950/40 text-emerald-700' : 
+                                inv.status === 'void' ? 'bg-red-100 dark:bg-red-950/40 text-red-700' : 'bg-orange-100 dark:bg-orange-950/40 text-orange-750 dark:text-orange-400'
                               }`}>
                                 {inv.status}
                               </span>
                             </td>
-                            <td className="px-4 py-3 text-right font-bold text-slate-800">€{inv.grand_total.toFixed(2)}</td>
+                            <td className="px-4 py-3 text-right font-normal text-neutral-900 dark:text-neutral-100">€{inv.grand_total.toFixed(2)}</td>
                           </tr>
                         ))
                       )}
@@ -391,37 +392,37 @@ export default function CustomerDetails({
                   </table>
                 </div>
 
-                <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider border-b border-slate-100 pb-2 mt-8">Recent Payments</h3>
-                <div className="border border-slate-200 rounded overflow-hidden">
+                <h3 className="text-base font-bold text-black dark:text-white uppercase tracking-wider border-b border-neutral-300 dark:border-neutral-800 pb-2 mt-8">Recent Payments</h3>
+                <div className="border border-neutral-300 dark:border-neutral-800 rounded-none overflow-hidden">
                   <table className="w-full text-left border-collapse">
-                    <thead className="bg-slate-50">
-                      <tr className="text-[10px] font-bold text-slate-500 uppercase tracking-wider border-b border-slate-200">
+                    <thead className="bg-neutral-200 dark:bg-neutral-900">
+                      <tr className="text-[12px] font-bold text-black dark:text-white uppercase tracking-wider border-b border-neutral-300 dark:border-neutral-800">
                         <th className="px-4 py-2">Date</th>
                         <th className="px-4 py-2">Type</th>
                         <th className="px-4 py-2">Method</th>
                         <th className="px-4 py-2 text-right">Amount</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-100">
+                    <tbody className="divide-y divide-neutral-200 dark:divide-neutral-800 font-normal">
                       {payments.length === 0 ? (
                         <tr>
-                          <td colSpan={4} className="px-4 py-8 text-center text-slate-400 italic text-xs">No payments found.</td>
+                          <td colSpan={4} className="px-4 py-8 text-center text-neutral-400 dark:text-neutral-500 italic text-sm bg-white dark:bg-black">No payments found.</td>
                         </tr>
                       ) : (
                         payments.slice(0, 5).map(p => (
-                          <tr key={p.id} className="hover:bg-slate-50 transition-colors text-xs">
-                            <td className="px-4 py-3 text-slate-600">{new Date(p.paid_at).toLocaleDateString()}</td>
-                            <td className="px-4 py-3">
-                              <span className={`px-2 py-0.5 rounded text-[9px] font-bold uppercase ${
-                                p.type === 'deposit' ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-600'
+                          <tr key={p.id} className="hover:bg-neutral-100 dark:hover:bg-neutral-900 transition-colors text-sm bg-white dark:bg-black text-neutral-900 dark:text-neutral-100">
+                            <td className="px-4 py-3 text-neutral-600 dark:text-neutral-400 font-normal">{new Date(p.paid_at).toLocaleDateString()}</td>
+                            <td className="px-4 py-3 font-normal">
+                              <span className={`px-2 py-0.5 rounded-none text-[11px] font-bold uppercase ${
+                                p.type === 'deposit' ? 'bg-blue-100 dark:bg-blue-950/40 text-blue-700' : 'bg-neutral-200 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300'
                               }`}>
                                 {p.type || 'payment'}
                               </span>
                             </td>
-                            <td className="px-4 py-3">
-                              <span className="bg-slate-100 px-2 py-0.5 rounded text-[10px] font-medium text-slate-700">{p.method}</span>
+                            <td className="px-4 py-3 font-normal">
+                              <span className="bg-neutral-200 dark:bg-neutral-800 px-2 py-0.5 rounded-none text-[10px] font-normal text-neutral-750 dark:text-neutral-200">{p.method}</span>
                             </td>
-                            <td className="px-4 py-3 text-right font-bold text-emerald-600">€{p.amount.toFixed(2)}</td>
+                            <td className="px-4 py-3 text-right font-normal text-emerald-600 dark:text-emerald-400">€{p.amount.toFixed(2)}</td>
                           </tr>
                         ))
                       )}
@@ -434,32 +435,32 @@ export default function CustomerDetails({
 
           {activeTab === 'properties' && (
             <div className="space-y-6">
-              <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider border-b border-slate-100 pb-2">Customer Properties</h3>
-              <div className="grid grid-cols-2 gap-6">
+              <h3 className="text-base font-bold text-black dark:text-white uppercase tracking-wider border-b border-neutral-300 dark:border-neutral-800 pb-2">Customer Properties</h3>
+              <div className="grid grid-cols-2 gap-6 font-normal">
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Tax ID / VAT Number</label>
-                    <p className="text-sm font-medium text-slate-700">{customer.fax || 'Not set'}</p>
+                    <label className="block text-[12px] font-bold text-neutral-400 uppercase mb-1">Tax ID / VAT Number</label>
+                    <p className="text-base font-normal text-neutral-900 dark:text-neutral-100">{customer.fax || 'Not set'}</p>
                   </div>
                   <div>
-                    <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Website</label>
-                    <p className="text-sm font-medium text-blue-600 hover:underline cursor-pointer">{customer.website || 'Not set'}</p>
+                    <label className="block text-[12px] font-bold text-neutral-400 uppercase mb-1">Website</label>
+                    <p className="text-base font-normal text-blue-500 hover:underline cursor-pointer">{customer.website || 'Not set'}</p>
                   </div>
                 </div>
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Customer Group</label>
-                    <p className="text-sm font-medium text-slate-700">General Customers</p>
+                    <label className="block text-[12px] font-bold text-neutral-400 uppercase mb-1">Customer Group</label>
+                    <p className="text-base font-normal text-neutral-900 dark:text-neutral-100">General Customers</p>
                   </div>
                   <div>
-                    <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Price Level</label>
-                    <p className="text-sm font-medium text-slate-700">Retail</p>
+                    <label className="block text-[12px] font-bold text-neutral-400 uppercase mb-1">Price Level</label>
+                    <p className="text-base font-normal text-neutral-900 dark:text-neutral-100">Retail</p>
                   </div>
                 </div>
               </div>
               <div className="pt-4">
-                <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Alert Message</label>
-                <div className="p-3 bg-orange-50 border border-orange-100 rounded text-sm text-orange-800 min-h-[60px]">
+                <label className="block text-[12px] font-bold text-neutral-400 uppercase mb-1">Alert Message</label>
+                <div className="p-3 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/50 rounded-none text-base text-amber-800 dark:text-amber-300 min-h-[60px] font-normal">
                   {customer.alert_message || 'No alert message set for this customer.'}
                 </div>
               </div>
@@ -468,25 +469,25 @@ export default function CustomerDetails({
 
           {activeTab === 'credits' && (
             <div className="space-y-6">
-              <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider border-b border-slate-100 pb-2">Wallet & Ledger</h3>
-              <div className="bg-emerald-50 border border-emerald-100 p-6 rounded-lg flex items-center justify-between">
+              <h3 className="text-base font-bold text-black dark:text-white uppercase tracking-wider border-b border-neutral-300 dark:border-neutral-800 pb-2">Wallet & Ledger</h3>
+              <div className="bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-250 dark:border-emerald-900/50 p-6 rounded-none flex items-center justify-between">
                 <div>
-                  <p className="text-xs font-bold text-emerald-600 uppercase mb-1">Available Balance</p>
-                  <p className="text-3xl font-black text-emerald-700">€{(customer.wallet_balance || 0).toFixed(2)}</p>
+                  <p className="text-sm font-bold text-emerald-600 dark:text-emerald-400 uppercase mb-1">Available Balance</p>
+                  <p className="text-3xl font-bold text-emerald-700 dark:text-emerald-300">€{(customer.wallet_balance || 0).toFixed(2)}</p>
                 </div>
                 <button 
                   onClick={() => onDeposit?.()}
-                  className="bg-emerald-600 text-white px-4 py-2 rounded font-bold text-xs hover:bg-emerald-700 transition-colors"
+                  className="bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 px-4 py-2 font-bold text-xs text-neutral-900 dark:text-neutral-100 hover:bg-neutral-200 dark:hover:bg-neutral-900 transition-colors rounded-none"
                 >
                   Add Deposit
                 </button>
               </div>
               
-              <h4 className="text-xs font-bold text-slate-500 uppercase mt-8 mb-4">Payment Ledger</h4>
-              <div className="border border-slate-200 rounded overflow-hidden">
+              <h4 className="text-sm font-bold text-black dark:text-white uppercase mt-8 mb-4">Payment Ledger</h4>
+              <div className="border border-neutral-300 dark:border-neutral-800 rounded-none overflow-hidden">
                 <table className="w-full text-left border-collapse">
-                  <thead className="bg-slate-50">
-                    <tr className="text-[10px] font-bold text-slate-500 uppercase tracking-wider border-b border-slate-200">
+                  <thead className="bg-neutral-200 dark:bg-neutral-900">
+                    <tr className="text-[12px] font-bold text-black dark:text-white uppercase tracking-wider border-b border-neutral-300 dark:border-neutral-800">
                       <th className="px-4 py-2">Date</th>
                       <th className="px-4 py-2">Type</th>
                       <th className="px-4 py-2">Method</th>
@@ -494,26 +495,26 @@ export default function CustomerDetails({
                       <th className="px-4 py-2 text-right">Amount</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-100">
+                  <tbody className="divide-y divide-neutral-200 dark:divide-neutral-800 font-normal">
                     {payments.length === 0 ? (
                       <tr>
-                        <td colSpan={5} className="px-4 py-8 text-center text-slate-400 italic text-xs">No transactions found.</td>
+                        <td colSpan={5} className="px-4 py-8 text-center text-neutral-400 dark:text-neutral-500 italic text-sm bg-white dark:bg-black">No transactions found.</td>
                       </tr>
                     ) : (
                       payments.map(p => (
-                        <tr key={p.id} className="hover:bg-slate-50 transition-colors text-xs">
-                          <td className="px-4 py-3 text-slate-600">{new Date(p.paid_at).toLocaleString()}</td>
-                          <td className="px-4 py-3">
-                            <span className={`px-2 py-0.5 rounded text-[9px] font-bold uppercase ${
-                              p.type === 'deposit' ? 'bg-emerald-100 text-emerald-700' : 
-                              p.type === 'wallet_use' ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-700'
+                        <tr key={p.id} className="hover:bg-neutral-100 dark:hover:bg-neutral-900 transition-colors text-sm bg-white dark:bg-black text-neutral-900 dark:text-neutral-100 font-normal">
+                          <td className="px-4 py-3 text-neutral-600 dark:text-neutral-400 font-normal">{new Date(p.paid_at).toLocaleString()}</td>
+                          <td className="px-4 py-3 font-normal">
+                            <span className={`px-2 py-0.5 rounded-none text-[11px] font-bold uppercase ${
+                              p.type === 'deposit' ? 'bg-emerald-100 dark:bg-emerald-950/40 text-emerald-700' : 
+                              p.type === 'wallet_use' ? 'bg-blue-100 dark:bg-blue-950/40 text-blue-700' : 'bg-neutral-200 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300'
                             }`}>
                               {p.type?.replace('_', ' ')}
                             </span>
                           </td>
-                          <td className="px-4 py-3 text-slate-600">{p.method}</td>
-                          <td className="px-4 py-3 text-slate-600">{p.invoice_number || '-'}</td>
-                          <td className={`px-4 py-3 text-right font-bold ${p.type === 'wallet_use' ? 'text-red-600' : 'text-emerald-600'}`}>
+                          <td className="px-4 py-3 text-neutral-600 dark:text-neutral-400 font-normal">{p.method}</td>
+                          <td className="px-4 py-3 text-neutral-600 dark:text-neutral-400 font-normal">{p.invoice_number || '-'}</td>
+                          <td className={`px-4 py-3 text-right font-normal ${p.type === 'wallet_use' ? 'text-red-600 dark:text-red-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
                             {p.type === 'wallet_use' ? '-' : '+'}€{p.amount.toFixed(2)}
                           </td>
                         </tr>
@@ -527,41 +528,41 @@ export default function CustomerDetails({
 
           {activeTab === 'terms' && (
             <div className="space-y-6">
-              <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider border-b border-slate-100 pb-2">Payment Terms</h3>
-              <div className="grid grid-cols-2 gap-6">
-                <div className="p-4 bg-slate-50 border border-slate-200 rounded">
-                  <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Default Terms</label>
-                  <p className="text-sm font-bold text-slate-800">Due on Receipt</p>
+              <h3 className="text-base font-bold text-black dark:text-white uppercase tracking-wider border-b border-neutral-300 dark:border-neutral-800 pb-2">Payment Terms</h3>
+              <div className="grid grid-cols-2 gap-6 font-normal">
+                <div className="p-4 bg-neutral-200 dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-800 rounded-none">
+                  <label className="block text-[12px] font-bold text-neutral-400 uppercase mb-1">Default Terms</label>
+                  <p className="text-base font-bold text-neutral-900 dark:text-neutral-100">Due on Receipt</p>
                 </div>
-                <div className="p-4 bg-slate-50 border border-slate-200 rounded">
-                  <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Credit Limit</label>
-                  <p className="text-sm font-bold text-slate-800">€0.00</p>
+                <div className="p-4 bg-neutral-200 dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-800 rounded-none">
+                  <label className="block text-[12px] font-bold text-neutral-400 uppercase mb-1">Credit Limit</label>
+                  <p className="text-base font-bold text-neutral-900 dark:text-neutral-100">€0.00</p>
                 </div>
               </div>
-              <div className="p-4 bg-slate-50 border border-slate-200 rounded">
-                <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Internal Notes</label>
-                <p className="text-xs text-slate-600 italic">No internal notes for this customer.</p>
+              <div className="p-4 bg-neutral-200 dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-800 rounded-none">
+                <label className="block text-[12px] font-bold text-neutral-400 uppercase mb-1">Internal Notes</label>
+                <p className="text-sm text-neutral-600 dark:text-neutral-400 italic">No internal notes for this customer.</p>
               </div>
             </div>
           )}
 
           {activeTab === 'activity' && (
             <div className="space-y-4">
-              <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider border-b border-slate-100 pb-2">Activity Log</h3>
+              <h3 className="text-base font-bold text-black dark:text-white uppercase tracking-wider border-b border-neutral-300 dark:border-neutral-800 pb-2">Activity Log</h3>
               {activities.length === 0 ? (
-                <p className="text-center text-slate-400 italic py-8 text-xs">No activity recorded yet.</p>
+                <p className="text-center text-neutral-400 dark:text-neutral-500 italic py-8 text-sm font-normal">No activity recorded yet.</p>
               ) : (
                 <div className="space-y-4">
                   {activities.map(act => (
-                    <div key={act.id} className="bg-slate-50 rounded p-3 border border-slate-100">
-                      <div className="flex justify-between items-start mb-1">
-                        <p className="text-xs font-bold text-slate-800">{act.activity}</p>
-                        <span className="text-[9px] font-bold text-slate-400 uppercase">
+                    <div key={act.id} className="bg-neutral-200 dark:bg-neutral-900 rounded-none p-3 border border-neutral-300 dark:border-neutral-800">
+                      <div className="flex justify-between items-start mb-1 font-normal">
+                        <p className="text-base font-bold text-black dark:text-white">{act.activity}</p>
+                        <span className="text-[11px] font-bold text-neutral-400 uppercase">
                           {new Date(act.created_at).toLocaleString()}
                         </span>
                       </div>
-                      <p className="text-[11px] text-slate-600 leading-relaxed">{act.details}</p>
-                      <p className="text-[9px] text-slate-400 mt-2 font-medium">Logged by: {act.user_name}</p>
+                      <p className="text-sm text-neutral-600 dark:text-neutral-400 leading-relaxed font-normal">{act.details}</p>
+                      <p className="text-[11px] text-neutral-400 mt-2 font-normal">Logged by: {act.user_name}</p>
                     </div>
                   ))}
                 </div>

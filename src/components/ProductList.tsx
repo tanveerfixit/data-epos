@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Plus, Search, Edit2, Trash2, Package } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Plus, Search } from 'lucide-react';
 import { Product, Category, Manufacturer } from '../types';
 
 export default function ProductList({ 
@@ -24,6 +24,8 @@ export default function ProductList({
   const [selectedCategory, setSelectedCategory] = useState('');
   const [selectedManufacturer, setSelectedManufacturer] = useState('');
   const [selectedType, setSelectedType] = useState('');
+
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   // Debounce search input to avoid hitting database on every keystroke
   useEffect(() => {
@@ -79,6 +81,12 @@ export default function ProductList({
     fetch('/api/manufacturers').then(res => res.json()).then(setManufacturers);
   }, []);
 
+  useEffect(() => {
+    if (searchInputRef.current) {
+      searchInputRef.current.focus();
+    }
+  }, [products]);
+
   const totalPages = Math.ceil(totalItems / itemsPerPage);
 
   const handlePageChange = (page: number) => {
@@ -108,14 +116,14 @@ export default function ProductList({
     return pages.map((p, i) => (
       <React.Fragment key={i}>
         {p === '..' ? (
-          <span className="px-2 text-[var(--text-muted)]">..</span>
+          <span className="px-2 text-neutral-500">..</span>
         ) : (
           <button
             onClick={() => handlePageChange(Number(p))}
-            className={`px-3 py-1 rounded font-bold transition-colors ${
+            className={`px-3 py-1 rounded-none font-bold transition-colors ${
               currentPage === p 
-                ? 'bg-[var(--brand-primary)] text-white' 
-                : 'border border-[var(--border-base)] text-[var(--text-main)] hover:bg-[var(--bg-app)]'
+                ? 'bg-neutral-300 dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 border border-neutral-300 dark:border-neutral-800' 
+                : 'border border-neutral-300 dark:border-neutral-800 text-neutral-900 dark:text-neutral-100 hover:bg-neutral-200 dark:hover:bg-neutral-900'
             }`}
           >
             {p}
@@ -126,24 +134,24 @@ export default function ProductList({
   };
 
   return (
-    <div className="flex flex-col h-full bg-[var(--bg-app)] transition-colors duration-300">
+    <div className="flex flex-col h-full bg-neutral-100 text-neutral-900 dark:bg-neutral-950 dark:text-neutral-100 font-mono text-base px-2 py-2 select-none w-full overflow-hidden" style={{ fontSize: '17px' }}>
       {/* Header */}
-      <div className="p-4 flex justify-between items-center bg-[var(--bg-card)] border-b border-[var(--border-base)]">
-        <h2 className="text-xl font-medium text-[var(--text-main)]">Manage Products</h2>
+      <div className="flex justify-between items-center shrink-0 mb-2 px-1 py-1">
+        <h2 className="text-xl font-bold text-black dark:text-white uppercase">Manage Products</h2>
         <button 
           onClick={onCreateProduct}
-          className="bg-[var(--brand-warning)] hover:opacity-90 text-slate-900 font-bold py-1.5 px-4 rounded text-sm flex items-center gap-2 transition-all shadow-sm"
+          className="bg-amber-400 hover:bg-amber-500 text-slate-900 font-bold py-1.5 px-4 rounded-none text-base flex items-center gap-2 transition-all shadow-none"
         >
           <Plus size={16} />
           Create Product
         </button>
       </div>
 
-      <div className="p-4 flex flex-wrap gap-2 items-center bg-[var(--bg-card)] border-b border-[var(--border-base)]">
+      <div className="p-4 flex flex-wrap gap-2 items-center bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 rounded-none shadow-none mb-2">
         <select 
           value={selectedType}
           onChange={(e) => { setSelectedType(e.target.value); setCurrentPage(1); }}
-          className="bg-[var(--bg-card)] border border-[var(--border-base)] rounded px-3 py-1.5 text-sm text-[var(--text-main)] focus:outline-none focus:ring-1 focus:ring-[var(--brand-primary)] w-48"
+          className="bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 rounded-none px-3 py-1.5 text-base text-neutral-900 dark:text-neutral-100 focus:outline-none w-48"
         >
           <option value="All Products">All Types</option>
           <option value="stock">Generic Stock</option>
@@ -153,7 +161,7 @@ export default function ProductList({
         <select 
           value={selectedManufacturer}
           onChange={(e) => { setSelectedManufacturer(e.target.value); setCurrentPage(1); }}
-          className="bg-[var(--bg-card)] border border-[var(--border-base)] rounded px-3 py-1.5 text-sm text-[var(--text-main)] focus:outline-none focus:ring-1 focus:ring-[var(--brand-primary)] w-48"
+          className="bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 rounded-none px-3 py-1.5 text-base text-neutral-900 dark:text-neutral-100 focus:outline-none w-48"
         >
           <option value="All Manufacturers">All Manufacturers</option>
           {manufacturers.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
@@ -161,7 +169,7 @@ export default function ProductList({
         <select 
           value={selectedCategory}
           onChange={(e) => { setSelectedCategory(e.target.value); setCurrentPage(1); }}
-          className="bg-[var(--bg-card)] border border-[var(--border-base)] rounded px-3 py-1.5 text-sm text-[var(--text-main)] focus:outline-none focus:ring-1 focus:ring-[var(--brand-primary)] w-48"
+          className="bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 rounded-none px-3 py-1.5 text-base text-neutral-900 dark:text-neutral-100 focus:outline-none w-48"
         >
           <option value="All Categories">All Categories</option>
           {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
@@ -169,90 +177,83 @@ export default function ProductList({
         
         <div className="relative flex-1 max-w-md ml-auto">
           <input
+            ref={searchInputRef}
             type="text"
             placeholder="Search Products"
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                setSearchQuery(searchInput);
-                setCurrentPage(1);
-              }
-            }}
-            className="w-full pl-3 pr-10 py-1.5 bg-[var(--bg-card)] border border-[var(--border-base)] rounded text-sm focus:outline-none focus:ring-1 focus:ring-[var(--brand-primary)] text-[var(--text-main)]"
+            className="w-full pl-3 pr-10 py-1.5 bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 rounded-none text-base focus:outline-none text-neutral-900 dark:text-neutral-100"
           />
           <div 
             onClick={() => { setSearchQuery(searchInput); setCurrentPage(1); }}
-            className="absolute right-0 top-0 h-full w-10 flex items-center justify-center bg-[var(--bg-app)] border-l border-[var(--border-base)] rounded-r cursor-pointer hover:bg-[var(--bg-hover)]"
+            className="absolute right-0 top-0 h-full w-10 flex items-center justify-center bg-neutral-100 dark:bg-neutral-955 border-l border-neutral-300 dark:border-neutral-800 rounded-none cursor-pointer hover:bg-neutral-200 dark:hover:bg-neutral-900"
           >
-            <Search size={16} className="text-[var(--text-muted)]" />
+            <Search size={16} className="text-neutral-500" />
           </div>
         </div>
       </div>
 
       {/* Table Content */}
-      <div className="flex-1 overflow-auto p-4">
-        <div className="bg-[var(--bg-card)] border border-[var(--border-base)] rounded shadow-sm overflow-hidden">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="bg-[var(--bg-app)] border-b border-[var(--border-base)] text-[11px] font-bold text-[var(--text-main)] uppercase tracking-wider">
-                <th className="px-4 py-2 border-r border-[var(--border-base)] w-1/6">Manufacturer Name</th>
-                <th className="px-4 py-2 border-r border-[var(--border-base)] w-1/4">Product Name</th>
-                <th className="px-4 py-2 border-r border-[var(--border-base)] w-1/6">SKU/Barcode</th>
-                <th className="px-4 py-2 border-r border-[var(--border-base)] w-1/6">Category Name</th>
-                <th className="px-4 py-2 border-r border-[var(--border-base)] text-right w-1/12">Selling Price</th>
-                <th className="px-4 py-2 text-center w-1/6">Stock (Total)</th>
+      <div className="flex-1 overflow-auto border border-neutral-300 dark:border-neutral-800 bg-white dark:bg-black rounded-none shadow-none">
+        <table className="w-full text-left border-collapse">
+          <thead>
+            <tr className="bg-neutral-200 dark:bg-neutral-900 border-b border-neutral-300 dark:border-neutral-800 text-[13px] font-bold text-black dark:text-white uppercase tracking-wider">
+              <th className="px-2 py-1 border-r border-neutral-300 dark:border-neutral-800 w-1/6">Manufacturer Name</th>
+              <th className="px-2 py-1 border-r border-neutral-300 dark:border-neutral-800 w-1/4">Product Name</th>
+              <th className="px-2 py-1 border-r border-neutral-300 dark:border-neutral-800 w-1/6">SKU/Barcode</th>
+              <th className="px-2 py-1 border-r border-neutral-300 dark:border-neutral-800 w-1/6">Category Name</th>
+              <th className="px-2 py-1 border-r border-neutral-300 dark:border-neutral-800 text-right w-1/12">Selling Price</th>
+              <th className="px-2 py-1 text-center w-1/6">Stock (Total)</th>
+            </tr>
+          </thead>
+          <tbody>
+            {products.length === 0 ? (
+              <tr>
+                <td colSpan={6} className="px-2 py-8 text-center text-neutral-400 dark:text-neutral-500 bg-white dark:bg-black">
+                  No products found.
+                </td>
               </tr>
-            </thead>
-            <tbody>
-              {products.length === 0 ? (
-                <tr>
-                  <td colSpan={6} className="px-4 py-8 text-center text-[var(--text-muted)]">
-                    No products found.
+            ) : (
+              products.map((product, idx) => (
+                <tr 
+                  key={product.id} 
+                  onClick={() => onSelectProduct(product.id)}
+                  className={`border-b border-neutral-200 dark:border-neutral-800 text-base font-normal hover:bg-neutral-100 dark:hover:bg-neutral-900 cursor-pointer transition-colors bg-white dark:bg-black text-neutral-900 dark:text-neutral-100`}
+                >
+                  <td className="px-2 py-1 border-r border-neutral-200 dark:border-neutral-800 text-neutral-600 dark:text-neutral-400 font-normal font-sans">{product.manufacturer_name || ''}</td>
+                  <td className="px-2 py-1 border-r border-neutral-200 dark:border-neutral-800 font-normal font-sans text-neutral-900 dark:text-neutral-100">{product.product_name}</td>
+                  <td className="px-2 py-1 border-r border-neutral-200 dark:border-neutral-800 text-neutral-600 dark:text-neutral-400 font-normal font-mono text-sm">{product.sku_code || product.barcode || ''}</td>
+                  <td className="px-2 py-1 border-r border-neutral-200 dark:border-neutral-800 font-normal font-sans text-neutral-600 dark:text-neutral-400">
+                    <div className="flex items-center justify-between">
+                      <span>{product.category_name || ''}</span>
+                      {product.category_name && (
+                        <button className="p-1 bg-neutral-200 dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-800 text-neutral-900 dark:text-neutral-100 rounded-none hover:bg-neutral-300 dark:hover:bg-neutral-800 transition-colors">
+                          <div className="flex gap-0.5">
+                            <div className="w-0.5 h-0.5 bg-neutral-900 dark:bg-white rounded-none"></div>
+                            <div className="w-0.5 h-0.5 bg-neutral-900 dark:bg-white rounded-none"></div>
+                            <div className="w-0.5 h-0.5 bg-neutral-900 dark:bg-white rounded-none"></div>
+                          </div>
+                        </button>
+                      )}
+                    </div>
+                  </td>
+                  <td className="px-2 py-1 border-r border-neutral-200 dark:border-neutral-800 text-right font-normal text-neutral-900 dark:text-neutral-100">
+                    €{product.selling_price.toFixed(2)}
+                  </td>
+                  <td className="px-2 py-1 text-center">
+                    <span className={`font-bold text-sm ${product.total_stock && product.total_stock > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>
+                      {product.total_stock || 0}
+                    </span>
                   </td>
                 </tr>
-              ) : (
-                products.map((product, idx) => (
-                  <tr 
-                    key={product.id} 
-                    onClick={() => onSelectProduct(product.id)}
-                    className={`border-b border-[var(--border-base)] text-sm hover:bg-[var(--bg-hover)] cursor-pointer transition-colors ${idx % 2 === 1 ? 'bg-[var(--bg-app)]/30' : ''}`}
-                  >
-                    <td className="px-4 py-2 border-r border-[var(--border-base)] text-[var(--text-muted)]">{product.manufacturer_name || ''}</td>
-                    <td className="px-4 py-2 border-r border-[var(--border-base)] font-medium text-[var(--text-main)]">{product.product_name}</td>
-                    <td className="px-4 py-2 border-r border-[var(--border-base)] text-[var(--text-muted)] font-mono text-xs">{product.sku_code || product.barcode || ''}</td>
-                    <td className="px-4 py-2 border-r border-[var(--border-base)]">
-                      <div className="flex items-center justify-between">
-                        <span className="text-[var(--text-muted)]">{product.category_name || ''}</span>
-                        {product.category_name && (
-                          <button className="p-1 bg-[var(--bg-sidebar)] text-white rounded-sm hover:opacity-90 transition-opacity">
-                            <div className="flex gap-0.5">
-                              <div className="w-0.5 h-0.5 bg-white rounded-full"></div>
-                              <div className="w-0.5 h-0.5 bg-white rounded-full"></div>
-                              <div className="w-0.5 h-0.5 bg-white rounded-full"></div>
-                            </div>
-                          </button>
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-4 py-2 border-r border-[var(--border-base)] text-right font-medium text-[var(--text-main)]">
-                      €{product.selling_price.toFixed(2)}
-                    </td>
-                    <td className="px-4 py-2 text-center">
-                      <span className={`font-bold text-xs ${product.total_stock && product.total_stock > 0 ? 'text-[var(--brand-success)]' : 'text-[var(--brand-danger)]'}`}>
-                        {product.total_stock || 0}
-                      </span>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+              ))
+            )}
+          </tbody>
+        </table>
       </div>
 
       {/* Footer Pagination */}
-      <div className="p-4 bg-[var(--bg-card)] border-t border-[var(--border-base)] flex justify-between items-center text-xs text-[var(--text-muted)]">
+      <div className="p-4 bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 rounded-none shadow-none mt-2 flex justify-between items-center text-sm text-neutral-500 dark:text-neutral-400">
         <div className="flex items-center gap-4">
           <select 
             value={itemsPerPage}
@@ -260,7 +261,7 @@ export default function ProductList({
               setItemsPerPage(Number(e.target.value));
               setCurrentPage(1);
             }}
-            className="bg-[var(--bg-card)] border border-[var(--border-base)] rounded px-2 py-1 focus:outline-none text-[var(--text-main)]"
+            className="bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 rounded-none px-2 py-1 focus:outline-none text-neutral-900 dark:text-neutral-100"
           >
             <option value={20}>20</option>
             <option value={50}>50</option>
@@ -275,7 +276,7 @@ export default function ProductList({
           <button 
             onClick={() => handlePageChange(currentPage - 1)}
             disabled={currentPage === 1}
-            className="px-2 py-1 border border-[var(--border-base)] rounded hover:bg-[var(--bg-app)] disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-2 py-1 border border-neutral-300 dark:border-neutral-800 rounded-none hover:bg-neutral-200 dark:hover:bg-neutral-900 disabled:opacity-50 disabled:cursor-not-allowed text-neutral-900 dark:text-neutral-100"
           >
             «
           </button>
@@ -283,15 +284,12 @@ export default function ProductList({
           <button 
             onClick={() => handlePageChange(currentPage + 1)}
             disabled={currentPage === totalPages}
-            className="px-2 py-1 border border-[var(--border-base)] rounded hover:bg-[var(--bg-app)] disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-2 py-1 border border-neutral-300 dark:border-neutral-800 rounded-none hover:bg-neutral-200 dark:hover:bg-neutral-900 disabled:opacity-50 disabled:cursor-not-allowed text-neutral-900 dark:text-neutral-100"
           >
             »
           </button>
         </div>
       </div>
-
-
     </div>
   );
 }
-

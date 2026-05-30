@@ -1,9 +1,10 @@
 import { Router } from 'express';
 import { pool, query, queryOne, execute } from '../mysql.js';
+import { z } from 'zod';
 
 const router = Router();
 
-router.get('/', async (req: any, res) => {
+router.get('/', async (req: any, res, next) => {
   try {
     const { startDate, endDate } = req.query;
     const isDeveloper = req.user.role === 'developer';
@@ -28,10 +29,10 @@ router.get('/', async (req: any, res) => {
 
     sql += ' ORDER BY i.created_at DESC';
     res.json(await query(sql, params));
-  } catch (e: any) { res.status(500).json({ error: e.message }); }
+  } catch (e: any) { next(e); }
 });
 
-router.get('/:id', async (req: any, res) => {
+router.get('/:id', async (req: any, res, next) => {
   try {
     const isDeveloper = req.user.role === 'developer';
     const branchId = req.user.branch_id;
@@ -62,11 +63,39 @@ router.get('/:id', async (req: any, res) => {
       ...invoice, items, payments, activities, payment_method: paymentMethod,
       customer: { name: invoice.customer_name, phone: invoice.customer_phone, email: invoice.customer_email }
     });
-  } catch (e: any) { res.status(500).json({ error: e.message }); }
+  } catch (e: any) { next(e); }
 });
 
-router.post('/', async (req: any, res) => {
-  const { customer_id, items, subtotal, tax_total, discount_total, grand_total, payments, activities } = req.body;
+const createInvoiceSchema = z.object({
+  customer_id: z.number().nullable().optional(),
+  subtotal: z.number().or(z.string().transform(Number)),
+  tax_total: z.number().or(z.string().transform(Number)),
+  discount_total: z.number().or(z.string().transform(Number)),
+  grand_total: z.number().or(z.string().transform(Number)),
+  items: z.array(z.object({
+    id: z.number().optional(),
+    sku_id: z.number().optional(),
+    device_id: z.number().nullable().optional(),
+    quantity: z.number().or(z.string().transform(Number)),
+    price: z.number().or(z.string().transform(Number)),
+    total: z.number().or(z.string().transform(Number)),
+    is_deposit: z.boolean().optional()
+  })).min(1, "Cart is empty"),
+  payments: z.array(z.object({
+    method: z.string(),
+    amount: z.number().or(z.string().transform(Number))
+  })).optional(),
+  activities: z.array(z.object({
+    action: z.string().optional(),
+    activity: z.string().optional(),
+    details: z.string().optional()
+  })).optional()
+});
+
+router.post('/', async (req: any, res, next) => {
+  const data = createInvoiceSchema.parse(req.body);
+  const { customer_id, items, subtotal, tax_total, discount_total, grand_total, payments, activities } = data;
+  
   if (!items || !items.length) return res.status(400).json({ error: 'Cart is empty' });
 
   const conn = await pool.getConnection();
@@ -215,13 +244,13 @@ router.post('/', async (req: any, res) => {
   } catch (e: any) { 
     if (conn) await conn.rollback().catch(() => {});
     console.error('[POST /api/invoices] Error:', e.message);
-    res.status(500).json({ error: e.message }); 
+    next(e); 
   } finally { 
     if (conn) conn.release(); 
   }
 });
 
-router.post('/:id/refund', async (req, res) => {
+router.post('/:id/refund', async (req: any, res, next) => {
   const { method } = req.body;
   const conn = await pool.getConnection();
   try {
@@ -249,11 +278,11 @@ router.post('/:id/refund', async (req, res) => {
       [req.params.id, req.userId, 'Refund Created', `Refund issued via ${method} for €${invoice.grand_total.toFixed(2)}`]);
     await conn.commit();
     res.json({ success: true });
-  } catch (e: any) { await conn.rollback(); res.status(500).json({ error: e.message }); }
+  } catch (e: any) { await conn.rollback(); next(e); }
   finally { conn.release(); }
 });
 
-router.put('/payments/:id', async (req: any, res) => {
+router.put('/payments/:id', async (req: any, res, next) => {
   try {
     const r = await execute(
       'UPDATE payments p JOIN invoices i ON p.invoice_id=i.id SET p.method=? WHERE p.id=? AND i.business_id=?',
@@ -261,7 +290,7 @@ router.put('/payments/:id', async (req: any, res) => {
     );
     if (r.affectedRows === 0) return res.status(404).json({ error: 'Payment not found or access denied' });
     res.json({ success: true });
-  } catch (e: any) { res.status(500).json({ error: e.message }); }
+  } catch (e: any) { next(e); }
 });
 
 export default router;
