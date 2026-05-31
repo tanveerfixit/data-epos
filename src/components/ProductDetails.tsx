@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Trash2, List, Link, Calculator } from 'lucide-react';
+import { Trash2, List, Link, Edit3 } from 'lucide-react';
 import { Product, ProductActivity } from '../types';
 
 interface ProductWithStock extends Product {
@@ -86,18 +86,18 @@ export default function ProductDetails({
 
   if (loading && !product) return (
     <div className="flex items-center justify-center h-full bg-neutral-100 dark:bg-neutral-950 text-neutral-900 dark:text-neutral-100 font-mono p-8 text-base">
-      <div className="border border-neutral-400 dark:border-green-500 p-6 text-center">
-        <div className="text-sm font-normal uppercase tracking-widest animate-pulse">*** LOADING SYSTEM DATA ***</div>
-        <div className="text-[10px] mt-2 text-neutral-500 dark:text-green-600">PLEASE WAIT...</div>
+      <div className="border border-neutral-300 dark:border-neutral-800 p-6 text-center bg-white dark:bg-black w-64">
+        <div className="text-sm font-bold uppercase tracking-widest animate-pulse">Loading...</div>
+        <div className="text-[10px] mt-2 text-neutral-500">Retrieving system data</div>
       </div>
     </div>
   );
   
   if (!product) return (
     <div className="flex items-center justify-center h-full bg-neutral-100 dark:bg-neutral-950 text-red-500 font-mono p-8 text-base">
-      <div className="border border-red-500 p-6 text-center">
-        <div className="text-sm font-normal uppercase tracking-widest">*** PRODUCT NOT FOUND ***</div>
-        <div className="text-[10px] mt-2 text-red-400">ERROR: INVALID PRODUCT ID</div>
+      <div className="border border-red-500 p-6 text-center bg-white dark:bg-black">
+        <div className="text-sm font-bold uppercase tracking-widest">Product Not Found</div>
+        <div className="text-[10px] mt-2 text-red-400">The requested product does not exist</div>
       </div>
     </div>
   );
@@ -108,29 +108,32 @@ export default function ProductDetails({
     <div className="flex flex-col h-full bg-neutral-100 text-neutral-900 dark:bg-neutral-955 dark:text-neutral-100 font-mono text-base px-2 py-2 select-none w-full overflow-auto" style={{ fontSize: '17px' }}>
       {/* Header bar */}
       <div className="sticky top-0 z-40 bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 shrink-0 mb-2">
-        <div className="flex items-center justify-between px-4 py-1.5 flex-wrap md:flex-nowrap gap-2">
+        <div className="flex items-center justify-between px-4 py-2 flex-wrap md:flex-nowrap gap-2">
           <div className="flex items-center gap-6">
-            <h1 className="text-base font-normal tracking-wider uppercase text-neutral-850 dark:text-green-400">SYS.PROD // PRODUCT SPECIFICATION</h1>
+            <h1 className="text-base font-bold tracking-wider uppercase text-[#0285b5] dark:text-[#0285b5]">Product Details</h1>
           </div>
           
           <div className="flex items-center gap-2">
             <button 
               onClick={() => setIsEditing(true)}
-              className="flex items-center gap-1 px-3 py-1 bg-neutral-200 dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-850 text-neutral-900 dark:text-neutral-300 hover:bg-neutral-300 dark:hover:bg-neutral-800 font-normal text-sm cursor-pointer rounded-none"
+              className="flex items-center gap-1 px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white border border-blue-600 font-bold text-sm cursor-pointer rounded-none transition-colors"
             >
-              [EDIT]
+              <Edit3 size={13} />
+              Edit
             </button>
             <button 
               onClick={handleArchive}
-              className="flex items-center gap-1 px-3 py-1 bg-neutral-200 dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-850 text-red-650 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/20 font-normal text-sm cursor-pointer rounded-none"
+              className="flex items-center gap-1 px-3 py-1 bg-red-650 hover:bg-red-750 text-white border border-red-650 font-bold text-sm cursor-pointer rounded-none transition-colors"
             >
-              [ARCHIVE]
+              <Trash2 size={13} />
+              Archive
             </button>
             <button 
               onClick={onBack}
-              className="flex items-center gap-1 px-3 py-1 bg-neutral-200 dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-850 text-neutral-900 dark:text-neutral-300 hover:bg-neutral-300 dark:hover:bg-neutral-800 font-normal text-sm cursor-pointer rounded-none"
+              className="flex items-center gap-1 px-3 py-1 bg-white dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-800 text-neutral-800 dark:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-800 font-bold text-sm cursor-pointer rounded-none transition-colors"
             >
-              [BACK TO LIST]
+              <List size={13} />
+              Back to List
             </button>
           </div>
         </div>
@@ -142,31 +145,31 @@ export default function ProductDetails({
           onClick={() => setActiveTab('info')}
           className={`px-4 py-2 text-sm font-bold border-t border-x -mb-px transition-colors rounded-none cursor-pointer ${
             activeTab === 'info'
-              ? 'bg-neutral-200 dark:bg-neutral-900 border-neutral-300 dark:border-neutral-800 border-b-transparent text-neutral-900 dark:text-green-400'
-              : 'bg-white dark:bg-black border-transparent text-neutral-500 dark:text-neutral-400 hover:text-neutral-800 dark:hover:text-neutral-200'
+              ? 'bg-neutral-200 dark:bg-neutral-900 border-neutral-300 dark:border-neutral-800 border-b-transparent text-[#0285b5] dark:text-[#0285b5]'
+              : 'bg-white dark:bg-black border-transparent text-neutral-500 dark:text-neutral-400 hover:text-neutral-800'
           }`}
         >
-          [TAB.SPECIFICATION]
+          Specification
         </button>
         <button
           onClick={() => setActiveTab('pricing')}
           className={`px-4 py-2 text-sm font-bold border-t border-x -mb-px transition-colors rounded-none cursor-pointer ${
             activeTab === 'pricing'
-              ? 'bg-neutral-200 dark:bg-neutral-900 border-neutral-300 dark:border-neutral-800 border-b-transparent text-neutral-900 dark:text-green-400'
-              : 'bg-white dark:bg-black border-transparent text-neutral-500 dark:text-neutral-400 hover:text-neutral-800 dark:hover:text-neutral-200'
+              ? 'bg-neutral-200 dark:bg-neutral-900 border-neutral-300 dark:border-neutral-800 border-b-transparent text-[#0285b5] dark:text-[#0285b5]'
+              : 'bg-white dark:bg-black border-transparent text-neutral-500 dark:text-neutral-400 hover:text-neutral-800'
           }`}
         >
-          [TAB.SPECIAL_PRICING]
+          Special Pricing
         </button>
         <button
           onClick={() => setActiveTab('activity')}
           className={`px-4 py-2 text-sm font-bold border-t border-x -mb-px transition-colors rounded-none cursor-pointer ${
             activeTab === 'activity'
-              ? 'bg-neutral-200 dark:bg-neutral-900 border-neutral-300 dark:border-neutral-800 border-b-transparent text-neutral-900 dark:text-green-400'
-              : 'bg-white dark:bg-black border-transparent text-neutral-500 dark:text-neutral-400 hover:text-neutral-800 dark:hover:text-neutral-200'
+              ? 'bg-neutral-200 dark:bg-neutral-900 border-neutral-300 dark:border-neutral-800 border-b-transparent text-[#0285b5] dark:text-[#0285b5]'
+              : 'bg-white dark:bg-black border-transparent text-neutral-500 dark:text-neutral-400 hover:text-neutral-800'
           }`}
         >
-          [TAB.ACTIVITIES]
+          Activity Log
         </button>
       </div>
 
@@ -177,93 +180,93 @@ export default function ProductDetails({
               {/* Left Column: Image Area */}
               <div className="w-full md:w-1/4 flex flex-col items-center">
                 <div className="w-48 h-48 bg-neutral-200 dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-800 rounded-none flex items-center justify-center mb-4 shadow-none">
-                  <Link size={80} className="text-neutral-400 dark:text-green-600/30" strokeWidth={1.5} />
+                  <Link size={80} className="text-neutral-400 dark:text-neutral-700" strokeWidth={1.5} />
                 </div>
                 <div className="flex flex-col gap-2 w-full max-w-[200px]">
-                  <button className="bg-neutral-100 dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-800 text-neutral-900 dark:text-neutral-300 text-xs font-normal py-1 px-3 rounded-none transition-colors cursor-pointer uppercase">
+                  <button className="bg-neutral-100 dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-800 text-neutral-900 dark:text-neutral-300 text-xs font-bold py-1 px-3 rounded-none transition-colors cursor-pointer uppercase">
                     Change Picture
                   </button>
-                  <button className="bg-neutral-100 dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-800 text-neutral-900 dark:text-neutral-300 text-xs font-normal py-1 px-3 rounded-none transition-colors cursor-pointer uppercase">
+                  <button className="bg-neutral-100 dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-800 text-neutral-900 dark:text-neutral-300 text-xs font-bold py-1 px-3 rounded-none transition-colors cursor-pointer uppercase">
                     Web Description
                   </button>
                 </div>
               </div>
 
-              {/* Right Column: Dynamic Terminal reconciliation specifications */}
+              {/* Right Column: Standard Specification reconciliation table */}
               <div className="flex-1">
                 <div className="bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 font-mono text-[14px]">
                   <div className="divide-y divide-neutral-300 dark:divide-neutral-800">
                     {/* Product Name */}
-                    <div className="grid grid-cols-1 md:grid-cols-12 items-center py-2 bg-white dark:bg-black hover:bg-neutral-50 dark:hover:bg-neutral-900">
-                      <div className="md:col-span-4 px-3 md:text-right font-normal text-neutral-600 dark:text-green-400 uppercase">PRODUCT NAME :</div>
+                    <div className="grid grid-cols-1 md:grid-cols-12 items-center py-2.5 bg-white dark:bg-black hover:bg-neutral-50 dark:hover:bg-neutral-900">
+                      <div className="md:col-span-4 px-3 md:text-right font-bold text-neutral-500 dark:text-neutral-400 uppercase">Product Name :</div>
                       <div className="md:col-span-8 px-3 font-bold text-neutral-900 dark:text-neutral-100 uppercase">{product.product_name}</div>
                     </div>
 
                     {/* Category */}
-                    <div className="grid grid-cols-1 md:grid-cols-12 items-center py-2 bg-white dark:bg-black hover:bg-neutral-50 dark:hover:bg-neutral-900">
-                      <div className="md:col-span-4 px-3 md:text-right font-normal text-neutral-600 dark:text-green-400 uppercase">CATEGORY :</div>
-                      <div className="md:col-span-8 px-3 text-neutral-800 dark:text-neutral-200 uppercase">{product.category_name || 'UNCATEGORIZED'}</div>
+                    <div className="grid grid-cols-1 md:grid-cols-12 items-center py-2.5 bg-white dark:bg-black hover:bg-neutral-50 dark:hover:bg-neutral-900">
+                      <div className="md:col-span-4 px-3 md:text-right font-bold text-neutral-500 dark:text-neutral-400 uppercase">Category :</div>
+                      <div className="md:col-span-8 px-3 text-neutral-850 dark:text-neutral-200 uppercase">{product.category_name || 'UNCATEGORIZED'}</div>
                     </div>
 
                     {/* Tracking Type */}
-                    <div className="grid grid-cols-1 md:grid-cols-12 items-center py-2 bg-white dark:bg-black hover:bg-neutral-50 dark:hover:bg-neutral-900">
-                      <div className="md:col-span-4 px-3 md:text-right font-normal text-neutral-600 dark:text-green-400 uppercase">INVENTORY TYPE :</div>
-                      <div className="md:col-span-8 px-3 text-neutral-800 dark:text-neutral-200 capitalize">{product.product_type}</div>
+                    <div className="grid grid-cols-1 md:grid-cols-12 items-center py-2.5 bg-white dark:bg-black hover:bg-neutral-50 dark:hover:bg-neutral-900">
+                      <div className="md:col-span-4 px-3 md:text-right font-bold text-neutral-500 dark:text-neutral-400 uppercase">Inventory Type :</div>
+                      <div className="md:col-span-8 px-3 text-neutral-850 dark:text-neutral-200 capitalize">{product.product_type}</div>
                     </div>
 
                     {/* SKU/Barcode */}
-                    <div className="grid grid-cols-1 md:grid-cols-12 items-center py-2 bg-white dark:bg-black hover:bg-neutral-50 dark:hover:bg-neutral-900">
-                      <div className="md:col-span-4 px-3 md:text-right font-normal text-neutral-600 dark:text-green-400 uppercase">SKU / BARCODE :</div>
-                      <div className="md:col-span-8 px-3 text-neutral-800 dark:text-neutral-200 font-mono">{product.sku_code || 'N/A'}</div>
+                    <div className="grid grid-cols-1 md:grid-cols-12 items-center py-2.5 bg-white dark:bg-black hover:bg-neutral-50 dark:hover:bg-neutral-900">
+                      <div className="md:col-span-4 px-3 md:text-right font-bold text-neutral-500 dark:text-neutral-400 uppercase">SKU / Barcode :</div>
+                      <div className="md:col-span-8 px-3 text-neutral-850 dark:text-neutral-200 font-mono">{product.sku_code || 'N/A'}</div>
                     </div>
 
                     {/* Stock Levels */}
-                    <div className="grid grid-cols-1 md:grid-cols-12 items-center py-2 bg-white dark:bg-black hover:bg-neutral-50 dark:hover:bg-neutral-900">
-                      <div className="md:col-span-4 px-3 md:text-right font-normal text-neutral-600 dark:text-green-400 uppercase">NEED / HAVE / ON PO :</div>
+                    <div className="grid grid-cols-1 md:grid-cols-12 items-center py-2.5 bg-white dark:bg-black hover:bg-neutral-50 dark:hover:bg-neutral-900">
+                      <div className="md:col-span-4 px-3 md:text-right font-bold text-neutral-500 dark:text-neutral-400 uppercase">Need / Have / On PO :</div>
                       <div className="md:col-span-8 px-3 flex items-center gap-3">
                         <button 
                           onClick={() => onViewDevices(product.id)}
-                          className="text-[#2980b9] font-bold hover:underline cursor-pointer bg-transparent border-0 p-0 text-sm"
+                          className="text-[#0285b5] font-bold hover:underline cursor-pointer bg-transparent border-0 p-0 text-sm"
                         >
                           0 / {totalStock} / 0
                         </button>
                         <button 
                           onClick={() => onViewDevices(product.id)}
-                          className="cursor-pointer bg-transparent border-0 p-0"
+                          className="cursor-pointer bg-transparent border-0 p-0 flex items-center"
                         >
-                          <Link size={13} className="text-[#2980b9]" />
+                          <Link size={13} className="text-[#0285b5]" />
                         </button>
                         <button 
                           onClick={() => onAddInventory(product.id)}
                           className="bg-amber-400 hover:bg-amber-500 text-slate-900 font-bold py-0.5 px-3 rounded-none text-xs transition-colors cursor-pointer border border-amber-500 uppercase"
                         >
-                          [Add Stock]
+                          Add Stock
                         </button>
                       </div>
                     </div>
 
                     {/* Minimum Stock */}
-                    <div className="grid grid-cols-1 md:grid-cols-12 items-center py-2 bg-white dark:bg-black hover:bg-neutral-50 dark:hover:bg-neutral-900">
-                      <div className="md:col-span-4 px-3 md:text-right font-normal text-neutral-600 dark:text-green-400 uppercase">MINIMUM STOCK :</div>
-                      <div className="md:col-span-8 px-3 text-neutral-800 dark:text-neutral-200">0</div>
+                    <div className="grid grid-cols-1 md:grid-cols-12 items-center py-2.5 bg-white dark:bg-black hover:bg-neutral-50 dark:hover:bg-neutral-900">
+                      <div className="md:col-span-4 px-3 md:text-right font-bold text-neutral-500 dark:text-neutral-400 uppercase">Minimum Stock :</div>
+                      <div className="md:col-span-8 px-3 text-neutral-850 dark:text-neutral-200">0</div>
                     </div>
 
                     {/* Selling Price */}
-                    <div className="grid grid-cols-1 md:grid-cols-12 items-center py-2 bg-white dark:bg-black hover:bg-neutral-50 dark:hover:bg-neutral-900">
-                      <div className="md:col-span-4 px-3 md:text-right font-normal text-neutral-600 dark:text-green-400 uppercase">SELLING PRICE :</div>
+                    <div className="grid grid-cols-1 md:grid-cols-12 items-center py-2.5 bg-white dark:bg-black hover:bg-neutral-50 dark:hover:bg-neutral-900">
+                      <div className="md:col-span-4 px-3 md:text-right font-bold text-neutral-500 dark:text-neutral-400 uppercase">Selling Price :</div>
                       <div className="md:col-span-8 px-3 font-bold text-neutral-900 dark:text-neutral-100">€{product.selling_price.toFixed(2)}</div>
                     </div>
 
                     {/* Min Selling Price */}
-                    <div className="grid grid-cols-1 md:grid-cols-12 items-center py-2 bg-white dark:bg-black hover:bg-neutral-50 dark:hover:bg-neutral-900">
-                      <div className="md:col-span-4 px-3 md:text-right font-normal text-neutral-600 dark:text-green-400 uppercase">MIN SELLING PRICE :</div>
-                      <div className="md:col-span-8 px-3 text-neutral-800 dark:text-neutral-200">€0.00</div>
+                    <div className="grid grid-cols-1 md:grid-cols-12 items-center py-2.5 bg-white dark:bg-black hover:bg-neutral-50 dark:hover:bg-neutral-900">
+                      <div className="md:col-span-4 px-3 md:text-right font-bold text-neutral-500 dark:text-neutral-400 uppercase">Min Selling Price :</div>
+                      <div className="md:col-span-8 px-3 text-neutral-850 dark:text-neutral-200">€0.00</div>
                     </div>
 
                     {/* Taxable */}
-                    <div className="grid grid-cols-1 md:grid-cols-12 items-center py-2 bg-white dark:bg-black hover:bg-neutral-50 dark:hover:bg-neutral-900">
-                      <div className="md:col-span-4 px-3 md:text-right font-normal text-neutral-600 dark:text-green-400 uppercase">TAXABLE :</div>
-                      <div className="md:col-span-8 px-3 text-neutral-800 dark:text-neutral-200 uppercase">YES</div>
+                    <div className="grid grid-cols-1 md:grid-cols-12 items-center py-2.5 bg-white dark:bg-black hover:bg-neutral-50 dark:hover:bg-neutral-900">
+                      <div className="md:col-span-4 px-3 md:text-right font-bold text-neutral-500 dark:text-neutral-400 uppercase">Taxable :</div>
+                      <div className="md:col-span-8 px-3 text-neutral-850 dark:text-neutral-200 uppercase">YES</div>
                     </div>
                   </div>
                 </div>
@@ -356,7 +359,7 @@ export default function ProductDetails({
 
         {activeTab === 'pricing' && (
           <div className="p-8 text-center text-neutral-400 italic font-mono text-[14px]">
-            [CONFIG.SPECIAL_PRICING] - NO CURRENT PRICE ADJUSTMENT DATA AVAILABLE
+            No current special pricing adjustment data available
           </div>
         )}
       </div>
