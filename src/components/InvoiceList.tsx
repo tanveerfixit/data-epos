@@ -5,9 +5,10 @@ import { Invoice } from '../types';
 interface Props {
   onSelectInvoice: (id: number) => void;
   onSelectCustomer?: (id: number) => void;
+  isActive?: boolean;
 }
 
-export default function InvoiceList({ onSelectInvoice, onSelectCustomer }: Props) {
+export default function InvoiceList({ onSelectInvoice, onSelectCustomer, isActive }: Props) {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [loading, setLoading] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -17,6 +18,12 @@ export default function InvoiceList({ onSelectInvoice, onSelectCustomer }: Props
       searchInputRef.current.focus();
     }
   }, [loading]);
+
+  useEffect(() => {
+    if (isActive) {
+      fetchInvoices();
+    }
+  }, [isActive]);
   
   // Filtering states
   const getLocalDateString = (date = new Date()) => {

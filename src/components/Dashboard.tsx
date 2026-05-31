@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { TrendingUp, ShoppingBag, Wrench, Users, ArrowUpRight, ArrowDownRight } from 'lucide-react';
 
-export default function Dashboard() {
+export default function Dashboard({ isActive }: { isActive?: boolean }) {
   const [stats, setStats] = useState({
     totalSales: 0,
     activeRepairs: 0,
@@ -11,39 +11,45 @@ export default function Dashboard() {
 
   const [recentSales, setRecentSales] = useState<any[]>([]);
 
+  const fetchStats = async () => {
+    try {
+      const [invoicesRaw, repairsRaw, customersRaw, productsRaw] = await Promise.all([
+        fetch('/api/invoices').then(res => res.json()),
+        fetch('/api/repairs').then(res => res.json()),
+        fetch('/api/customers').then(res => res.json()),
+        fetch('/api/products').then(res => res.json())
+      ]);
+
+      const invoices = Array.isArray(invoicesRaw) ? invoicesRaw : [];
+      const repairs = Array.isArray(repairsRaw) ? repairsRaw : [];
+      const customers = Array.isArray(customersRaw) ? customersRaw : [];
+      const products = Array.isArray(productsRaw) ? productsRaw : [];
+
+      const totalSales = invoices.reduce((sum: number, inv: any) => sum + inv.grand_total, 0);
+      const activeRepairs = repairs.filter((r: any) => r.status !== 'collected').length;
+
+      setStats({
+        totalSales,
+        activeRepairs,
+        totalCustomers: customers.length,
+        lowStock: 0 // For now
+      });
+
+      setRecentSales(invoices.slice(0, 5));
+    } catch (error) {
+      console.error('Failed to fetch stats:', error);
+    }
+  };
+
   useEffect(() => {
-    const fetchStats = async () => {
-      try {
-        const [invoicesRaw, repairsRaw, customersRaw, productsRaw] = await Promise.all([
-          fetch('/api/invoices').then(res => res.json()),
-          fetch('/api/repairs').then(res => res.json()),
-          fetch('/api/customers').then(res => res.json()),
-          fetch('/api/products').then(res => res.json())
-        ]);
-
-        const invoices = Array.isArray(invoicesRaw) ? invoicesRaw : [];
-        const repairs = Array.isArray(repairsRaw) ? repairsRaw : [];
-        const customers = Array.isArray(customersRaw) ? customersRaw : [];
-        const products = Array.isArray(productsRaw) ? productsRaw : [];
-
-        const totalSales = invoices.reduce((sum: number, inv: any) => sum + inv.grand_total, 0);
-        const activeRepairs = repairs.filter((r: any) => r.status !== 'collected').length;
-
-        setStats({
-          totalSales,
-          activeRepairs,
-          totalCustomers: customers.length,
-          lowStock: 0 // For now
-        });
-
-        setRecentSales(invoices.slice(0, 5));
-      } catch (error) {
-        console.error('Failed to fetch stats:', error);
-      }
-    };
-
     fetchStats();
   }, []);
+
+  useEffect(() => {
+    if (isActive) {
+      fetchStats();
+    }
+  }, [isActive]);
 
   const cards = [
     { label: 'Total Sales', value: `€${stats.totalSales.toLocaleString()}`, icon: TrendingUp, color: 'bg-[var(--brand-primary)]', trend: '+12.5%', trendUp: true },

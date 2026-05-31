@@ -122,13 +122,14 @@ const AddInventoryRoute = () => {
   );
 };
 
-const InvoiceListRoute = () => {
+const InvoiceListRoute = ({ isActive }: { isActive?: boolean }) => {
   const navigate = useNavigate();
   const branchSlug = slugify(useAuth().currentUser?.branch_name || 'branch');
   return (
     <InvoiceList 
       onSelectInvoice={(id) => navigate(`/${branchSlug}/invoices/${id}`)} 
       onSelectCustomer={(id) => navigate(`/${branchSlug}/customers/${id}`)}
+      isActive={isActive}
     />
   );
 };
@@ -449,7 +450,7 @@ function AppInner() {
               <HomeMenu onNavigate={handleSidebarNavigate} />
             </div>
             <div className={(!isDetailView && currentView === 'dashboard') ? 'h-full' : 'hidden'}>
-              <Dashboard />
+              <Dashboard isActive={!isDetailView && currentView === 'dashboard'} />
             </div>
             <div className={(!isDetailView && currentView === 'register') ? 'h-full' : 'hidden'}>
               <CashRegisterRoute />
@@ -458,7 +459,7 @@ function AppInner() {
               <ProductListRoute />
             </div>
             <div className={(!isDetailView && currentView === 'invoices') ? 'h-full' : 'hidden'}>
-              <InvoiceListRoute />
+              <InvoiceListRoute isActive={!isDetailView && currentView === 'invoices'} />
             </div>
             <div className={(!isDetailView && currentView === 'customers') ? 'h-full' : 'hidden'}>
               <CustomerListRoute />
