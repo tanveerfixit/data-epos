@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Plus, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react';
+import { Search, Plus, ChevronLeft, ChevronRight } from 'lucide-react';
 import { PurchaseOrder, Supplier } from '../types';
 
 export default function PurchaseOrderList({ onSelectPO }: { onSelectPO: (id: number) => void }) {
@@ -29,33 +29,39 @@ export default function PurchaseOrderList({ onSelectPO }: { onSelectPO: (id: num
     return matchesSearch && matchesSupplier && matchesStatus;
   }) : [];
 
-  if (loading) return <div className="p-8 text-center text-[var(--text-muted)] bg-[var(--bg-app)]">Loading Purchase Orders...</div>;
+  if (loading) {
+    return (
+      <div className="h-full flex items-center justify-center bg-white dark:bg-black text-neutral-900 dark:text-neutral-100 font-mono text-base p-8 text-lg">
+        *** LOADING SYSTEM DATA ***
+      </div>
+    );
+  }
 
   return (
-    <div className="flex flex-col h-full bg-[var(--bg-app)]">
+    <div className="flex flex-col h-full bg-neutral-100 text-neutral-900 dark:bg-neutral-950 dark:text-neutral-100 font-mono text-base px-2 py-2 select-none w-full overflow-hidden" style={{ fontSize: '17px' }}>
       {/* Header */}
-      <div className="px-6 py-4 flex justify-between items-center bg-[var(--bg-card)] border-b border-[var(--border-base)]">
-        <h2 className="text-xl font-medium text-[var(--text-main)]">Purchase Order</h2>
-        <button className="bg-[var(--brand-warning)] hover:bg-[var(--brand-warning-hover)] text-slate-900 font-bold py-1.5 px-4 rounded text-sm flex items-center gap-2 transition-all shadow-sm">
+      <div className="flex justify-between items-center shrink-0 mb-2 px-1 py-1">
+        <h2 className="text-xl font-bold text-black dark:text-white uppercase">Purchase Order</h2>
+        <button className="bg-amber-400 hover:bg-amber-500 text-slate-900 font-bold py-1.5 px-4 rounded-none text-base flex items-center gap-2 transition-all shadow-none border-0 cursor-pointer">
           <Plus size={16} />
           Create Purchase Order
         </button>
       </div>
 
       {/* Filters */}
-      <div className="p-4 bg-[var(--bg-hover)] border-b border-[var(--border-base)] flex flex-wrap gap-4 items-center">
-        <select className="bg-[var(--bg-input)] border border-[var(--border-header)] rounded px-3 py-1.5 text-sm focus:ring-1 focus:ring-[var(--brand-primary)] outline-none min-w-[150px] text-[var(--text-main)]">
+      <div className="p-4 flex flex-wrap gap-2 items-center bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 rounded-none shadow-none mb-2">
+        <select className="bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 rounded-none px-3 py-1.5 text-base text-neutral-900 dark:text-neutral-100 focus:outline-none min-w-[150px] font-sans">
           <option>Date, PO</option>
           <option>Lot Ref. No.</option>
           <option>Supplier Inv. No.</option>
         </select>
 
         <select 
-          className="bg-[var(--bg-input)] border border-[var(--border-header)] rounded px-3 py-1.5 text-sm focus:ring-1 focus:ring-[var(--brand-primary)] outline-none min-w-[150px] text-[var(--text-main)]"
+          className="bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 rounded-none px-3 py-1.5 text-base text-neutral-900 dark:text-neutral-100 focus:outline-none min-w-[150px] font-sans"
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
         >
-          <option value="">All Types</option>
+          <option value="">All Statuses</option>
           <option value="draft">Draft</option>
           <option value="received">Received</option>
           <option value="closed">Closed</option>
@@ -63,7 +69,7 @@ export default function PurchaseOrderList({ onSelectPO }: { onSelectPO: (id: num
         </select>
 
         <select 
-          className="bg-[var(--bg-input)] border border-[var(--border-header)] rounded px-3 py-1.5 text-sm focus:ring-1 focus:ring-[var(--brand-primary)] outline-none min-w-[150px] text-[var(--text-main)]"
+          className="bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 rounded-none px-3 py-1.5 text-base text-neutral-900 dark:text-neutral-100 focus:outline-none min-w-[150px] font-sans"
           value={supplierFilter}
           onChange={(e) => setSupplierFilter(e.target.value)}
         >
@@ -71,58 +77,58 @@ export default function PurchaseOrderList({ onSelectPO }: { onSelectPO: (id: num
           {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
         </select>
 
-        <div className="relative flex-1 max-w-md">
+        <div className="relative flex-1 max-w-md ml-auto">
           <input 
             type="text" 
             placeholder="PO / Lot Ref./Suppliers Inv. No." 
-            className="w-full bg-[var(--bg-input)] border border-[var(--border-header)] rounded py-1.5 pl-3 pr-10 text-sm focus:outline-none focus:ring-1 focus:ring-[var(--brand-primary)] text-[var(--text-main)]"
+            className="w-full bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 rounded-none py-1.5 pl-3 pr-10 text-base focus:outline-none text-neutral-900 dark:text-neutral-100 font-sans"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
-          <button className="absolute right-0 top-0 h-full px-3 bg-[var(--bg-accent-subtle)] border-l border-[var(--border-header)] rounded-r hover:bg-[var(--bg-hover)] transition-colors">
-            <Search size={16} className="text-[var(--text-muted)]" />
+          <button className="absolute right-0 top-0 h-full px-3 bg-neutral-100 dark:bg-neutral-900 border-l border-neutral-300 dark:border-neutral-800 rounded-none hover:bg-neutral-200 dark:hover:bg-neutral-950 transition-colors border-0 cursor-pointer flex items-center justify-center">
+            <Search size={16} className="text-neutral-500" />
           </button>
         </div>
       </div>
 
       {/* Table */}
-      <div className="flex-1 overflow-auto bg-[var(--bg-card)]">
+      <div className="flex-1 overflow-auto border border-neutral-300 dark:border-neutral-800 bg-white dark:bg-black rounded-none shadow-none">
         <table className="w-full text-left border-collapse">
           <thead>
-            <tr className="bg-[var(--bg-accent-subtle)] border-b border-[var(--border-base)] text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider">
-              <th className="px-4 py-3 border-r border-[var(--border-base)]">Date</th>
-              <th className="px-4 py-3 border-r border-[var(--border-base)]">PO</th>
-              <th className="px-4 py-3 border-r border-[var(--border-base)]">Lot Ref. No.</th>
-              <th className="px-4 py-3 border-r border-[var(--border-base)]">Supplier</th>
-              <th className="px-4 py-3 border-r border-[var(--border-base)] text-right">Sales Tax</th>
-              <th className="px-4 py-3 border-r border-[var(--border-base)] text-right">Shipping Cost</th>
-              <th className="px-4 py-3 border-r border-[var(--border-base)] text-right">Total</th>
-              <th className="px-4 py-3 border-r border-[var(--border-base)]">Expected</th>
-              <th className="px-4 py-3 border-r border-[var(--border-base)]">Return</th>
-              <th className="px-4 py-3">Status</th>
+            <tr className="bg-neutral-200 dark:bg-neutral-900 border-b border-neutral-300 dark:border-neutral-800 text-[13px] font-bold text-black dark:text-white uppercase tracking-wider">
+              <th className="px-2 py-1 border-r border-neutral-300 dark:border-neutral-800">Date</th>
+              <th className="px-2 py-1 border-r border-neutral-300 dark:border-neutral-800">PO</th>
+              <th className="px-2 py-1 border-r border-neutral-300 dark:border-neutral-800">Lot Ref. No.</th>
+              <th className="px-2 py-1 border-r border-neutral-300 dark:border-neutral-800">Supplier</th>
+              <th className="px-2 py-1 border-r border-neutral-300 dark:border-neutral-800 text-right">Sales Tax</th>
+              <th className="px-2 py-1 border-r border-neutral-300 dark:border-neutral-800 text-right">Shipping Cost</th>
+              <th className="px-2 py-1 border-r border-neutral-300 dark:border-neutral-800 text-right">Total</th>
+              <th className="px-2 py-1 border-r border-neutral-300 dark:border-neutral-800">Expected</th>
+              <th className="px-2 py-1 border-r border-neutral-300 dark:border-neutral-800">Return</th>
+              <th className="px-2 py-1">Status</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-[var(--border-base)] text-sm">
+          <tbody className="divide-y divide-neutral-200 dark:divide-neutral-800 text-base font-normal">
             {filteredPos.map((po) => (
-              <tr key={po.id} className="hover:bg-[var(--bg-hover)] transition-colors">
-                <td className="px-4 py-2.5 border-r border-[var(--border-base)]">{new Date(po.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit' })}</td>
-                <td className="px-4 py-2.5 border-r border-[var(--border-base)] text-[var(--brand-primary)] font-medium">
-                  <button onClick={() => onSelectPO(po.id)} className="hover:underline">
+              <tr key={po.id} className="hover:bg-neutral-100 dark:hover:bg-neutral-900 transition-colors bg-white dark:bg-black text-neutral-900 dark:text-neutral-100">
+                <td className="px-2 py-1 border-r border-neutral-200 dark:border-neutral-800 font-mono">{new Date(po.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit' }).replace(/\//g, '-')}</td>
+                <td className="px-2 py-1 border-r border-neutral-200 dark:border-neutral-800 font-mono font-bold text-blue-600 dark:text-blue-400">
+                  <button onClick={() => onSelectPO(po.id)} className="hover:underline font-mono font-bold text-left bg-transparent border-0 cursor-pointer">
                     {po.po_number}
                   </button>
                 </td>
-                <td className="px-4 py-2.5 border-r border-[var(--border-base)] text-[var(--text-main)]">{po.lot_ref_no}</td>
-                <td className="px-4 py-2.5 border-r border-[var(--border-base)] text-[var(--text-main)]">{po.supplier_name}</td>
-                <td className="px-4 py-2.5 border-r border-[var(--border-base)] text-right text-[var(--text-muted)]">€{po.sales_tax.toFixed(2)}</td>
-                <td className="px-4 py-2.5 border-r border-[var(--border-base)] text-right text-[var(--text-muted)]">€{po.shipping_cost.toFixed(2)}</td>
-                <td className="px-4 py-2.5 border-r border-[var(--border-base)] text-right font-medium text-[var(--text-main)]">€{po.total.toFixed(2)}</td>
-                <td className="px-4 py-2.5 border-r border-[var(--border-base)] text-[var(--text-muted)]">{po.expected_at ? new Date(po.expected_at).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit' }) : ''}</td>
-                <td className="px-4 py-2.5 border-r border-[var(--border-base)]"></td>
-                <td className="px-4 py-2.5">
-                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
-                    po.status === 'closed' ? 'bg-slate-100 text-slate-600' : 
-                    po.status === 'received' ? 'bg-green-100 text-green-700' :
-                    'bg-blue-100 text-blue-700'
+                <td className="px-2 py-1 border-r border-neutral-200 dark:border-neutral-800 font-sans">{po.lot_ref_no || po.po_number}</td>
+                <td className="px-2 py-1 border-r border-neutral-200 dark:border-neutral-800 font-sans">{po.supplier_name}</td>
+                <td className="px-2 py-1 border-r border-neutral-200 dark:border-neutral-800 text-right font-mono">€{po.sales_tax.toFixed(2)}</td>
+                <td className="px-2 py-1 border-r border-neutral-200 dark:border-neutral-800 text-right font-mono">€{po.shipping_cost.toFixed(2)}</td>
+                <td className="px-2 py-1 border-r border-neutral-200 dark:border-neutral-800 text-right font-mono font-bold">€{po.total.toFixed(2)}</td>
+                <td className="px-2 py-1 border-r border-neutral-200 dark:border-neutral-800 font-mono">{po.expected_at ? new Date(po.expected_at).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit' }).replace(/\//g, '-') : ''}</td>
+                <td className="px-2 py-1 border-r border-neutral-200 dark:border-neutral-800"></td>
+                <td className="px-2 py-1">
+                  <span className={`px-2 py-0.5 rounded-none text-[10px] font-bold uppercase ${
+                    po.status === 'closed' ? 'bg-neutral-200 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400' : 
+                    po.status === 'received' ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20' :
+                    'bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20'
                   }`}>
                     {po.status}
                   </span>
@@ -131,7 +137,7 @@ export default function PurchaseOrderList({ onSelectPO }: { onSelectPO: (id: num
             ))}
             {filteredPos.length === 0 && (
               <tr>
-                <td colSpan={10} className="px-4 py-12 text-center text-[var(--text-muted-more)] bg-[var(--bg-card)]">
+                <td colSpan={10} className="px-2 py-12 text-center text-neutral-400 dark:text-neutral-500 bg-white dark:bg-black font-sans italic">
                   No purchase orders found matching your filters.
                 </td>
               </tr>
@@ -141,10 +147,9 @@ export default function PurchaseOrderList({ onSelectPO }: { onSelectPO: (id: num
       </div>
 
       {/* Pagination Footer */}
-      <div className="p-4 border-t border-[var(--border-base)] bg-[var(--bg-zebra)] flex justify-between items-center text-xs text-[var(--text-muted)]">
+      <div className="p-4 bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 rounded-none shadow-none mt-2 flex justify-between items-center text-sm text-neutral-500 dark:text-neutral-400">
         <div className="flex items-center gap-4">
-          <select className="bg-[var(--bg-card)] border border-[var(--border-header)] rounded px-2 py-1 outline-none text-[var(--text-main)]">
-            <option>auto</option>
+          <select className="bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 rounded-none px-2 py-1 focus:outline-none text-neutral-900 dark:text-neutral-100">
             <option>25</option>
             <option>50</option>
             <option>100</option>
@@ -153,15 +158,10 @@ export default function PurchaseOrderList({ onSelectPO }: { onSelectPO: (id: num
         </div>
 
         <div className="flex items-center gap-1">
-          <button className="p-1.5 hover:bg-[var(--bg-hover)] rounded disabled:opacity-30" disabled><ChevronsLeft size={14} /></button>
-          <button className="p-1.5 hover:bg-[var(--bg-hover)] rounded disabled:opacity-30" disabled><ChevronLeft size={14} /></button>
-          <button className="w-7 h-7 flex items-center justify-center bg-[var(--brand-primary)] text-white rounded font-bold">1</button>
-          <button className="w-7 h-7 flex items-center justify-center hover:bg-[var(--bg-hover)] rounded text-[var(--text-main)]">2</button>
-          <button className="w-7 h-7 flex items-center justify-center text-[var(--text-muted)]">...</button>
-          <button className="w-7 h-7 flex items-center justify-center hover:bg-[var(--bg-hover)] rounded text-[var(--text-main)]">9</button>
-          <button className="w-7 h-7 flex items-center justify-center hover:bg-[var(--bg-hover)] rounded text-[var(--text-main)]">10</button>
-          <button className="p-1.5 hover:bg-[var(--bg-hover)] rounded"><ChevronRight size={14} /></button>
-          <button className="p-1.5 hover:bg-[var(--bg-hover)] rounded"><ChevronsRight size={14} /></button>
+          <button className="px-2 py-1 border border-neutral-300 dark:border-neutral-800 rounded-none hover:bg-neutral-200 dark:hover:bg-neutral-900 disabled:opacity-50 disabled:cursor-not-allowed text-neutral-900 dark:text-neutral-100" disabled>«</button>
+          <button className="px-2 py-1 border border-neutral-300 dark:border-neutral-800 rounded-none hover:bg-neutral-200 dark:hover:bg-neutral-900 disabled:opacity-50 disabled:cursor-not-allowed text-neutral-900 dark:text-neutral-100" disabled>‹</button>
+          <button className="px-3 py-1 bg-neutral-300 dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 border border-neutral-300 dark:border-neutral-800 rounded-none font-bold">1</button>
+          <button className="px-2 py-1 border border-neutral-300 dark:border-neutral-800 rounded-none hover:bg-neutral-200 dark:hover:bg-neutral-900 text-neutral-900 dark:text-neutral-100">»</button>
         </div>
       </div>
     </div>

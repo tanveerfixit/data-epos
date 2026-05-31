@@ -25,16 +25,16 @@ export const CustomerSelector: React.FC<CustomerSelectorProps> = ({
   onOpenDepositModal
 }) => {
   return (
-    <div className="p-5">
+    <div className="p-4 border-b border-neutral-300 dark:border-neutral-800 bg-white dark:bg-black font-mono">
       <div className="flex justify-between items-center mb-3">
         <div className="flex items-center gap-2">
-          <User size={18} className="text-[var(--text-muted)]" />
-          <h3 className="font-bold text-[var(--text-main)] text-sm">Customer</h3>
+          <User size={16} className="text-neutral-600 dark:text-neutral-400" />
+          <h3 className="font-bold text-black dark:text-white text-base uppercase">Customer</h3>
         </div>
         {!selectedCustomer && (
           <button 
             onClick={onOpenNewCustomerModal}
-            className="text-[10px] font-bold text-[var(--brand-primary)] hover:text-[var(--brand-primary-hover)] flex items-center gap-1 uppercase tracking-wider"
+            className="text-[12px] font-bold text-neutral-900 dark:text-neutral-100 hover:underline flex items-center gap-1 uppercase tracking-wider bg-transparent border-0 cursor-pointer"
           >
             <UserPlus size={12} />
             New
@@ -43,19 +43,19 @@ export const CustomerSelector: React.FC<CustomerSelectorProps> = ({
       </div>
 
       {selectedCustomer ? (
-        <div className="bg-[var(--bg-hover)] border border-[var(--brand-primary)] rounded-md p-3 flex justify-between items-center animate-in fade-in slide-in-from-top-1">
+        <div className="bg-neutral-100 dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-800 rounded-none p-2 flex justify-between items-center font-sans">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-[var(--brand-primary)] rounded-full flex items-center justify-center text-white font-bold">
+            <div className="w-10 h-10 bg-neutral-200 dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 flex items-center justify-center font-bold rounded-none border border-neutral-300 dark:border-neutral-700">
               {safeCustomerName(selectedCustomer).charAt(0) || '?'}
             </div>
             <div>
-              <p className="font-bold text-[var(--text-main)] text-sm">
+              <p className="font-bold text-neutral-900 dark:text-neutral-100 text-base leading-tight">
                 {safeCustomerName(selectedCustomer)}
               </p>
-              <div className="flex items-center gap-2">
-                <p className="text-xs text-[var(--brand-primary)] font-medium">{selectedCustomer.phone}</p>
+              <div className="flex items-center gap-2 mt-0.5">
+                <p className="text-xs text-neutral-600 dark:text-neutral-400 font-normal">{selectedCustomer.phone}</p>
                 {selectedCustomer.wallet_balance !== undefined && (
-                  <span className="text-[10px] font-bold text-[var(--brand-success)] bg-[var(--bg-zebra)] px-1.5 py-0.5 rounded border border-[var(--brand-success)]">
+                  <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 bg-white dark:bg-black px-1.5 py-0.5 rounded-none border border-neutral-300 dark:border-neutral-800 font-mono">
                     Wallet: €{selectedCustomer.wallet_balance.toFixed(2)}
                   </span>
                 )}
@@ -66,7 +66,7 @@ export const CustomerSelector: React.FC<CustomerSelectorProps> = ({
             {selectedCustomer.name !== 'Walk-in Customer' && onOpenDepositModal && (
               <button 
                 onClick={onOpenDepositModal}
-                className="p-1.5 text-emerald-500 hover:bg-emerald-50 rounded-lg transition-all"
+                className="p-1 text-emerald-600 hover:bg-neutral-200 dark:hover:bg-neutral-850 rounded-none transition-colors border-0 bg-transparent cursor-pointer"
                 title="Deposit to Wallet"
               >
                 <Plus size={16} />
@@ -74,41 +74,42 @@ export const CustomerSelector: React.FC<CustomerSelectorProps> = ({
             )}
             <button 
               onClick={onClearCustomer}
-              className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
+              className="p-1 text-red-650 hover:bg-neutral-200 dark:hover:bg-neutral-850 rounded-none transition-colors border-0 bg-transparent cursor-pointer"
+              title="Clear Customer"
             >
               <X size={16} />
             </button>
           </div>
         </div>
       ) : (
-        <div className="relative">
+        <div className="relative font-sans">
           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <Search size={14} className="text-[var(--text-muted-more)]" />
+            <Search size={14} className="text-neutral-500" />
           </div>
           <input 
             type="text"
-            className="w-full pl-9 pr-4 py-2 bg-[var(--bg-app)] border border-[var(--border-base)] rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-[var(--bg-card)] transition-all text-[var(--text-main)] placeholder:text-[var(--text-muted-more)]"
-            placeholder="Search customer by phone or name..."
+            className="w-full pl-9 pr-4 py-1.5 bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 rounded-none text-base focus:outline-none text-neutral-900 dark:text-neutral-100 font-sans"
+            placeholder="Search phone or name..."
             value={customerSearch}
             onChange={(e) => setCustomerSearch(e.target.value)}
           />
           
           {customerSearch && customerResults.length > 0 && (
-            <div className="absolute z-20 left-0 right-0 mt-1 bg-[var(--bg-card)] rounded-md shadow-xl border border-[var(--border-base)] max-h-[200px] overflow-y-auto">
+            <div className="absolute z-20 left-0 right-0 mt-1 bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 shadow-none rounded-none max-h-[200px] overflow-y-auto">
               {customerResults.map((customer, idx) => (
                 <button
                   key={`${customer.id}-${idx}`}
                   onClick={() => onSelectCustomer(customer)}
-                  className="w-full text-left p-3 hover:bg-[var(--bg-hover)] transition-colors flex items-center gap-3 border-b border-[var(--border-base)] last:border-0"
+                  className="w-full text-left p-2 hover:bg-neutral-100 dark:hover:bg-neutral-900 transition-colors flex items-center gap-3 border-b border-neutral-200 dark:border-neutral-800 last:border-0 rounded-none font-sans"
                 >
-                  <div className="w-8 h-8 bg-[var(--bg-app)] rounded-full flex items-center justify-center text-[var(--text-muted)] text-xs font-bold">
+                  <div className="w-8 h-8 bg-neutral-100 dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-800 rounded-none flex items-center justify-center text-neutral-550 dark:text-neutral-400 text-xs font-bold font-sans">
                     {safeCustomerName(customer).charAt(0) || '?'}
                   </div>
                   <div>
-                    <p className="text-sm font-bold text-[var(--text-main)]">
+                    <p className="text-base font-bold text-neutral-900 dark:text-neutral-100 leading-tight">
                       {safeCustomerName(customer)}
                     </p>
-                    <p className="text-[10px] text-[var(--text-muted)] font-mono">{customer.phone}</p>
+                    <p className="text-[11px] text-neutral-500 font-mono mt-0.5">{customer.phone}</p>
                   </div>
                 </button>
               ))}

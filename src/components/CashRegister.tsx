@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { 
   ShoppingBag, 
-  XCircle
+  XCircle,
+  Loader2
 } from 'lucide-react';
 import ThermalReceipt from './ThermalReceipt';
 import { Product, Customer, Invoice } from '../types';
@@ -576,6 +577,25 @@ export default function CashRegister({ onViewCustomers, onSelectCustomer, preSel
     setShowReviewModal(true);
   };
 
+  const handleQuickCheckout = () => {
+    if (cart.length === 0) return;
+    const amount = remainingAmount;
+    if (amount <= 0) return;
+
+    if (paymentMethod === 'Wallet') {
+      const balance = selectedCustomer?.wallet_balance || 0;
+      if (amount > balance) {
+        alert(`Insufficient wallet balance. Available: €${balance.toFixed(2)}`);
+        return;
+      }
+    }
+
+    setAddedPayments(prev => [...prev, { method: paymentMethod, amount }]);
+    setPaymentAmount('');
+    addActivity('Payment Added (Quick)', `€${amount.toFixed(2)} via ${paymentMethod}`, 'sale');
+    setShowReviewModal(true);
+  };
+
   const handleFinalizeTransaction = async (printPreference: 'Thermal' | 'A4' | null) => {
     const invoiceData = {
       customer_id: selectedCustomer?.id || null,
@@ -698,20 +718,16 @@ export default function CashRegister({ onViewCustomers, onSelectCustomer, preSel
   }, [remainingAmount]);
 
   return (
-    <div className="h-full flex flex-col bg-[var(--bg-app)] overflow-hidden transition-colors duration-300">
+    <div className="flex flex-col h-full bg-neutral-100 text-neutral-900 dark:bg-neutral-950 dark:text-neutral-100 font-mono text-base px-2 py-2 select-none w-full overflow-hidden" style={{ fontSize: '17px' }}>
       {/* Header Area */}
-      <div className="bg-[var(--bg-card)] px-6 py-4 flex justify-between items-center shrink-0">
-        <div className="flex items-center gap-3">
-          <div>
-            <h1 className="text-xl font-normal text-[var(--text-main)] uppercase tracking-wide">Register</h1>
-          </div>
-        </div>
+      <div className="flex justify-between items-center shrink-0 mb-2 px-1 py-1">
+        <h2 className="text-xl font-bold text-black dark:text-white uppercase">Register</h2>
       </div>
 
       {/* Main Content Area */}
-      <div className="flex-1 flex overflow-hidden px-6 py-0 gap-0">
+      <div className="flex-1 flex overflow-hidden gap-2">
         {/* Left Side: Product Search & Cart */}
-        <div className="flex-1 flex flex-col pt-6 pb-6 pr-6 border-r border-[var(--border-base)] min-w-0">
+        <div className="flex-1 flex flex-col bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 p-3 min-w-0">
           {/* Search Bar & Results (Floating setup) */}
           <div ref={searchContainerRef} className="shrink-0 mb-3 relative z-50">
             <ProductSearchBar 
@@ -796,6 +812,7 @@ export default function CashRegister({ onViewCustomers, onSelectCustomer, preSel
           remainingAmount={remainingAmount}
           
           onCheckout={handleCheckout}
+          onQuickCheckout={handleQuickCheckout}
           onClearCart={() => setShowDiscardConfirm(true)}
           isCartEmpty={cart.length === 0 && !selectedCustomer && addedPayments.length === 0}
           isPaymentComplete={isPaymentComplete}
@@ -805,28 +822,28 @@ export default function CashRegister({ onViewCustomers, onSelectCustomer, preSel
 
       {/* Modals */}
       {showDiscardConfirm && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[110] p-4 animate-in fade-in duration-200">
-          <div className="bg-[var(--bg-card)] rounded-md shadow-2xl w-full max-w-sm overflow-hidden animate-in zoom-in-95 duration-300 border border-[var(--border-base)]">
-            <div className="p-6 text-center">
-              <div className="w-16 h-16 bg-[var(--bg-hover)] rounded-full flex items-center justify-center mx-auto mb-4">
-                <XCircle size={32} className="text-[var(--brand-danger)]" />
-              </div>
-              <h3 className="text-xl font-black text-[var(--text-main)] mb-2 uppercase tracking-tight">Discard Sale?</h3>
-              <p className="text-[var(--text-muted)] text-sm mb-6">Are you sure you want to clear the current cart and reset the transaction? This action cannot be undone.</p>
-              <div className="flex gap-3">
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[110] p-4 font-mono text-base">
+          <div className="bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 w-full max-w-sm overflow-hidden flex flex-col rounded-none shadow-none">
+            <div className="bg-red-600 dark:bg-red-750 px-4 py-2 border-b border-red-700 dark:border-red-800 rounded-none">
+              <h3 className="text-white font-bold text-base uppercase">Discard Sale?</h3>
+            </div>
+            <div className="p-4 space-y-4 text-center">
+              <p className="text-neutral-600 dark:text-neutral-400 text-sm">
+                Are you sure you want to clear the current cart and reset the transaction? This action will completely clear all items and activity logs.
+              </p>
+              <div className="flex gap-2 justify-center pt-2">
                 <button 
                   onClick={() => setShowDiscardConfirm(false)}
-                  className="flex-1 py-3 rounded-md font-bold text-[var(--text-muted)] bg-[var(--bg-app)] hover:bg-[var(--bg-hover)] transition-all border border-[var(--border-base)]"
+                  className="bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-900 text-neutral-900 dark:text-neutral-100 font-normal py-1 px-4 rounded-none text-base transition-colors"
                 >
                   Cancel
                 </button>
                 <button 
                   onClick={() => {
                     resetRegister();
-                    addActivity('Cart Cleared', 'Transaction discarded and reset to default', 'system');
                     setShowDiscardConfirm(false);
                   }}
-                  className="flex-1 py-3 rounded-md font-bold text-white bg-[var(--brand-danger)] hover:bg-[var(--brand-danger-hover)] transition-all shadow-lg shadow-red-100"
+                  className="bg-red-600 hover:bg-red-700 text-white font-bold py-1 px-4 rounded-none text-base border border-red-750 dark:border-red-800 transition-colors"
                 >
                   Discard
                 </button>
@@ -890,32 +907,29 @@ export default function CashRegister({ onViewCustomers, onSelectCustomer, preSel
       )}
 
       {showQuickAdd && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[110] p-4 animate-in fade-in duration-200">
-          <div className="bg-[var(--bg-card)] rounded-xl shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-300 border border-[var(--border-base)] flex flex-col">
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[110] p-4 font-mono text-base">
+          <div className="bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 w-full max-w-md overflow-hidden flex flex-col rounded-none shadow-none text-base">
             {/* Modal Header */}
-            <div className="px-6 py-4 border-b border-[var(--border-base)] bg-[var(--bg-app)] flex justify-between items-center">
-              <div className="flex items-center gap-2">
-                <div className="w-2.5 h-2.5 bg-emerald-500 rounded-full animate-ping" />
-                <h3 className="text-lg font-bold text-[var(--text-main)] uppercase tracking-wide">⚡ Quick Add Product</h3>
-              </div>
+            <div className="bg-neutral-200 dark:bg-neutral-900 px-4 py-2 border-b border-neutral-300 dark:border-neutral-800 rounded-none flex justify-between items-center">
+              <h3 className="text-base font-bold text-black dark:text-white uppercase">⚡ Quick Add Product</h3>
               <button
                 type="button"
                 onClick={() => setShowQuickAdd(false)}
-                className="text-[var(--text-muted)] hover:text-[var(--text-main)] transition-colors border-0 bg-transparent p-0 cursor-pointer"
+                className="text-neutral-500 hover:text-neutral-750 dark:hover:text-neutral-350 transition-colors border-0 bg-transparent p-0 cursor-pointer"
               >
-                <XCircle size={20} />
+                <XCircle size={18} />
               </button>
             </div>
             
             {/* Modal Form */}
-            <form onSubmit={handleQuickAddSubmit} className="p-6 space-y-4 flex-1">
-              <div className="space-y-1.5">
-                <label className="block text-xs font-bold text-[var(--text-muted)] uppercase">Product Name *</label>
+            <form onSubmit={handleQuickAddSubmit} className="p-4 space-y-4 flex-1 bg-white dark:bg-black">
+              <div className="space-y-1">
+                <label className="block text-[13px] font-bold text-neutral-900 dark:text-neutral-100 uppercase tracking-wider">Product Name *</label>
                 <input
                   type="text"
                   required
                   placeholder="e.g. iPhone 13 Pro Case"
-                  className="w-full bg-[var(--bg-app)] border border-[var(--border-base)] rounded px-3 py-2 text-sm text-[var(--text-main)] focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 outline-none"
+                  className="w-full bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 rounded-none px-3 py-1.5 text-base text-neutral-900 dark:text-neutral-100 focus:outline-none font-sans"
                   value={quickName}
                   onChange={(e) => setQuickName(e.target.value)}
                   autoFocus
@@ -923,27 +937,27 @@ export default function CashRegister({ onViewCustomers, onSelectCustomer, preSel
               </div>
 
               <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <label className="block text-xs font-bold text-[var(--text-muted)] uppercase">SKU / Barcode</label>
+                <div className="space-y-1">
+                  <label className="block text-[13px] font-bold text-neutral-900 dark:text-neutral-100 uppercase tracking-wider">SKU / Barcode</label>
                   <input
                     type="text"
                     placeholder="e.g. SKU12345"
-                    className="w-full bg-[var(--bg-app)] border border-[var(--border-base)] rounded px-3 py-2 text-sm text-[var(--text-main)] focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 outline-none"
+                    className="w-full bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 rounded-none px-3 py-1.5 text-base text-neutral-900 dark:text-neutral-100 focus:outline-none font-mono"
                     value={quickBarcode}
                     onChange={(e) => setQuickBarcode(e.target.value)}
                   />
                 </div>
-                <div className="space-y-1.5">
-                  <label className="block text-xs font-bold text-[var(--text-muted)] uppercase">Category *</label>
+                <div className="space-y-1">
+                  <label className="block text-[13px] font-bold text-neutral-900 dark:text-neutral-100 uppercase tracking-wider">Category *</label>
                   <select
                     required
-                    className="w-full bg-[var(--bg-app)] border border-[var(--border-base)] rounded px-3 py-2 text-sm text-[var(--text-main)] focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 outline-none bg-transparent"
+                    className="w-full bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 rounded-none px-3 py-1.5 text-base text-neutral-900 dark:text-neutral-100 focus:outline-none bg-transparent font-sans"
                     value={quickCategoryId}
                     onChange={(e) => setQuickCategoryId(e.target.value)}
                   >
-                    <option value="" className="bg-[var(--bg-card)]">Choose Category</option>
+                    <option value="" className="bg-white dark:bg-black">Choose Category</option>
                     {categories.map((c) => (
-                      <option key={c.id} value={c.id} className="bg-[var(--bg-card)]">
+                      <option key={c.id} value={c.id} className="bg-white dark:bg-black">
                         {c.name}
                       </option>
                     ))}
@@ -952,62 +966,62 @@ export default function CashRegister({ onViewCustomers, onSelectCustomer, preSel
               </div>
 
               <div className="grid grid-cols-3 gap-4">
-                <div className="space-y-1.5">
-                  <label className="block text-xs font-bold text-[var(--text-muted)] uppercase">Cost Price (€)</label>
+                <div className="space-y-1">
+                  <label className="block text-[13px] font-bold text-neutral-900 dark:text-neutral-100 uppercase tracking-wider">Cost (€)</label>
                   <input
                     type="number"
                     step="0.01"
                     placeholder="0.00"
-                    className="w-full bg-[var(--bg-app)] border border-[var(--border-base)] rounded px-3 py-2 text-sm text-[var(--text-main)] focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 outline-none"
+                    className="w-full bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 rounded-none px-3 py-1.5 text-base text-neutral-900 dark:text-neutral-100 focus:outline-none font-mono"
                     value={quickCost}
                     onChange={(e) => setQuickCost(e.target.value)}
                   />
                 </div>
-                <div className="space-y-1.5">
-                  <label className="block text-xs font-bold text-[var(--text-muted)] uppercase">Selling Price (€) *</label>
+                <div className="space-y-1">
+                  <label className="block text-[13px] font-bold text-neutral-900 dark:text-neutral-100 uppercase tracking-wider">Selling (€) *</label>
                   <input
                     type="number"
                     step="0.01"
                     required
                     placeholder="0.00"
-                    className="w-full bg-[var(--bg-app)] border border-[var(--border-base)] rounded px-3 py-2 text-sm text-[var(--text-main)] focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 outline-none"
+                    className="w-full bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 rounded-none px-3 py-1.5 text-base text-neutral-900 dark:text-neutral-100 focus:outline-none font-mono"
                     value={quickSelling}
                     onChange={(e) => setQuickSelling(e.target.value)}
                   />
                 </div>
-                <div className="space-y-1.5">
-                  <label className="block text-xs font-bold text-[var(--text-muted)] uppercase">Initial Stock</label>
+                <div className="space-y-1">
+                  <label className="block text-[13px] font-bold text-neutral-900 dark:text-neutral-100 uppercase tracking-wider">Stock</label>
                   <input
                     type="number"
                     min="0"
-                    className="w-full bg-[var(--bg-app)] border border-[var(--border-base)] rounded px-3 py-2 text-sm text-[var(--text-main)] focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 outline-none"
+                    className="w-full bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 rounded-none px-3 py-1.5 text-base text-neutral-900 dark:text-neutral-100 focus:outline-none font-mono"
                     value={quickStock}
                     onChange={(e) => setQuickStock(e.target.value)}
                   />
                 </div>
               </div>
 
-              <div className="pt-4 flex gap-3 border-t border-[var(--border-base)]">
+              <div className="pt-4 border-t border-neutral-300 dark:border-neutral-800 flex gap-2 justify-end bg-neutral-100 dark:bg-neutral-950 p-3 -mx-4 -mb-4 shrink-0 rounded-none">
                 <button
                   type="button"
                   onClick={() => setShowQuickAdd(false)}
-                  className="flex-1 py-2.5 rounded font-bold text-[var(--text-muted)] bg-[var(--bg-app)] hover:bg-[var(--bg-hover)] transition-all border border-[var(--border-base)] cursor-pointer"
+                  className="bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-900 text-neutral-900 dark:text-neutral-100 font-normal py-1.5 px-4 rounded-none text-base transition-colors cursor-pointer"
                   disabled={quickAddLoading}
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 py-2.5 rounded font-bold text-white bg-emerald-600 hover:bg-emerald-700 transition-all shadow-lg active:scale-95 flex items-center justify-center gap-2 cursor-pointer border-0"
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-1.5 px-5 rounded-none text-base border border-emerald-500 hover:border-emerald-600 transition-colors flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
                   disabled={quickAddLoading}
                 >
                   {quickAddLoading ? (
                     <>
-                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      <Loader2 size={16} className="animate-spin" />
                       Saving...
                     </>
                   ) : (
-                    'Save & Add to Cart'
+                    'Save & Add'
                   )}
                 </button>
               </div>

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Trash2, List, Link } from 'lucide-react';
+import { Trash2, List, Link, Calculator } from 'lucide-react';
 import { Product, ProductActivity } from '../types';
 
 interface ProductWithStock extends Product {
@@ -85,14 +85,20 @@ export default function ProductDetails({
   };
 
   if (loading && !product) return (
-    <div className="flex items-center justify-center h-full bg-neutral-100 dark:bg-neutral-950 text-neutral-900 dark:text-neutral-100 font-mono p-8 text-lg">
-      *** LOADING SYSTEM DATA ***
+    <div className="flex items-center justify-center h-full bg-neutral-100 dark:bg-neutral-950 text-neutral-900 dark:text-neutral-100 font-mono p-8 text-base">
+      <div className="border border-neutral-400 dark:border-green-500 p-6 text-center">
+        <div className="text-sm font-normal uppercase tracking-widest animate-pulse">*** LOADING SYSTEM DATA ***</div>
+        <div className="text-[10px] mt-2 text-neutral-500 dark:text-green-600">PLEASE WAIT...</div>
+      </div>
     </div>
   );
   
   if (!product) return (
-    <div className="flex items-center justify-center h-full bg-neutral-100 dark:bg-neutral-955 text-red-500 font-mono p-8 text-lg">
-      *** PRODUCT NOT FOUND ***
+    <div className="flex items-center justify-center h-full bg-neutral-100 dark:bg-neutral-950 text-red-500 font-mono p-8 text-base">
+      <div className="border border-red-500 p-6 text-center">
+        <div className="text-sm font-normal uppercase tracking-widest">*** PRODUCT NOT FOUND ***</div>
+        <div className="text-[10px] mt-2 text-red-400">ERROR: INVALID PRODUCT ID</div>
+      </div>
     </div>
   );
 
@@ -100,126 +106,166 @@ export default function ProductDetails({
 
   return (
     <div className="flex flex-col h-full bg-neutral-100 text-neutral-900 dark:bg-neutral-955 dark:text-neutral-100 font-mono text-base px-2 py-2 select-none w-full overflow-auto" style={{ fontSize: '17px' }}>
-      {/* Tabs Header */}
-      <div className="flex bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 px-4 pt-2 gap-1 rounded-none shadow-none mb-2 flex-wrap md:flex-nowrap">
-        <button 
-          onClick={() => setActiveTab('info')}
-          className={`px-4 py-1.5 border border-neutral-300 dark:border-neutral-800 border-b-0 text-base font-bold -mb-px relative transition-colors rounded-none ${
-            activeTab === 'info' 
-              ? 'bg-neutral-200 dark:bg-neutral-900 text-black dark:text-white' 
-              : 'bg-white dark:bg-black text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-950'
-          }`}
-        >
-          Product Information
-        </button>
-        <button 
-          onClick={() => setActiveTab('pricing')}
-          className={`px-4 py-1.5 border border-neutral-300 dark:border-neutral-800 border-b-0 text-base font-bold -mb-px relative transition-colors rounded-none ${
-            activeTab === 'pricing' 
-              ? 'bg-neutral-200 dark:bg-neutral-900 text-black dark:text-white' 
-              : 'bg-white dark:bg-black text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-950'
-          }`}
-        >
-          Special Pricing
-        </button>
-        <button 
-          onClick={() => setActiveTab('activity')}
-          className={`px-4 py-1.5 border border-neutral-300 dark:border-neutral-800 border-b-0 text-base font-bold -mb-px relative transition-colors rounded-none ${
-            activeTab === 'activity' 
-              ? 'bg-neutral-200 dark:bg-neutral-900 text-black dark:text-white' 
-              : 'bg-white dark:bg-black text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-950'
-          }`}
-        >
-          Activity Log
-        </button>
-        
-        <div className="ml-auto flex items-center pb-2 gap-2">
-          <button 
-            onClick={handleArchive}
-            className="bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-900 text-red-650 dark:text-red-400 font-bold py-1 px-3 rounded-none text-sm flex items-center gap-1 transition-all shadow-none"
-          >
-            <Trash2 size={14} />
-            Archive
-          </button>
-          <button 
-            onClick={onBack}
-            className="bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-900 text-neutral-900 dark:text-neutral-100 font-bold py-1 px-3 rounded-none text-sm flex items-center gap-1 transition-all shadow-none"
-          >
-            <List size={14} />
-            List Products
-          </button>
+      {/* Header bar */}
+      <div className="sticky top-0 z-40 bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 shrink-0 mb-2">
+        <div className="flex items-center justify-between px-4 py-1.5 flex-wrap md:flex-nowrap gap-2">
+          <div className="flex items-center gap-6">
+            <h1 className="text-base font-normal tracking-wider uppercase text-neutral-850 dark:text-green-400">SYS.PROD // PRODUCT SPECIFICATION</h1>
+          </div>
+          
+          <div className="flex items-center gap-2">
+            <button 
+              onClick={() => setIsEditing(true)}
+              className="flex items-center gap-1 px-3 py-1 bg-neutral-200 dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-850 text-neutral-900 dark:text-neutral-300 hover:bg-neutral-300 dark:hover:bg-neutral-800 font-normal text-sm cursor-pointer rounded-none"
+            >
+              [EDIT]
+            </button>
+            <button 
+              onClick={handleArchive}
+              className="flex items-center gap-1 px-3 py-1 bg-neutral-200 dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-850 text-red-650 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/20 font-normal text-sm cursor-pointer rounded-none"
+            >
+              [ARCHIVE]
+            </button>
+            <button 
+              onClick={onBack}
+              className="flex items-center gap-1 px-3 py-1 bg-neutral-200 dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-850 text-neutral-900 dark:text-neutral-300 hover:bg-neutral-300 dark:hover:bg-neutral-800 font-normal text-sm cursor-pointer rounded-none"
+            >
+              [BACK TO LIST]
+            </button>
+          </div>
         </div>
+      </div>
+
+      {/* Tab selectors */}
+      <div className="flex border-b border-neutral-300 dark:border-neutral-800 mb-4 bg-white dark:bg-black px-2 pt-2">
+        <button
+          onClick={() => setActiveTab('info')}
+          className={`px-4 py-2 text-sm font-bold border-t border-x -mb-px transition-colors rounded-none cursor-pointer ${
+            activeTab === 'info'
+              ? 'bg-neutral-200 dark:bg-neutral-900 border-neutral-300 dark:border-neutral-800 border-b-transparent text-neutral-900 dark:text-green-400'
+              : 'bg-white dark:bg-black border-transparent text-neutral-500 dark:text-neutral-400 hover:text-neutral-800 dark:hover:text-neutral-200'
+          }`}
+        >
+          [TAB.SPECIFICATION]
+        </button>
+        <button
+          onClick={() => setActiveTab('pricing')}
+          className={`px-4 py-2 text-sm font-bold border-t border-x -mb-px transition-colors rounded-none cursor-pointer ${
+            activeTab === 'pricing'
+              ? 'bg-neutral-200 dark:bg-neutral-900 border-neutral-300 dark:border-neutral-800 border-b-transparent text-neutral-900 dark:text-green-400'
+              : 'bg-white dark:bg-black border-transparent text-neutral-500 dark:text-neutral-400 hover:text-neutral-800 dark:hover:text-neutral-200'
+          }`}
+        >
+          [TAB.SPECIAL_PRICING]
+        </button>
+        <button
+          onClick={() => setActiveTab('activity')}
+          className={`px-4 py-2 text-sm font-bold border-t border-x -mb-px transition-colors rounded-none cursor-pointer ${
+            activeTab === 'activity'
+              ? 'bg-neutral-200 dark:bg-neutral-900 border-neutral-300 dark:border-neutral-800 border-b-transparent text-neutral-900 dark:text-green-400'
+              : 'bg-white dark:bg-black border-transparent text-neutral-500 dark:text-neutral-400 hover:text-neutral-800 dark:hover:text-neutral-200'
+          }`}
+        >
+          [TAB.ACTIVITIES]
+        </button>
       </div>
 
       <div className="flex-1 overflow-auto bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 rounded-none shadow-none p-4">
         {activeTab === 'info' && (
-          <div className="p-8">
-            <div className="flex flex-col md:flex-row gap-12">
-              {/* Left: Product Image Placeholder */}
-              <div className="w-full md:w-1/3 flex flex-col items-center">
-                <div className="w-64 h-64 bg-neutral-200 dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-800 rounded-none flex items-center justify-center mb-6 shadow-none">
-                  <Link size={120} className="text-neutral-900 dark:text-neutral-100" strokeWidth={3} />
+          <div className="space-y-6">
+            <div className="flex flex-col md:flex-row gap-8">
+              {/* Left Column: Image Area */}
+              <div className="w-full md:w-1/4 flex flex-col items-center">
+                <div className="w-48 h-48 bg-neutral-200 dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-800 rounded-none flex items-center justify-center mb-4 shadow-none">
+                  <Link size={80} className="text-neutral-400 dark:text-green-600/30" strokeWidth={1.5} />
                 </div>
-                <div className="flex flex-wrap gap-2 justify-center">
-                  <button className="bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-900 text-neutral-900 dark:text-neutral-100 text-sm font-normal py-1 px-3 rounded-none transition-colors">
+                <div className="flex flex-col gap-2 w-full max-w-[200px]">
+                  <button className="bg-neutral-100 dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-800 text-neutral-900 dark:text-neutral-300 text-xs font-normal py-1 px-3 rounded-none transition-colors cursor-pointer uppercase">
                     Change Picture
                   </button>
-                  <button className="bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-900 text-neutral-900 dark:text-neutral-100 text-sm font-normal py-1 px-3 rounded-none transition-colors">
+                  <button className="bg-neutral-100 dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-800 text-neutral-900 dark:text-neutral-300 text-xs font-normal py-1 px-3 rounded-none transition-colors cursor-pointer uppercase">
                     Web Description
-                  </button>
-                  <button 
-                    onClick={() => setIsEditing(true)}
-                    className="bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-900 text-neutral-900 dark:text-neutral-100 text-sm font-normal py-1 px-3 rounded-none transition-colors"
-                  >
-                    Edit
                   </button>
                 </div>
               </div>
 
-              {/* Right: Product Details */}
-              <div className="flex-1 space-y-4 font-normal text-neutral-900 dark:text-neutral-100 text-base">
-                <h1 className="text-2xl font-bold text-[#2980b9] dark:text-[#2980b9] mb-4">{product.product_name}</h1>
-                
-                <div className="grid grid-cols-[200px_1fr] gap-y-3 text-base font-normal">
-                  <span className="font-normal text-neutral-900 dark:text-neutral-100">Category :</span>
-                  <span className="text-neutral-600 dark:text-neutral-400">{product.category_name || 'Uncategorized'}</span>
-                  
-                  <span className="font-normal text-neutral-900 dark:text-neutral-100">Inventory & Tracking Type :</span>
-                  <span className="text-neutral-600 dark:text-neutral-400 capitalize">{product.product_type}</span>
-                  
-                  <span className="font-normal text-neutral-900 dark:text-neutral-100">SKU/Barcode :</span>
-                  <span className="text-neutral-600 dark:text-neutral-400 font-mono">{product.sku_code || 'N/A'}</span>
-                  
-                  <span className="font-normal text-neutral-900 dark:text-neutral-100">Need/Have/OnPO :</span>
-                  <div className="flex items-center gap-3">
-                    <button 
-                      onClick={() => onViewDevices(product.id)}
-                      className="text-[#2980b9] font-normal hover:underline"
-                    >
-                      0 / {totalStock} / 0
-                    </button>
-                    <button onClick={() => onViewDevices(product.id)}>
-                      <Link size={14} className="text-[#2980b9]" />
-                    </button>
-                    <button 
-                      onClick={() => onAddInventory(product.id)}
-                      className="bg-amber-400 hover:bg-amber-500 text-slate-900 font-bold py-1 px-3 rounded-none text-sm transition-colors shadow-none"
-                    >
-                      Add Inventory
-                    </button>
+              {/* Right Column: Dynamic Terminal reconciliation specifications */}
+              <div className="flex-1">
+                <div className="bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 font-mono text-[14px]">
+                  <div className="divide-y divide-neutral-300 dark:divide-neutral-800">
+                    {/* Product Name */}
+                    <div className="grid grid-cols-1 md:grid-cols-12 items-center py-2 bg-white dark:bg-black hover:bg-neutral-50 dark:hover:bg-neutral-900">
+                      <div className="md:col-span-4 px-3 md:text-right font-normal text-neutral-600 dark:text-green-400 uppercase">PRODUCT NAME :</div>
+                      <div className="md:col-span-8 px-3 font-bold text-neutral-900 dark:text-neutral-100 uppercase">{product.product_name}</div>
+                    </div>
+
+                    {/* Category */}
+                    <div className="grid grid-cols-1 md:grid-cols-12 items-center py-2 bg-white dark:bg-black hover:bg-neutral-50 dark:hover:bg-neutral-900">
+                      <div className="md:col-span-4 px-3 md:text-right font-normal text-neutral-600 dark:text-green-400 uppercase">CATEGORY :</div>
+                      <div className="md:col-span-8 px-3 text-neutral-800 dark:text-neutral-200 uppercase">{product.category_name || 'UNCATEGORIZED'}</div>
+                    </div>
+
+                    {/* Tracking Type */}
+                    <div className="grid grid-cols-1 md:grid-cols-12 items-center py-2 bg-white dark:bg-black hover:bg-neutral-50 dark:hover:bg-neutral-900">
+                      <div className="md:col-span-4 px-3 md:text-right font-normal text-neutral-600 dark:text-green-400 uppercase">INVENTORY TYPE :</div>
+                      <div className="md:col-span-8 px-3 text-neutral-800 dark:text-neutral-200 capitalize">{product.product_type}</div>
+                    </div>
+
+                    {/* SKU/Barcode */}
+                    <div className="grid grid-cols-1 md:grid-cols-12 items-center py-2 bg-white dark:bg-black hover:bg-neutral-50 dark:hover:bg-neutral-900">
+                      <div className="md:col-span-4 px-3 md:text-right font-normal text-neutral-600 dark:text-green-400 uppercase">SKU / BARCODE :</div>
+                      <div className="md:col-span-8 px-3 text-neutral-800 dark:text-neutral-200 font-mono">{product.sku_code || 'N/A'}</div>
+                    </div>
+
+                    {/* Stock Levels */}
+                    <div className="grid grid-cols-1 md:grid-cols-12 items-center py-2 bg-white dark:bg-black hover:bg-neutral-50 dark:hover:bg-neutral-900">
+                      <div className="md:col-span-4 px-3 md:text-right font-normal text-neutral-600 dark:text-green-400 uppercase">NEED / HAVE / ON PO :</div>
+                      <div className="md:col-span-8 px-3 flex items-center gap-3">
+                        <button 
+                          onClick={() => onViewDevices(product.id)}
+                          className="text-[#2980b9] font-bold hover:underline cursor-pointer bg-transparent border-0 p-0 text-sm"
+                        >
+                          0 / {totalStock} / 0
+                        </button>
+                        <button 
+                          onClick={() => onViewDevices(product.id)}
+                          className="cursor-pointer bg-transparent border-0 p-0"
+                        >
+                          <Link size={13} className="text-[#2980b9]" />
+                        </button>
+                        <button 
+                          onClick={() => onAddInventory(product.id)}
+                          className="bg-amber-400 hover:bg-amber-500 text-slate-900 font-bold py-0.5 px-3 rounded-none text-xs transition-colors cursor-pointer border border-amber-500 uppercase"
+                        >
+                          [Add Stock]
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Minimum Stock */}
+                    <div className="grid grid-cols-1 md:grid-cols-12 items-center py-2 bg-white dark:bg-black hover:bg-neutral-50 dark:hover:bg-neutral-900">
+                      <div className="md:col-span-4 px-3 md:text-right font-normal text-neutral-600 dark:text-green-400 uppercase">MINIMUM STOCK :</div>
+                      <div className="md:col-span-8 px-3 text-neutral-800 dark:text-neutral-200">0</div>
+                    </div>
+
+                    {/* Selling Price */}
+                    <div className="grid grid-cols-1 md:grid-cols-12 items-center py-2 bg-white dark:bg-black hover:bg-neutral-50 dark:hover:bg-neutral-900">
+                      <div className="md:col-span-4 px-3 md:text-right font-normal text-neutral-600 dark:text-green-400 uppercase">SELLING PRICE :</div>
+                      <div className="md:col-span-8 px-3 font-bold text-neutral-900 dark:text-neutral-100">€{product.selling_price.toFixed(2)}</div>
+                    </div>
+
+                    {/* Min Selling Price */}
+                    <div className="grid grid-cols-1 md:grid-cols-12 items-center py-2 bg-white dark:bg-black hover:bg-neutral-50 dark:hover:bg-neutral-900">
+                      <div className="md:col-span-4 px-3 md:text-right font-normal text-neutral-600 dark:text-green-400 uppercase">MIN SELLING PRICE :</div>
+                      <div className="md:col-span-8 px-3 text-neutral-800 dark:text-neutral-200">€0.00</div>
+                    </div>
+
+                    {/* Taxable */}
+                    <div className="grid grid-cols-1 md:grid-cols-12 items-center py-2 bg-white dark:bg-black hover:bg-neutral-50 dark:hover:bg-neutral-900">
+                      <div className="md:col-span-4 px-3 md:text-right font-normal text-neutral-600 dark:text-green-400 uppercase">TAXABLE :</div>
+                      <div className="md:col-span-8 px-3 text-neutral-800 dark:text-neutral-200 uppercase">YES</div>
+                    </div>
                   </div>
-                  
-                  <span className="font-normal text-neutral-900 dark:text-neutral-100">Minimum Stock :</span>
-                  <span className="text-neutral-600 dark:text-neutral-400">0</span>
-                  
-                  <span className="font-normal text-neutral-900 dark:text-neutral-100">Selling Price :</span>
-                  <span className="text-neutral-900 dark:text-neutral-100 font-bold">€{product.selling_price.toFixed(2)}</span>
-                  
-                  <span className="font-normal text-neutral-900 dark:text-neutral-100">Minimum Selling Price :</span>
-                  <span className="text-neutral-900 dark:text-neutral-100 font-bold">€0.00</span>
-                  
-                  <span className="font-normal text-neutral-900 dark:text-neutral-100">Taxable :</span>
-                  <span className="text-neutral-600 dark:text-neutral-400">Yes</span>
                 </div>
               </div>
             </div>
@@ -235,7 +281,7 @@ export default function ProductDetails({
         )}
 
         {activeTab === 'activity' && (
-          <div className="flex flex-col h-full">
+          <div className="flex flex-col h-full font-mono text-[14px]">
             {/* Activity Log Header */}
             <div className="p-3 bg-neutral-200 dark:bg-neutral-900 border-b border-neutral-300 dark:border-neutral-800 flex justify-between items-center rounded-none">
               <h3 className="text-base font-bold text-black dark:text-white uppercase">Activity Log</h3>
@@ -243,7 +289,7 @@ export default function ProductDetails({
                 <select className="bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 rounded-none px-2 py-1 text-sm text-neutral-900 dark:text-neutral-100 focus:outline-none">
                   <option>All Activities</option>
                 </select>
-                <button className="bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-900 text-neutral-900 dark:text-neutral-100 font-bold py-1 px-3 rounded-none text-sm transition-all shadow-none">
+                <button className="bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-900 text-neutral-900 dark:text-neutral-100 font-bold py-1 px-3 rounded-none text-sm transition-all shadow-none cursor-pointer">
                   Add New Note
                 </button>
               </div>
@@ -300,17 +346,17 @@ export default function ProductDetails({
               </div>
               
               <div className="flex items-center gap-1">
-                <button className="px-1.5 py-0.5 border border-neutral-300 dark:border-neutral-800 rounded-none hover:bg-neutral-200 dark:hover:bg-neutral-900">«</button>
-                <button className="px-2 py-0.5 bg-neutral-300 dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 rounded-none font-bold">1</button>
-                <button className="px-1.5 py-0.5 border border-neutral-300 dark:border-neutral-800 rounded-none hover:bg-neutral-200 dark:hover:bg-neutral-900">»</button>
+                <button className="px-1.5 py-0.5 border border-neutral-300 dark:border-neutral-800 rounded-none hover:bg-neutral-200 dark:hover:bg-neutral-900 cursor-pointer">«</button>
+                <button className="px-2 py-0.5 bg-neutral-300 dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 rounded-none font-bold cursor-pointer">1</button>
+                <button className="px-1.5 py-0.5 border border-neutral-300 dark:border-neutral-800 rounded-none hover:bg-neutral-200 dark:hover:bg-neutral-900 cursor-pointer">»</button>
               </div>
             </div>
           </div>
         )}
 
         {activeTab === 'pricing' && (
-          <div className="p-8 text-center text-slate-400 italic">
-            Special pricing configurations will appear here.
+          <div className="p-8 text-center text-neutral-400 italic font-mono text-[14px]">
+            [CONFIG.SPECIAL_PRICING] - NO CURRENT PRICE ADJUSTMENT DATA AVAILABLE
           </div>
         )}
       </div>

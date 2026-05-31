@@ -17,39 +17,39 @@ export const ProductSearchBar: React.FC<ProductSearchBarProps> = ({
   onQuickAddClick
 }) => {
   return (
-    <div className="relative group">
-      <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-        <Search className="h-5 w-5 text-slate-400" />
+    <div className="relative group font-sans">
+      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+        <Search className="h-4 w-4 text-neutral-500" />
       </div>
       <input
         type="text"
-        className="block w-full pl-12 pr-32 py-3.5 border border-[var(--border-base)] rounded-none bg-[var(--bg-card)] transition-all text-lg hover:shadow-md focus:shadow-md focus:outline-none placeholder:text-[var(--text-muted)] text-[var(--text-main)]"
+        className="block w-full pl-10 pr-32 py-2 border border-neutral-350 dark:border-neutral-800 rounded-none bg-white dark:bg-black transition-all text-base focus:outline-none placeholder:text-neutral-500 text-neutral-900 dark:text-neutral-100 font-sans shadow-none"
         placeholder="Search products by name, SKU or scan barcode..."
         value={searchQuery}
         onChange={(e) => setSearchQuery(e.target.value)}
         onKeyDown={onKeyDown}
         autoFocus
       />
-      <div className="absolute inset-y-0 right-0 pr-5 flex items-center gap-3">
+      <div className="absolute inset-y-0 right-0 pr-4 flex items-center gap-3">
         {searchQuery && (
           <button
             onClick={onClear}
-            className="text-[var(--text-muted)] hover:text-[var(--text-main)] border-r border-[var(--border-base)] pr-3 mr-1"
+            className="text-neutral-550 hover:text-neutral-800 border-r border-neutral-300 dark:border-neutral-800 pr-3 mr-1 bg-transparent border-0 cursor-pointer"
           >
-            <X className="h-5 w-5" />
+            <X className="h-4 w-4" />
           </button>
         )}
-        <button className="text-blue-500 hover:text-blue-600 transition-colors" title="Search by Lens">
-          <Camera className="h-5 w-5" />
+        <button className="text-blue-500 hover:text-blue-650 transition-colors bg-transparent border-0 cursor-pointer" title="Search by Lens">
+          <Camera className="h-4 w-4" />
         </button>
         {onQuickAddClick && (
           <button 
             type="button"
             onClick={onQuickAddClick}
-            className="text-emerald-500 hover:text-emerald-600 transition-colors"
+            className="text-emerald-500 hover:text-emerald-650 transition-colors bg-transparent border-0 cursor-pointer"
             title="Quick Add Product"
           >
-            <Plus className="h-5 w-5" />
+            <Plus className="h-4 w-4" />
           </button>
         )}
       </div>

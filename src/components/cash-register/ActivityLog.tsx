@@ -14,7 +14,7 @@ export const ActivityLog: React.FC<ActivityLogProps> = ({ activities }) => {
       case 'sale': return <Tag size={12} className="text-emerald-600 dark:text-emerald-400" />;
       case 'customer': return <UserPlus size={12} className="text-blue-600 dark:text-blue-400" />;
       case 'stock': return <Package size={12} className="text-amber-600 dark:text-amber-400" />;
-      default: return <Settings size={12} className="text-[var(--text-muted)]" />;
+      default: return <Settings size={12} className="text-neutral-500" />;
     }
   };
 
@@ -23,45 +23,45 @@ export const ActivityLog: React.FC<ActivityLogProps> = ({ activities }) => {
       case 'sale': return 'bg-emerald-100 dark:bg-emerald-950/20';
       case 'customer': return 'bg-blue-100 dark:bg-blue-950/20';
       case 'stock': return 'bg-amber-100 dark:bg-amber-950/20';
-      default: return 'bg-[var(--bg-app)]';
+      default: return 'bg-neutral-100 dark:bg-neutral-900';
     }
   };
 
   return (
-    <div className={`bg-[var(--bg-card)] rounded-none shadow-sm border border-[var(--border-base)] overflow-hidden flex flex-col transition-all duration-300 ${isCollapsed ? 'h-[44px]' : 'h-[200px]'}`}>
+    <div className={`bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 rounded-none shadow-none overflow-hidden flex flex-col transition-all duration-300 ${isCollapsed ? 'h-[40px]' : 'h-[200px]'} font-mono`}>
       <div 
-        className="p-3 border-b border-[var(--border-base)] bg-[var(--bg-header)] flex items-center justify-between cursor-pointer hover:bg-[var(--bg-header)]/80 transition-colors"
+        className="px-4 py-1.5 border-b border-neutral-300 dark:border-neutral-800 bg-neutral-200 dark:bg-neutral-900 flex items-center justify-between cursor-pointer hover:bg-neutral-250 dark:hover:bg-neutral-850 transition-colors"
         onClick={() => setIsCollapsed(!isCollapsed)}
       >
         <div className="flex items-center gap-2">
-          <History size={16} className="text-[var(--text-muted)]" />
-          <h2 className="font-bold text-[var(--text-main)] text-sm">Recent Activity</h2>
+          <History size={16} className="text-neutral-600 dark:text-neutral-400" />
+          <h2 className="font-bold text-black dark:text-white text-[13px] uppercase tracking-wider">Recent Activity</h2>
           {activities.length > 0 && (
-            <span className="bg-[var(--bg-card)] text-blue-600 dark:text-blue-400 text-[10px] px-1.5 py-0.5 rounded-full font-bold shadow-sm border border-[var(--border-base)]">
+            <span className="bg-white dark:bg-black text-neutral-900 dark:text-neutral-100 text-[10px] px-1.5 py-0.5 rounded-none font-bold border border-neutral-300 dark:border-neutral-800">
               {activities.length}
             </span>
           )}
         </div>
-        {isCollapsed ? <ChevronDown size={16} className="text-[var(--text-muted-more)]" /> : <ChevronUp size={16} className="text-[var(--text-muted-more)]" />}
+        {isCollapsed ? <ChevronDown size={16} className="text-neutral-555" /> : <ChevronUp size={16} className="text-neutral-555" />}
       </div>
       {!isCollapsed && (
-        <div className="flex-1 overflow-y-auto p-2 space-y-2 custom-scrollbar">
+        <div className="flex-1 overflow-y-auto p-1.5 space-y-1.5 custom-scrollbar">
           {activities.length === 0 ? (
-            <div className="h-full flex items-center justify-center text-[var(--text-muted-more)] text-xs italic">
+            <div className="h-full flex items-center justify-center text-neutral-450 dark:text-neutral-500 text-xs italic">
               No recent activity
             </div>
           ) : (
             activities.map((activity) => (
-              <div key={activity.id} className="flex gap-3 p-2 rounded-lg hover:bg-[var(--bg-hover)] transition-colors group">
-                <div className={`mt-0.5 w-6 h-6 rounded-full flex items-center justify-center shrink-0 ${getActivityBg(activity.type)}`}>
+              <div key={activity.id} className="flex gap-3 p-2 rounded-none hover:bg-neutral-100 dark:hover:bg-neutral-900 transition-colors group border-b border-neutral-200 dark:border-neutral-800 last:border-0">
+                <div className={`mt-0.5 w-6 h-6 rounded-none flex items-center justify-center shrink-0 border border-neutral-300 dark:border-neutral-800 ${getActivityBg(activity.type)}`}>
                   {getActivityIcon(activity.type)}
                 </div>
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2">
-                    <p className="text-xs font-bold text-[var(--text-main)] truncate">{activity.action}</p>
-                    <span className="text-[10px] text-[var(--text-muted)] font-medium whitespace-nowrap">{activity.time}</span>
+                <div className="min-w-0 font-sans">
+                  <div className="flex items-center gap-2 font-sans">
+                    <p className="text-xs font-bold text-neutral-900 dark:text-neutral-100 truncate font-sans">{activity.action}</p>
+                    <span className="text-[10px] text-neutral-500 font-mono whitespace-nowrap">{activity.time}</span>
                   </div>
-                  <p className="text-[10px] text-[var(--text-muted-more)] truncate leading-tight mt-0.5">{activity.details}</p>
+                  <p className="text-[11px] text-neutral-600 dark:text-neutral-400 truncate leading-tight mt-0.5 font-sans">{activity.details}</p>
                 </div>
               </div>
             ))

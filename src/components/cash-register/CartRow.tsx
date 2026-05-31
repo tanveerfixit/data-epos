@@ -37,83 +37,83 @@ export const CartRow: React.FC<CartRowProps> = ({
   total = Math.max(0, total);
 
   return (
-    <tr className="group border-b border-[var(--border-base)] hover:bg-[var(--bg-hover)] transition-colors">
+    <tr className="group border-b border-neutral-200 dark:border-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-900 transition-colors bg-white dark:bg-black">
       {/* Index Column */}
-      <td className="py-2 pl-3 text-center">
-        <span className="text-sm font-bold text-[var(--text-muted-more)]">#{index + 1}</span>
+      <td className="py-1.5 pl-2 text-center border-r border-neutral-300 dark:border-neutral-800 font-mono text-sm text-neutral-500 font-bold">
+        <span>#{index + 1}</span>
       </td>
 
       {/* Description Column */}
-      <td className="py-2 px-3 min-w-[250px]">
+      <td className="py-1.5 px-2.5 min-w-[250px] border-r border-neutral-300 dark:border-neutral-800 font-sans">
         <div className="flex flex-col">
-          <div className="flex items-baseline gap-2 flex-wrap">
-            <span className="text-[15px] font-normal text-[var(--text-main)] leading-tight">{item.product_name}</span>
+          <div className="flex items-baseline gap-2 flex-wrap font-sans">
+            <span className="text-[16px] font-normal text-neutral-900 dark:text-neutral-100 leading-tight font-sans">{item.product_name}</span>
             <button 
               onClick={() => onSelectProduct?.(item.id)}
-              className="text-[11px] font-mono font-bold text-blue-600 hover:underline hover:text-blue-700 uppercase"
+              className="text-[11px] font-mono font-bold text-blue-600 dark:text-blue-400 hover:underline uppercase"
             >
               {item.sku_code || item.barcode || `SKU-${item.id}`}
             </button>
           </div>
-          <div className="flex items-center gap-2 mt-1 flex-wrap">
+          <div className="flex items-center gap-2 mt-1 flex-wrap font-sans">
             {item.device_id && (
-              <span className="inline-flex items-center gap-1 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 text-[10px] px-1.5 py-0.5 rounded border border-slate-200 dark:border-slate-700">
+              <span className="inline-flex items-center gap-1 bg-neutral-200 dark:bg-neutral-900 text-neutral-600 dark:text-neutral-400 text-[10px] px-1.5 py-0.5 rounded-none border border-neutral-300 dark:border-neutral-800 font-mono">
                 <Smartphone size={10} />
                 {item.imei}
               </span>
             )}
             {item.discount && (
-              <span className="text-[10px] font-bold text-[var(--brand-success)] bg-green-500/10 px-1.5 py-0.5 rounded border border-green-500/20">
+              <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded-none border border-emerald-500/20">
                 -{item.discount}{item.discountType === 'percentage' ? '%' : '€'}
               </span>
             )}
           </div>
           {item.notes && (
-            <p className="text-xs text-[var(--text-muted)] italic mt-1 line-clamp-1">"{item.notes}"</p>
+            <p className="text-xs text-neutral-500 italic mt-1 line-clamp-1">"{item.notes}"</p>
           )}
         </div>
       </td>
 
       {/* Metrics Column (Need/Have/OnPO) */}
-      <td className="py-2 px-3 text-center">
-        <div className="flex items-center justify-center gap-2">
+      <td className="py-1.5 px-2 text-center border-r border-neutral-300 dark:border-neutral-800">
+        <div className="flex items-center justify-center gap-2 text-sm font-mono">
           <div className="flex flex-col items-center" title="Need">
-            <span className="text-sm font-mono text-[var(--text-main)]">0</span>
+            <span className="text-neutral-650 dark:text-neutral-400">0</span>
           </div>
-          <div className="w-[1px] h-4 bg-[var(--border-base)]" />
+          <div className="w-[1px] h-4 bg-neutral-350 dark:bg-neutral-800" />
           <div className="flex flex-col items-center" title="Have">
-            <span className={`text-sm font-mono font-bold ${(item.total_stock || 0) > 0 ? 'text-[var(--brand-success)]' : 'text-[var(--brand-danger)]'}`}>
+            <span className={`font-bold ${(item.total_stock || 0) > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-650 dark:text-red-400'}`}>
               {item.total_stock || 0}
             </span>
           </div>
-          <div className="w-[1px] h-4 bg-[var(--border-base)]" />
+          <div className="w-[1px] h-4 bg-neutral-350 dark:bg-neutral-800" />
           <div className="flex flex-col items-center" title="OnPO">
-            <span className="text-sm font-mono text-[var(--text-main)]">0</span>
+            <span className="text-neutral-650 dark:text-neutral-400">0</span>
           </div>
         </div>
       </td>
 
       {/* Quantity Column */}
-      <td className="py-2 px-3">
+      <td className="py-1.5 px-2 border-r border-neutral-300 dark:border-neutral-800">
         <div className="flex items-center justify-center gap-2">
           {item.product_type === 'serialized' ? (
-            <span className="w-20 text-center font-mono font-bold text-sm text-blue-600 bg-blue-50 dark:bg-blue-900/20 py-1 rounded border border-blue-200 dark:border-blue-800">
+            <span className="w-20 text-center font-mono font-bold text-[13px] text-blue-650 dark:text-blue-400 bg-blue-500/10 py-0.5 rounded-none border border-blue-200 dark:border-blue-800">
               QTY: 1
             </span>
           ) : (
             <>
               <button 
                 onClick={() => onUpdateQuantity(item.id, -1, item.device_id)}
-                className="w-7 h-7 flex items-center justify-center rounded border border-[var(--border-base)] hover:bg-[var(--bg-hover)] text-[var(--text-main)] transition-all"
+                className="w-6 h-6 flex items-center justify-center rounded-none border border-neutral-300 dark:border-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-900 text-neutral-900 dark:text-neutral-100 transition-colors"
               >
-                <Minus size={14} />
+                <Minus size={12} />
               </button>
-              <span className="w-8 text-center font-mono font-bold text-base text-[var(--text-main)]">{item.quantity}</span>
+              <span className="w-8 text-center font-mono font-bold text-[15px] text-neutral-900 dark:text-neutral-100">{item.quantity}</span>
               <button 
                 onClick={() => onUpdateQuantity(item.id, 1, item.device_id)}
-                className="w-7 h-7 flex items-center justify-center rounded border border-[var(--border-base)] hover:bg-emerald-50 hover:text-emerald-600 hover:border-emerald-200 text-[var(--text-main)] transition-all"
+                className="w-6 h-6 flex items-center justify-center rounded-none border border-neutral-300 dark:border-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-900 text-neutral-900 dark:text-neutral-100 transition-colors"
               >
-                <Plus size={14} />
+                <Plus size={12} />
               </button>
             </>
           )}
@@ -121,31 +121,31 @@ export const CartRow: React.FC<CartRowProps> = ({
       </td>
 
       {/* Unit Price Column */}
-      <td className="py-2 px-3 text-right">
-        <span className="text-[15px] font-mono text-[var(--text-main)]">€{itemPrice.toFixed(2)}</span>
+      <td className="py-1.5 px-2 text-right border-r border-neutral-300 dark:border-neutral-800 font-mono text-neutral-900 dark:text-neutral-100">
+        <span>€{itemPrice.toFixed(2)}</span>
       </td>
 
       {/* Total Column */}
-      <td className="py-2 px-3 text-right">
-        <span className="text-[15px] font-mono font-black text-blue-600">€{total.toFixed(2)}</span>
+      <td className="py-1.5 px-2 text-right border-r border-neutral-300 dark:border-neutral-800 font-mono font-bold text-neutral-900 dark:text-neutral-100">
+        <span>€{total.toFixed(2)}</span>
       </td>
 
       {/* Actions Column */}
-      <td className="py-2 pr-3 text-right">
-        <div className="flex items-center justify-end gap-1">
+      <td className="py-1.5 pr-2 text-center">
+        <div className="flex items-center justify-center gap-1">
           <button 
             onClick={() => onEdit(item)}
-            className="p-2 text-[var(--text-main)] hover:text-blue-500 hover:bg-blue-500/10 rounded-md transition-all"
+            className="p-1 text-neutral-600 hover:text-blue-500 hover:bg-neutral-200 dark:hover:bg-neutral-900 rounded-none transition-colors"
             title="Edit Item"
           >
-            <Pencil size={16} />
+            <Pencil size={14} />
           </button>
           <button 
             onClick={() => onRemove(item.id, item.device_id)}
-            className="p-2 text-[var(--text-main)] hover:text-red-500 hover:bg-red-500/10 rounded-md transition-all"
+            className="p-1 text-neutral-650 hover:text-red-500 hover:bg-neutral-200 dark:hover:bg-neutral-900 rounded-none transition-colors"
             title="Remove Item"
           >
-            <Trash2 size={16} className="text-red-500" />
+            <Trash2 size={14} className="text-red-500" />
           </button>
         </div>
       </td>

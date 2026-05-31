@@ -1,5 +1,5 @@
 import React from 'react';
-import { CreditCard, Plus, Trash2 } from 'lucide-react';
+import { CreditCard, Plus, Trash2, Banknote, Wallet } from 'lucide-react';
 import { PaymentEntry } from './types';
 
 interface PaymentPanelProps {
@@ -32,13 +32,41 @@ export const PaymentPanel: React.FC<PaymentPanelProps> = ({
     paymentMethods.push('Wallet');
   }
 
+  const getMethodIcon = (method: string) => {
+    switch (method.toLowerCase()) {
+      case 'cash': return <Banknote size={15} />;
+      case 'card': return <CreditCard size={15} />;
+      case 'wallet': return <Wallet size={15} />;
+      default: return null;
+    }
+  };
+
+  const getMethodColor = (method: string, isActive: boolean) => {
+    if (!isActive) {
+      return 'bg-white dark:bg-black text-neutral-900 dark:text-neutral-100 border-neutral-300 dark:border-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-950';
+    }
+    switch (method.toLowerCase()) {
+      case 'cash':
+        // Vibrant flat emerald-green for Cash selection
+        return 'bg-emerald-600 border-emerald-600 dark:bg-emerald-700 dark:border-emerald-700 text-white';
+      case 'card':
+        // Vibrant flat royal-blue for Card selection
+        return 'bg-blue-600 border-blue-600 dark:bg-blue-700 dark:border-blue-700 text-white';
+      case 'wallet':
+        // Vibrant flat purple for Wallet selection
+        return 'bg-purple-600 border-purple-600 dark:bg-purple-700 dark:border-purple-700 text-white';
+      default:
+        return 'bg-neutral-200 dark:bg-neutral-900 text-black dark:text-white border-neutral-450 dark:border-neutral-700';
+    }
+  };
+
   return (
-    <div className="p-5">
-      <div className="flex items-center gap-2 mb-4">
-        <CreditCard size={18} className="text-black" />
-        <h3 className="font-bold text-black text-sm uppercase tracking-wider">Payment</h3>
+    <div className="p-4 border-b border-neutral-300 dark:border-neutral-800 bg-white dark:bg-black font-mono text-base">
+      <div className="flex items-center gap-2 mb-3">
+        <CreditCard size={16} className="text-neutral-600 dark:text-neutral-400" />
+        <h3 className="font-bold text-black dark:text-white text-base uppercase">Payment</h3>
         {customerBalance > 0 && (
-          <span className="ml-auto text-xs font-bold text-green-700 bg-green-50 px-2 py-0.5 rounded border border-green-200">
+          <span className="ml-auto text-[11px] font-bold text-emerald-600 dark:text-emerald-400 bg-white dark:bg-black px-1.5 py-0.5 rounded-none border border-neutral-300 dark:border-neutral-800">
             Wallet: €{customerBalance.toFixed(2)}
           </span>
         )}
@@ -46,70 +74,77 @@ export const PaymentPanel: React.FC<PaymentPanelProps> = ({
 
       <div className="space-y-4">
         {/* Simplified Payment Method Buttons */}
-        <div className="flex gap-2 w-full">
-          {paymentMethods.map((method) => (
-            <button
-              key={method}
-              onClick={() => setPaymentMethod(method)}
-              className={`
-                flex-1 py-2.5 px-4 text-[15px] font-semibold rounded cursor-pointer transition-colors text-center border
-                ${paymentMethod === method 
-                  ? 'bg-blue-600 text-white border-blue-600' 
-                  : 'bg-white text-black border-gray-300 hover:bg-gray-100'}
-              `}
-            >
-              {method}
-            </button>
-          ))}
+        <div className="flex gap-2 w-full font-sans">
+          {paymentMethods.map((method) => {
+            const isActive = paymentMethod === method;
+            return (
+              <button
+                key={method}
+                onClick={() => setPaymentMethod(method)}
+                className={`
+                  flex-1 py-2 px-3 text-[14px] font-bold rounded-none cursor-pointer transition-all border flex items-center justify-center gap-1.5 font-sans
+                  ${getMethodColor(method, isActive)}
+                `}
+              >
+                {getMethodIcon(method)}
+                <span>{method}</span>
+              </button>
+            );
+          })}
         </div>
 
         {/* Amount Input and Action Button */}
-        <div className="flex gap-2">
-          <div className="relative flex-1">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 font-bold text-lg">€</span>
-            <input 
-              type="number"
-              className="w-full pl-7 pr-4 py-2.5 bg-white border border-gray-300 rounded text-[16px] font-mono font-bold focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-black placeholder:text-gray-400"
-              placeholder="0.00"
-              value={paymentAmount}
-              onChange={(e) => setPaymentAmount(e.target.value)}
-              onFocus={(e) => e.target.select()}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  e.preventDefault();
-                  onAddPayment();
-                }
-              }}
-            />
+        <div className="space-y-3">
+          <div className="flex gap-2">
+            <div className="relative flex-1">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-500 font-bold text-base">€</span>
+              <input 
+                type="number"
+                className="w-full pl-7 pr-4 py-2 bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 rounded-none text-lg font-mono font-bold focus:outline-none text-neutral-900 dark:text-neutral-100 placeholder:text-neutral-400"
+                placeholder="0.00"
+                value={paymentAmount}
+                onChange={(e) => setPaymentAmount(e.target.value)}
+                onFocus={(e) => e.target.select()}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    onAddPayment();
+                  }
+                }}
+              />
+            </div>
           </div>
+          
           <button 
             onClick={onAddPayment}
-            className="bg-emerald-600 text-white px-5 rounded hover:bg-emerald-700 transition-colors flex items-center justify-center cursor-pointer border-0 text-lg font-bold"
-            title="Take Payment"
+            className={`w-full py-3 rounded-none font-bold text-[14px] uppercase tracking-wider flex items-center justify-center gap-1.5 cursor-pointer border transition-all ${
+              getMethodColor(paymentMethod, true)
+            }`}
           >
-            <Plus size={22} />
+            <Plus size={16} strokeWidth={3} />
+            <span>Apply €{Number(paymentAmount || 0).toFixed(2)} as {paymentMethod}</span>
           </button>
         </div>
 
         {addedPayments.length > 0 && (
           <div className="space-y-2 pt-2">
             {addedPayments.map((p, idx) => (
-              <div key={idx} className="flex justify-between items-center bg-gray-50 p-2.5 rounded border border-gray-200 text-[15px]">
+              <div key={idx} className="flex justify-between items-center bg-neutral-100 dark:bg-neutral-900 p-2 border border-neutral-300 dark:border-neutral-800 text-base rounded-none">
                 <div className="flex items-center gap-2">
-                  <span className="font-bold bg-white px-1.5 py-0.5 rounded border border-gray-300 text-gray-700 uppercase text-xs">{p.method}</span>
-                  <span className="font-mono font-bold text-black">€{p.amount.toFixed(2)}</span>
+                  <span className="font-bold bg-white dark:bg-black px-1.5 py-0.5 rounded-none border border-neutral-300 dark:border-neutral-800 text-neutral-700 dark:text-neutral-300 uppercase text-xs">{p.method}</span>
+                  <span className="font-mono font-bold text-neutral-900 dark:text-neutral-100">€{p.amount.toFixed(2)}</span>
                 </div>
                 <button 
                   onClick={() => onRemovePayment(idx)}
-                  className="text-gray-400 hover:text-red-600 transition-colors cursor-pointer border-0 bg-transparent"
+                  className="text-neutral-400 hover:text-red-500 transition-colors cursor-pointer border-0 bg-transparent"
                 >
                   <Trash2 size={16} />
                 </button>
               </div>
             ))}
-            <div className="flex justify-between items-center px-2 pt-1 text-[15px]">
-              <span className="font-bold text-gray-500 uppercase tracking-wider text-xs">Remaining</span>
-              <span className={`font-mono font-bold ${remainingAmount > 0 ? 'text-yellow-600' : 'text-green-600'}`}>
+            <div className="flex justify-between items-center px-1 pt-1 text-base">
+              <span className="font-bold text-neutral-500 uppercase tracking-wider text-xs">Remaining</span>
+              <span className={`font-mono font-bold ${remainingAmount > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
                 €{Math.max(0, remainingAmount).toFixed(2)}
               </span>
             </div>

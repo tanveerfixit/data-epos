@@ -313,6 +313,7 @@ function AppInner() {
   // Determine current active view for sidebar highlighting
   const pathParts = location.pathname.split('/').filter(Boolean);
   const currentView = pathParts[1] || 'home';
+  const isDetailView = pathParts.length > 2;
   const branchSlug = slugify(currentUser.branch_name || 'branch');
 
   // If user tries to access root or standard auth paths while logged in, redirect to their branch home
@@ -346,10 +347,10 @@ function AppInner() {
           <div className="w-28 flex items-center justify-center h-full">
             <button 
               onClick={() => navigate(`/${branchSlug}/home`)}
-              className="transition-transform hover:scale-110 p-2"
+              className="transition-all hover:scale-115 p-2 bg-[rgb(2,133,181)] text-white rounded-md shadow-sm flex items-center justify-center"
               title="Home Menu"
             >
-              <LayoutGrid size={24} className="text-[var(--brand-primary)]" />
+              <LayoutGrid size={24} />
             </button>
           </div>
           
@@ -358,7 +359,7 @@ function AppInner() {
             className="pl-6 flex flex-col items-start font-sans cursor-pointer hover:opacity-85 transition-opacity"
             title="Home Menu"
           >
-            <h1 className="text-lg font-bold text-[var(--brand-primary)] tracking-tight leading-none uppercase">
+            <h1 className="text-[20px] font-bold text-[var(--brand-primary)] font-sans tracking-tight leading-none uppercase">
               {currentUser?.branch_name || 'EPOS'}
             </h1>
           </button>
@@ -443,41 +444,58 @@ function AppInner() {
         {/* Main Content Area */}
         <main className="flex-1 overflow-auto bg-[var(--bg-app)] transition-colors duration-300">
           <ErrorBoundary>
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={location.pathname}
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.1 }}
-                className="h-full"
-              >
-                <Routes>
-                  <Route path="/:branchSlug/home" element={<HomeMenu onNavigate={handleSidebarNavigate} />} />
-                  <Route path="/:branchSlug/dashboard" element={<Dashboard />} />
-                  <Route path="/:branchSlug/register" element={<CashRegisterRoute />} />
-                  <Route path="/:branchSlug/products" element={<ProductListRoute />} />
-                  <Route path="/:branchSlug/products/:id" element={<ProductDetailsRoute />} />
-                  <Route path="/:branchSlug/create-product" element={<CreateProduct onCancel={() => navigate(`/${branchSlug}/products`)} onSave={() => navigate(`/${branchSlug}/products`)} />} />
-                  <Route path="/:branchSlug/add-inventory/:id" element={<AddInventoryRoute />} />
-                  <Route path="/:branchSlug/invoices" element={<InvoiceListRoute />} />
-                  <Route path="/:branchSlug/invoices/:id" element={<InvoiceDetailsRoute />} />
-                  <Route path="/:branchSlug/customers" element={<CustomerListRoute />} />
-                  <Route path="/:branchSlug/customers/:id" element={<CustomerDetailsRoute />} />
-                  <Route path="/:branchSlug/repairs" element={<RepairListRoute />} />
-                  <Route path="/:branchSlug/devices" element={<DeviceInventoryRoute />} />
-                  <Route path="/:branchSlug/devices/:id" element={<DeviceDetailRoute />} />
-                  <Route path="/:branchSlug/sku-devices/:id" element={<SkuDeviceDetailsRoute />} />
-                  <Route path="/:branchSlug/purchase-orders" element={<PurchaseOrderListRoute />} />
-                  <Route path="/:branchSlug/purchase-orders/:id" element={<PurchaseOrderDetailRoute />} />
-                  <Route path="/:branchSlug/manage-data" element={<ManageData />} />
-                  <Route path="/:branchSlug/end-of-day" element={<EndOfDay />} />
-                  <Route path="/:branchSlug/getting-started" element={<GettingStartedRoute />} />
-                  <Route path="/:branchSlug/transfers" element={<BranchTransfer />} />
-                  <Route path="*" element={<Navigate to={`/${branchSlug}/dashboard`} replace />} />
-                </Routes>
-              </motion.div>
-            </AnimatePresence>
+            {/* Permanent Keep-Alive Panel Stack (Instant Swap, 0ms, Wipes Re-renders, Preserves Scans & Inputs) */}
+            <div className={(!isDetailView && currentView === 'home') ? 'h-full' : 'hidden'}>
+              <HomeMenu onNavigate={handleSidebarNavigate} />
+            </div>
+            <div className={(!isDetailView && currentView === 'dashboard') ? 'h-full' : 'hidden'}>
+              <Dashboard />
+            </div>
+            <div className={(!isDetailView && currentView === 'register') ? 'h-full' : 'hidden'}>
+              <CashRegisterRoute />
+            </div>
+            <div className={(!isDetailView && currentView === 'products') ? 'h-full' : 'hidden'}>
+              <ProductListRoute />
+            </div>
+            <div className={(!isDetailView && currentView === 'invoices') ? 'h-full' : 'hidden'}>
+              <InvoiceListRoute />
+            </div>
+            <div className={(!isDetailView && currentView === 'customers') ? 'h-full' : 'hidden'}>
+              <CustomerListRoute />
+            </div>
+            <div className={(!isDetailView && currentView === 'repairs') ? 'h-full' : 'hidden'}>
+              <RepairListRoute />
+            </div>
+            <div className={(!isDetailView && currentView === 'devices') ? 'h-full' : 'hidden'}>
+              <DeviceInventoryRoute />
+            </div>
+            <div className={(!isDetailView && currentView === 'transfers') ? 'h-full' : 'hidden'}>
+              <BranchTransfer />
+            </div>
+            <div className={(!isDetailView && currentView === 'purchase-orders') ? 'h-full' : 'hidden'}>
+              <PurchaseOrderListRoute />
+            </div>
+
+            {/* Standard Router Switcher for occasional Detail & Modal Sub-Pages */}
+            {(isDetailView || ![
+              'home', 'dashboard', 'register', 'products', 'invoices', 
+              'customers', 'repairs', 'devices', 'transfers', 'purchase-orders'
+            ].includes(currentView)) && (
+              <Routes>
+                <Route path="/:branchSlug/products/:id" element={<ProductDetailsRoute />} />
+                <Route path="/:branchSlug/create-product" element={<CreateProduct onCancel={() => navigate(`/${branchSlug}/products`)} onSave={() => navigate(`/${branchSlug}/products`)} />} />
+                <Route path="/:branchSlug/add-inventory/:id" element={<AddInventoryRoute />} />
+                <Route path="/:branchSlug/invoices/:id" element={<InvoiceDetailsRoute />} />
+                <Route path="/:branchSlug/customers/:id" element={<CustomerDetailsRoute />} />
+                <Route path="/:branchSlug/devices/:id" element={<DeviceDetailRoute />} />
+                <Route path="/:branchSlug/sku-devices/:id" element={<SkuDeviceDetailsRoute />} />
+                <Route path="/:branchSlug/purchase-orders/:id" element={<PurchaseOrderDetailRoute />} />
+                <Route path="/:branchSlug/manage-data" element={<ManageData />} />
+                <Route path="/:branchSlug/end-of-day" element={<EndOfDay />} />
+                <Route path="/:branchSlug/getting-started" element={<GettingStartedRoute />} />
+                <Route path="*" element={<Navigate to={`/${branchSlug}/dashboard`} replace />} />
+              </Routes>
+            )}
           </ErrorBoundary>
         </main>
       </div>

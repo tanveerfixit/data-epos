@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Printer, List, ChevronDown, ExternalLink, Users, Smartphone } from 'lucide-react';
+import { Printer, List, ExternalLink, Users, Smartphone } from 'lucide-react';
 import { PurchaseOrder } from '../types';
 
 interface POItem {
@@ -34,38 +34,46 @@ export default function PurchaseOrderDetail({ poId, onBack }: Props) {
       });
   }, [poId]);
 
-  if (loading) return <div className="p-8 text-center text-slate-500">Loading Purchase Order Details...</div>;
-  if (!po) return <div className="p-8 text-center text-red-500">Purchase Order not found.</div>;
+  if (loading) {
+    return (
+      <div className="h-full flex items-center justify-center bg-white dark:bg-black text-neutral-900 dark:text-neutral-100 font-mono text-base p-8 text-lg">
+        *** LOADING SYSTEM DATA ***
+      </div>
+    );
+  }
+  
+  if (!po) {
+    return (
+      <div className="h-full flex items-center justify-center bg-white dark:bg-black text-red-650 font-mono text-base p-8 text-lg">
+        *** PURCHASE ORDER NOT FOUND ***
+      </div>
+    );
+  }
 
   return (
-    <div className="flex flex-col h-full bg-[#f4f7f9]">
+    <div className="flex flex-col h-full bg-neutral-100 text-neutral-900 dark:bg-neutral-950 dark:text-neutral-100 font-mono text-base px-2 py-2 select-none w-full overflow-auto" style={{ fontSize: '17px' }}>
       {/* Top Bar */}
-      <div className="bg-white border-b border-slate-200 px-4 py-2 flex justify-between items-center shadow-sm">
-        <div className="flex items-center gap-1">
+      <div className="bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 px-4 py-1.5 flex justify-between items-center rounded-none shadow-none mb-2">
+        <div className="flex gap-2">
           <button 
             onClick={onBack}
-            className="px-3 py-1.5 bg-white border border-slate-300 rounded text-sm font-medium hover:bg-slate-50 transition-colors"
+            className="bg-neutral-200 dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-800 text-black dark:text-white px-3 py-1 font-bold rounded-none text-base transition-colors cursor-pointer"
           >
-            Purchase Order {po.po_number}
+            PO {po.po_number}
           </button>
-          <button className="px-3 py-1.5 bg-slate-100 border border-slate-300 rounded text-sm font-medium hover:bg-slate-200 transition-colors">
+          <button className="bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-950 text-neutral-900 dark:text-neutral-100 px-3 py-1 rounded-none text-base transition-colors cursor-pointer">
             Activity Log
           </button>
         </div>
         
         <div className="flex items-center gap-2">
-          <div className="flex">
-            <button className="bg-[#00e5ff] hover:bg-[#00d4eb] text-slate-900 px-3 py-1.5 rounded-l text-sm font-bold flex items-center gap-2 transition-colors">
-              <Printer size={16} />
-              Print
-            </button>
-            <button className="bg-[#00e5ff] hover:bg-[#00d4eb] text-slate-900 px-1.5 py-1.5 rounded-r border-l border-black/10 transition-colors">
-              <ChevronDown size={16} />
-            </button>
-          </div>
+          <button className="bg-amber-400 hover:bg-amber-500 text-slate-900 font-bold px-4 py-1.5 rounded-none text-base transition-colors flex items-center gap-2 border-0 cursor-pointer">
+            <Printer size={16} />
+            Print
+          </button>
           <button 
             onClick={onBack}
-            className="bg-white border border-slate-300 px-3 py-1.5 rounded text-sm font-medium flex items-center gap-2 hover:bg-slate-50 transition-colors"
+            className="bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-955 text-neutral-900 dark:text-neutral-100 px-3 py-1 rounded-none text-base transition-colors flex items-center gap-2 cursor-pointer"
           >
             <List size={16} />
             List Purchase
@@ -73,67 +81,67 @@ export default function PurchaseOrderDetail({ poId, onBack }: Props) {
         </div>
       </div>
 
-      <div className="p-4 flex flex-col gap-4 overflow-auto">
+      <div className="flex flex-col gap-2">
         {/* Status Badge */}
-        <div className="flex justify-center">
-          <span className="bg-[#00c853] text-white px-6 py-1 rounded text-sm font-bold uppercase shadow-sm">
+        <div className="flex justify-center mb-2">
+          <span className="bg-emerald-600 text-white px-6 py-1 text-sm font-bold uppercase rounded-none">
             {po.status}
           </span>
         </div>
 
         {/* Info Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
           {/* Supplier Info */}
-          <div className="bg-white border border-slate-300 rounded shadow-sm overflow-hidden">
-            <div className="bg-[#e9ecef] px-4 py-2 border-b border-slate-300 flex items-center gap-2">
-              <span className="text-slate-700 font-bold flex items-center gap-2">
-                <Users size={16} />
+          <div className="bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 rounded-none shadow-none overflow-hidden">
+            <div className="bg-neutral-200 dark:bg-neutral-900 px-4 py-1.5 border-b border-neutral-300 dark:border-neutral-800">
+              <span className="text-black dark:text-white font-bold uppercase tracking-wider text-[13px] flex items-center gap-2">
+                <Users size={15} />
                 Supplier Info
               </span>
             </div>
-            <div className="p-4 space-y-3 text-sm">
-              <div className="flex border-b border-slate-100 pb-2">
-                <span className="w-24 font-bold text-slate-700">Company :</span>
-                <span className="text-[#3498db] hover:underline cursor-pointer flex items-center gap-1">
+            <div className="p-4 space-y-2 text-base font-normal">
+              <div className="flex border-b border-neutral-150 dark:border-neutral-850 pb-1">
+                <span className="w-28 font-bold text-neutral-900 dark:text-neutral-100 font-mono">Company :</span>
+                <span className="text-blue-605 dark:text-blue-400 hover:underline cursor-pointer flex items-center gap-1 font-sans">
                   {po.supplier_name}
                   <ExternalLink size={12} />
                 </span>
               </div>
-              <div className="flex border-b border-slate-100 pb-2">
-                <span className="w-24 font-bold text-slate-700">Supplier :</span>
-                <span className="text-slate-600">Faisal</span>
+              <div className="flex border-b border-neutral-150 dark:border-neutral-850 pb-1">
+                <span className="w-28 font-bold text-neutral-900 dark:text-neutral-100 font-mono">Supplier :</span>
+                <span className="text-neutral-600 dark:text-neutral-400 font-sans">Faisal</span>
               </div>
               <div className="flex">
-                <span className="w-24 font-bold text-slate-700">Email :</span>
-                <span className="text-slate-600">{po.supplier_email || ''}</span>
+                <span className="w-28 font-bold text-neutral-900 dark:text-neutral-100 font-mono">Email :</span>
+                <span className="text-neutral-600 dark:text-neutral-400 font-sans">{po.supplier_email || ''}</span>
               </div>
             </div>
           </div>
 
           {/* Purchase Order Info */}
-          <div className="bg-white border border-slate-300 rounded shadow-sm overflow-hidden">
-            <div className="bg-[#e9ecef] px-4 py-2 border-b border-slate-300 flex items-center gap-2">
-              <span className="text-slate-700 font-bold flex items-center gap-2">
-                <Smartphone size={16} />
+          <div className="bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 rounded-none shadow-none overflow-hidden">
+            <div className="bg-neutral-200 dark:bg-neutral-900 px-4 py-1.5 border-b border-neutral-300 dark:border-neutral-800">
+              <span className="text-black dark:text-white font-bold uppercase tracking-wider text-[13px] flex items-center gap-2">
+                <Smartphone size={15} />
                 Purchase Order Info
               </span>
             </div>
-            <div className="p-0">
-              <div className="bg-white border-b border-slate-200">
-                <button className="px-4 py-2 text-sm font-medium border-b-2 border-[#3498db] text-[#3498db]">Basic Info</button>
+            <div className="p-0 bg-white dark:bg-black">
+              <div className="bg-neutral-100 dark:bg-neutral-950 border-b border-neutral-300 dark:border-neutral-800">
+                <button className="px-4 py-1.5 text-sm font-bold bg-white dark:bg-black border-r border-neutral-300 dark:border-neutral-800 text-neutral-900 dark:text-neutral-100 rounded-none uppercase">Basic Info</button>
               </div>
-              <div className="p-4 space-y-3 text-sm">
-                <div className="flex border-b border-slate-100 pb-2">
-                  <span className="w-32 font-bold text-slate-700">Date Expected :</span>
-                  <span className="text-slate-600">{po.expected_at ? new Date(po.expected_at).toLocaleDateString('en-GB') : ''}</span>
+              <div className="p-4 space-y-2 text-base font-normal">
+                <div className="flex border-b border-neutral-150 dark:border-neutral-850 pb-1">
+                  <span className="w-36 font-bold text-neutral-900 dark:text-neutral-100 font-mono">Date Expected :</span>
+                  <span className="text-neutral-600 dark:text-neutral-400 font-mono">{po.expected_at ? new Date(po.expected_at).toLocaleDateString('en-GB').replace(/\//g, '-') : ''}</span>
                 </div>
-                <div className="flex border-b border-slate-100 pb-2">
-                  <span className="w-32 font-bold text-slate-700">Shipping Cost :</span>
-                  <span className="text-slate-600">€{po.shipping_cost.toFixed(2)}</span>
+                <div className="flex border-b border-neutral-150 dark:border-neutral-850 pb-1">
+                  <span className="w-36 font-bold text-neutral-900 dark:text-neutral-100 font-mono">Shipping Cost :</span>
+                  <span className="text-neutral-605 dark:text-neutral-400 font-mono">€{po.shipping_cost.toFixed(2)}</span>
                 </div>
                 <div className="flex">
-                  <span className="w-32 font-bold text-slate-700">Lot Ref. No. :</span>
-                  <span className="text-slate-600">{po.lot_ref_no || ''}</span>
+                  <span className="w-36 font-bold text-neutral-900 dark:text-neutral-100 font-mono">Lot Ref. No. :</span>
+                  <span className="text-neutral-600 dark:text-neutral-400 font-sans">{po.lot_ref_no || ''}</span>
                 </div>
               </div>
             </div>
@@ -141,61 +149,61 @@ export default function PurchaseOrderDetail({ poId, onBack }: Props) {
         </div>
 
         {/* Items Table */}
-        <div className="bg-white border border-slate-300 rounded shadow-sm overflow-hidden">
+        <div className="bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 rounded-none shadow-none overflow-hidden">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="bg-[#e9ecef] border-b border-slate-300 text-[11px] font-bold text-slate-700 uppercase tracking-wider">
-                <th className="px-4 py-2 border-r border-slate-300 w-12 text-center">#</th>
-                <th className="px-4 py-2 border-r border-slate-300">Description</th>
-                <th className="px-4 py-2 border-r border-slate-300 text-center">Need/Have/OnPO</th>
-                <th className="px-4 py-2 border-r border-slate-300 text-center">Ordered Qty</th>
-                <th className="px-4 py-2 border-r border-slate-300 text-center">Received Qty</th>
-                <th className="px-4 py-2 border-r border-slate-300 text-right">Unit Cost</th>
-                <th className="px-4 py-2 text-right">Total</th>
+              <tr className="bg-neutral-200 dark:bg-neutral-900 border-b border-neutral-300 dark:border-neutral-800 text-[13px] font-bold text-black dark:text-white uppercase tracking-wider">
+                <th className="px-2 py-1 border-r border-neutral-300 dark:border-neutral-800 w-12 text-center">#</th>
+                <th className="px-2 py-1 border-r border-neutral-300 dark:border-neutral-800">Description</th>
+                <th className="px-2 py-1 border-r border-neutral-300 dark:border-neutral-800 text-center">Need/Have/OnPO</th>
+                <th className="px-2 py-1 border-r border-neutral-300 dark:border-neutral-800 text-center">Ordered Qty</th>
+                <th className="px-2 py-1 border-r border-neutral-300 dark:border-neutral-800 text-center">Received Qty</th>
+                <th className="px-2 py-1 border-r border-neutral-300 dark:border-neutral-800 text-right">Unit Cost</th>
+                <th className="px-2 py-1 text-right">Total</th>
               </tr>
             </thead>
-            <tbody className="text-sm">
+            <tbody className="text-base font-normal">
               {po.items.map((item, idx) => (
-                <tr key={item.id} className="border-b border-slate-200">
-                  <td className="px-4 py-3 border-r border-slate-200 text-center text-slate-500">{idx + 1}</td>
-                  <td className="px-4 py-3 border-r border-slate-200">
-                    <div className="flex flex-col">
-                      <span className="text-slate-800 font-medium">{item.description}</span>
-                      <span className="text-[#3498db] text-xs hover:underline cursor-pointer flex items-center gap-1">
+                <tr key={item.id} className="border-b border-neutral-200 dark:border-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-900 transition-colors bg-white dark:bg-black text-neutral-900 dark:text-neutral-100">
+                  <td className="px-2 py-1 border-r border-neutral-200 dark:border-neutral-800 text-center font-mono text-neutral-500 font-bold">#{idx + 1}</td>
+                  <td className="px-2 py-1 border-r border-neutral-200 dark:border-neutral-800 font-sans">
+                    <div className="flex flex-col font-sans">
+                      <span className="font-sans font-normal text-neutral-900 dark:text-neutral-100">{item.description}</span>
+                      <span className="text-blue-600 dark:text-blue-400 text-xs hover:underline cursor-pointer flex items-center gap-1 mt-0.5 font-mono">
                         (1506012 <ExternalLink size={10} />)
                       </span>
-                      <span className="text-[#3498db] text-xs hover:underline cursor-pointer flex items-center gap-1 mt-1">
+                      <span className="text-blue-605 dark:text-blue-400 text-xs hover:underline cursor-pointer flex items-center gap-1 mt-0.5 font-mono">
                         <ExternalLink size={10} /> SHFLK46D6TD
                       </span>
                     </div>
                   </td>
-                  <td className="px-4 py-3 border-r border-slate-200 text-center">
-                    <span className="text-[#3498db] hover:underline cursor-pointer flex items-center justify-center gap-1">
+                  <td className="px-2 py-1 border-r border-neutral-200 dark:border-neutral-800 text-center">
+                    <span className="text-blue-600 dark:text-blue-400 hover:underline cursor-pointer flex items-center justify-center gap-1 font-mono">
                       0 / 1 / 0
-                      <ExternalLink size={12} />
+                      <ExternalLink size={11} />
                     </span>
                   </td>
-                  <td className="px-4 py-3 border-r border-slate-200 text-center text-slate-600">{item.ordered_qty}</td>
-                  <td className="px-4 py-3 border-r border-slate-200 text-center text-slate-600">{item.received_qty}</td>
-                  <td className="px-4 py-3 border-r border-slate-200 text-right text-slate-600">€{item.unit_cost.toFixed(2)}</td>
-                  <td className="px-4 py-3 text-right text-slate-800 font-medium">€{item.total.toFixed(2)}</td>
+                  <td className="px-2 py-1 border-r border-neutral-200 dark:border-neutral-800 text-center font-mono">{item.ordered_qty}</td>
+                  <td className="px-2 py-1 border-r border-neutral-200 dark:border-neutral-800 text-center font-mono">{item.received_qty}</td>
+                  <td className="px-2 py-1 border-r border-neutral-200 dark:border-neutral-800 text-right font-mono">€{item.unit_cost.toFixed(2)}</td>
+                  <td className="px-2 py-1 text-right font-mono font-bold">€{item.total.toFixed(2)}</td>
                 </tr>
               ))}
               {/* Totals Row */}
-              <tr className="bg-slate-50 font-bold">
-                <td colSpan={3} className="px-4 py-2 border-r border-slate-200"></td>
-                <td className="px-4 py-2 border-r border-slate-200 text-center">{po.items.reduce((sum, item) => sum + item.ordered_qty, 0)}</td>
-                <td className="px-4 py-2 border-r border-slate-200 text-center">{po.items.reduce((sum, item) => sum + item.received_qty, 0)}</td>
-                <td className="px-4 py-2 border-r border-slate-200 text-right text-slate-700">Total :</td>
-                <td className="px-4 py-2 text-right text-slate-900">€{po.total.toFixed(2)}</td>
+              <tr className="bg-neutral-100 dark:bg-neutral-950 font-bold text-neutral-900 dark:text-neutral-100">
+                <td colSpan={3} className="px-2 py-1 border-r border-neutral-200 dark:border-neutral-800"></td>
+                <td className="px-2 py-1 border-r border-neutral-200 dark:border-neutral-800 text-center font-mono">{po.items.reduce((sum, item) => sum + item.ordered_qty, 0)}</td>
+                <td className="px-2 py-1 border-r border-neutral-200 dark:border-neutral-800 text-center font-mono">{po.items.reduce((sum, item) => sum + item.received_qty, 0)}</td>
+                <td className="px-2 py-1 border-r border-neutral-200 dark:border-neutral-800 text-right font-mono uppercase text-xs">Total :</td>
+                <td className="px-2 py-1 text-right font-mono text-lg">€{po.total.toFixed(2)}</td>
               </tr>
             </tbody>
           </table>
         </div>
 
         {/* Action Buttons */}
-        <div className="flex justify-end">
-          <button className="bg-[#ffff00] hover:bg-[#e6e600] text-slate-900 px-6 py-1.5 rounded text-sm font-bold shadow-sm transition-colors">
+        <div className="flex justify-end pt-2">
+          <button className="bg-amber-400 hover:bg-amber-500 text-slate-900 font-bold px-6 py-1.5 rounded-none text-base border border-amber-500 hover:border-amber-600 transition-colors cursor-pointer">
             Re-Open PO
           </button>
         </div>

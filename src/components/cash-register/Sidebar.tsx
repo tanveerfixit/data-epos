@@ -31,6 +31,7 @@ interface SidebarProps {
   remainingAmount: number;
   
   onCheckout: () => void;
+  onQuickCheckout: () => void;
   onClearCart: () => void;
   isCartEmpty: boolean;
   isPaymentComplete: boolean;
@@ -39,7 +40,7 @@ interface SidebarProps {
 
 export const Sidebar: React.FC<SidebarProps> = (props) => {
   return (
-    <div className="w-[380px] h-full flex flex-col bg-[var(--bg-card)] border-l border-[var(--border-base)] overflow-hidden transition-colors duration-300">
+    <div className="w-[380px] h-full flex flex-col bg-white dark:bg-black border-l border-neutral-300 dark:border-neutral-800 overflow-hidden rounded-none shadow-none">
       {/* Scrollable Content Area */}
       <div className="flex-1 overflow-y-auto custom-scrollbar">
         <div>
@@ -81,12 +82,16 @@ export const Sidebar: React.FC<SidebarProps> = (props) => {
       </div>
       
       {/* Sticky Footer Area */}
-      <div className="shrink-0 p-5 border-t border-[var(--border-base)] bg-[var(--bg-card)]">
+      <div className="shrink-0 p-4 border-t border-neutral-300 dark:border-neutral-800 bg-neutral-100 dark:bg-neutral-950 rounded-none">
         <CheckoutActions 
           onCheckout={props.onCheckout}
+          onQuickCheckout={props.onQuickCheckout}
           onClearCart={props.onClearCart}
           isCartEmpty={props.isCartEmpty}
           isPaymentComplete={props.isPaymentComplete}
+          remainingAmount={props.remainingAmount}
+          paymentMethod={props.paymentMethod}
+          addedPaymentsCount={props.addedPayments.length}
         />
       </div>
     </div>
