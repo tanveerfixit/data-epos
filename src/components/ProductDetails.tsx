@@ -123,7 +123,7 @@ export default function ProductDetails({
             </button>
             <button 
               onClick={handleArchive}
-              className="flex items-center gap-1 px-3 py-1 bg-red-650 hover:bg-red-750 text-white border border-red-650 font-bold text-sm cursor-pointer rounded-none transition-colors"
+              className="flex items-center gap-1 px-3 py-1 bg-red-600 hover:bg-red-700 text-white border border-red-600 font-bold text-sm cursor-pointer rounded-none transition-colors"
             >
               <Trash2 size={13} />
               Archive
@@ -183,10 +183,10 @@ export default function ProductDetails({
                   <Link size={80} className="text-neutral-400 dark:text-neutral-700" strokeWidth={1.5} />
                 </div>
                 <div className="flex flex-col gap-2 w-full max-w-[200px]">
-                  <button className="bg-neutral-100 dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-800 text-neutral-900 dark:text-neutral-300 text-xs font-bold py-1 px-3 rounded-none transition-colors cursor-pointer uppercase">
+                  <button className="bg-white dark:bg-neutral-900 border border-[#0285b5] text-[#0285b5] hover:bg-blue-50 dark:hover:bg-blue-950/20 text-xs font-bold py-1.5 px-3 rounded-none transition-colors cursor-pointer uppercase">
                     Change Picture
                   </button>
-                  <button className="bg-neutral-100 dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-800 text-neutral-900 dark:text-neutral-300 text-xs font-bold py-1 px-3 rounded-none transition-colors cursor-pointer uppercase">
+                  <button className="bg-white dark:bg-neutral-900 border border-[#0285b5] text-[#0285b5] hover:bg-blue-50 dark:hover:bg-blue-950/20 text-xs font-bold py-1.5 px-3 rounded-none transition-colors cursor-pointer uppercase">
                     Web Description
                   </button>
                 </div>
@@ -292,7 +292,7 @@ export default function ProductDetails({
                 <select className="bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 rounded-none px-2 py-1 text-sm text-neutral-900 dark:text-neutral-100 focus:outline-none">
                   <option>All Activities</option>
                 </select>
-                <button className="bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-900 text-neutral-900 dark:text-neutral-100 font-bold py-1 px-3 rounded-none text-sm transition-all shadow-none cursor-pointer">
+                <button className="bg-blue-600 hover:bg-blue-700 text-white border border-blue-600 font-bold py-1 px-3 rounded-none text-sm cursor-pointer transition-colors">
                   Add New Note
                 </button>
               </div>
@@ -349,9 +349,9 @@ export default function ProductDetails({
               </div>
               
               <div className="flex items-center gap-1">
-                <button className="px-1.5 py-0.5 border border-neutral-300 dark:border-neutral-800 rounded-none hover:bg-neutral-200 dark:hover:bg-neutral-900 cursor-pointer">«</button>
-                <button className="px-2 py-0.5 bg-neutral-300 dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 rounded-none font-bold cursor-pointer">1</button>
-                <button className="px-1.5 py-0.5 border border-neutral-300 dark:border-neutral-800 rounded-none hover:bg-neutral-200 dark:hover:bg-neutral-900 cursor-pointer">»</button>
+                <button className="px-2 py-0.5 bg-white dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-800 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-none cursor-pointer">«</button>
+                <button className="px-3 py-0.5 bg-[#0285b5] border border-[#0285b5] text-white rounded-none font-bold cursor-pointer">1</button>
+                <button className="px-2 py-0.5 bg-white dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-800 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-none cursor-pointer">»</button>
               </div>
             </div>
           </div>

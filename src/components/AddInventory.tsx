@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Plus, Trash2, Save, Package, Smartphone } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, Save, Smartphone } from 'lucide-react';
 import { Product, Branch, Supplier } from '../types';
 
 export default function AddInventory({ 
@@ -98,8 +98,8 @@ export default function AddInventory({
     setItems(newItems);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
     if (!branchId) return alert('Please select a branch');
 
     const payload = {
@@ -131,210 +131,247 @@ export default function AddInventory({
     }
   };
 
-  if (loading) return <div className="p-8 text-center text-slate-500">Loading...</div>;
-  if (!product) return <div className="p-8 text-center text-red-500">Product not found</div>;
+  if (loading) return (
+    <div className="flex items-center justify-center h-full bg-neutral-100 dark:bg-neutral-950 text-neutral-900 dark:text-neutral-100 font-mono p-8 text-base">
+      <div className="border border-neutral-300 dark:border-neutral-800 p-6 text-center bg-white dark:bg-black w-64">
+        <div className="text-sm font-bold uppercase tracking-widest animate-pulse">Loading...</div>
+        <div className="text-[10px] mt-2 text-neutral-500">Retrieving system data</div>
+      </div>
+    </div>
+  );
+  
+  if (!product) return (
+    <div className="flex items-center justify-center h-full bg-neutral-100 dark:bg-neutral-950 text-red-500 font-mono p-8 text-base">
+      <div className="border border-red-500 p-6 text-center bg-white dark:bg-black">
+        <div className="text-sm font-bold uppercase tracking-widest">Product Not Found</div>
+        <div className="text-[10px] mt-2 text-red-400">The requested product does not exist</div>
+      </div>
+    </div>
+  );
 
   return (
-    <div className="flex flex-col h-full bg-[#f4f7f9]">
-      {/* Header */}
-      <div className="p-4 flex justify-between items-center bg-white border-b border-slate-200">
-        <div className="flex items-center gap-4">
-          <button 
-            onClick={onBack}
-            className="p-2 hover:bg-slate-100 rounded-full transition-colors text-slate-600"
-          >
-            <ArrowLeft size={20} />
-          </button>
-          <div>
-            <h2 className="text-xl font-medium text-slate-700">Add Inventory</h2>
-            <p className="text-xs text-slate-500">
-              {product.manufacturer_name && <span className="font-bold text-slate-700">{product.manufacturer_name}</span>} • {product.product_name} • <span className="font-mono">{product.sku_code}</span>
-            </p>
+    <div className="flex flex-col h-full bg-neutral-100 text-neutral-900 dark:bg-neutral-955 dark:text-neutral-100 font-mono text-base px-2 py-2 select-none w-full overflow-auto" style={{ fontSize: '17px' }}>
+      {/* Header bar */}
+      <div className="sticky top-0 z-40 bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 shrink-0 mb-2">
+        <div className="flex items-center justify-between px-4 py-2 flex-wrap md:flex-nowrap gap-2">
+          <div className="flex items-center gap-6">
+            <h1 className="text-base font-bold tracking-wider uppercase text-[#0285b5] dark:text-[#0285b5]">Add Inventory</h1>
+            <span className="text-xs text-neutral-500 dark:text-neutral-400 hidden lg:inline">
+              {product.manufacturer_name && <span className="font-bold text-neutral-700 dark:text-neutral-300">{product.manufacturer_name}</span>} • {product.product_name} • <span className="font-mono">{product.sku_code}</span>
+            </span>
+          </div>
+          
+          <div className="flex items-center gap-2">
+            <button 
+              type="button"
+              onClick={() => handleSubmit()}
+              className="flex items-center gap-1 px-4 py-1 bg-emerald-600 hover:bg-emerald-700 text-white border border-emerald-600 font-bold text-sm cursor-pointer rounded-none transition-colors"
+            >
+              <Save size={13} />
+              Save Inventory
+            </button>
+            <button 
+              type="button"
+              onClick={onBack}
+              className="flex items-center gap-1 px-3 py-1 bg-white dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-800 text-neutral-800 dark:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-800 font-bold text-sm cursor-pointer rounded-none transition-colors"
+            >
+              <ArrowLeft size={13} />
+              Back
+            </button>
           </div>
         </div>
-        <button 
-          onClick={handleSubmit}
-          className="bg-[#2ecc71] hover:bg-[#27ae60] text-white font-bold py-1.5 px-6 rounded text-sm flex items-center gap-2 transition-all shadow-sm"
-        >
-          <Save size={16} />
-          Save Inventory
-        </button>
       </div>
 
-      <form onSubmit={handleSubmit} className="flex-1 overflow-auto p-6">
-        <div className="max-w-4xl mx-auto space-y-6">
-          {/* Main Config Card */}
-          <div className="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden">
-            <div className="p-4 bg-slate-50 border-b border-slate-200">
-              <h3 className="font-bold text-slate-700 flex items-center gap-2 uppercase text-xs tracking-wider">
-                <Package size={16} className="text-[#3498db]" />
-                Inventory Details
-              </h3>
-            </div>
-            <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Select Branch *</label>
+      <div className="flex-1 overflow-auto bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 rounded-none shadow-none p-4">
+        <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Specification Reconciliation Style Grid */}
+          <div className="bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 font-mono text-[14px]">
+            <div className="divide-y divide-neutral-300 dark:divide-neutral-800">
+              {/* Product Info Description */}
+              <div className="grid grid-cols-1 md:grid-cols-12 items-center py-2.5 bg-neutral-50 dark:bg-neutral-950 font-bold">
+                <div className="md:col-span-4 px-3 md:text-right text-neutral-600 dark:text-neutral-400">PRODUCT TO INCREASE :</div>
+                <div className="md:col-span-8 px-3 text-neutral-900 dark:text-neutral-100 uppercase">
+                  {product.manufacturer_name && `${product.manufacturer_name} - `}{product.product_name} ({product.sku_code})
+                </div>
+              </div>
+
+              {/* Branch Selection */}
+              <div className="grid grid-cols-1 md:grid-cols-12 items-center py-2.5 bg-white dark:bg-black hover:bg-neutral-50 dark:hover:bg-neutral-900">
+                <div className="md:col-span-4 px-3 md:text-right font-bold text-neutral-500 dark:text-neutral-400 uppercase">Select Branch * :</div>
+                <div className="md:col-span-8 px-3">
                   <select 
                     required
                     value={branchId}
                     onChange={(e) => setBranchId(e.target.value)}
-                    className="w-full bg-white border border-slate-300 rounded px-3 py-2 text-sm focus:ring-1 focus:ring-[#3498db] outline-none"
+                    className="w-full max-w-md bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 rounded-none px-2 py-1 text-sm text-neutral-900 dark:text-neutral-100 focus:outline-none"
                   >
                     <option value="">Choose Branch</option>
                     {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
                   </select>
                 </div>
-                <div>
-                  <div className="flex justify-between items-center mb-1">
-                    <label className="block text-xs font-bold text-slate-500 uppercase">Supplier</label>
-                    <button 
-                      type="button"
-                      onClick={() => setShowNewSupplierModal(true)}
-                      className="text-[#3498db] hover:underline text-[10px] font-bold flex items-center gap-1"
-                    >
-                      <Plus size={10} /> Quick Add
-                    </button>
-                  </div>
+              </div>
+
+              {/* Supplier */}
+              <div className="grid grid-cols-1 md:grid-cols-12 items-center py-2.5 bg-white dark:bg-black hover:bg-neutral-50 dark:hover:bg-neutral-900">
+                <div className="md:col-span-4 px-3 md:text-right font-bold text-neutral-500 dark:text-neutral-400 uppercase">Supplier :</div>
+                <div className="md:col-span-8 px-3 flex items-center gap-4">
                   <select 
                     value={supplierId}
                     onChange={(e) => setSupplierId(e.target.value)}
-                    className="w-full bg-white border border-slate-300 rounded px-3 py-2 text-sm focus:ring-1 focus:ring-[#3498db] outline-none"
+                    className="w-full max-w-md bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 rounded-none px-2 py-1 text-sm text-neutral-900 dark:text-neutral-100 focus:outline-none"
                   >
                     <option value="">Choose Supplier</option>
                     {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                   </select>
+                  <button 
+                    type="button"
+                    onClick={() => setShowNewSupplierModal(true)}
+                    className="text-[#0285b5] hover:underline text-xs font-bold flex items-center gap-1 bg-transparent border-0 p-0 cursor-pointer"
+                  >
+                    <Plus size={12} /> Quick Add
+                  </button>
                 </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase mb-1">PO Number / Reference</label>
+              </div>
+
+              {/* PO Reference */}
+              <div className="grid grid-cols-1 md:grid-cols-12 items-center py-2.5 bg-white dark:bg-black hover:bg-neutral-50 dark:hover:bg-neutral-900">
+                <div className="md:col-span-4 px-3 md:text-right font-bold text-neutral-500 dark:text-neutral-400 uppercase">PO Reference :</div>
+                <div className="md:col-span-8 px-3">
                   <input 
                     type="text"
                     value={poNumber}
                     onChange={(e) => setPoNumber(e.target.value)}
                     placeholder="e.g. PO-12345"
-                    className="w-full bg-white border border-slate-300 rounded px-3 py-2 text-sm focus:ring-1 focus:ring-[#3498db] outline-none"
+                    className="w-full max-w-md bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 rounded-none px-2 py-1.5 text-sm text-neutral-900 dark:text-neutral-100 focus:outline-none font-mono"
                   />
                 </div>
               </div>
 
-              <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Cost Price (€)</label>
-                    <input 
-                      type="number"
-                      step="0.01"
-                      value={costPrice}
-                      onChange={(e) => setCostPrice(e.target.value)}
-                      className="w-full bg-white border border-slate-300 rounded px-3 py-2 text-sm focus:ring-1 focus:ring-[#3498db] outline-none"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Selling Price (€)</label>
-                    <input 
-                      type="number"
-                      step="0.01"
-                      value={sellingPrice}
-                      onChange={(e) => setSellingPrice(e.target.value)}
-                      className="w-full bg-white border border-slate-300 rounded px-3 py-2 text-sm focus:ring-1 focus:ring-[#3498db] outline-none"
-                    />
-                  </div>
+              {/* Cost Price */}
+              <div className="grid grid-cols-1 md:grid-cols-12 items-center py-2.5 bg-white dark:bg-black hover:bg-neutral-50 dark:hover:bg-neutral-900">
+                <div className="md:col-span-4 px-3 md:text-right font-bold text-neutral-500 dark:text-neutral-400 uppercase">Cost Price (€) :</div>
+                <div className="md:col-span-8 px-3">
+                  <input 
+                    type="number"
+                    step="0.01"
+                    value={costPrice}
+                    onChange={(e) => setCostPrice(e.target.value)}
+                    className="w-full max-w-[150px] bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 rounded-none px-2 py-1 text-sm text-neutral-900 dark:text-neutral-100 focus:outline-none font-mono"
+                  />
                 </div>
-                {product.product_type !== 'serialized' && (
-                  <div>
-                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Quantity to Add</label>
+              </div>
+
+              {/* Selling Price */}
+              <div className="grid grid-cols-1 md:grid-cols-12 items-center py-2.5 bg-white dark:bg-black hover:bg-neutral-50 dark:hover:bg-neutral-900">
+                <div className="md:col-span-4 px-3 md:text-right font-bold text-neutral-500 dark:text-neutral-400 uppercase">Selling Price (€) :</div>
+                <div className="md:col-span-8 px-3">
+                  <input 
+                    type="number"
+                    step="0.01"
+                    value={sellingPrice}
+                    onChange={(e) => setSellingPrice(e.target.value)}
+                    className="w-full max-w-[150px] bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 rounded-none px-2 py-1 text-sm text-neutral-900 dark:text-neutral-100 focus:outline-none font-mono"
+                  />
+                </div>
+              </div>
+
+              {/* Non-Serialized Quantity */}
+              {product.product_type !== 'serialized' && (
+                <div className="grid grid-cols-1 md:grid-cols-12 items-center py-2.5 bg-white dark:bg-black hover:bg-neutral-50 dark:hover:bg-neutral-900">
+                  <div className="md:col-span-4 px-3 md:text-right font-bold text-neutral-500 dark:text-neutral-400 uppercase">Quantity to Add :</div>
+                  <div className="md:col-span-8 px-3">
                     <input 
                       type="number"
                       value={quantity}
                       onChange={(e) => setQuantity(e.target.value)}
-                      className="w-full bg-white border border-slate-300 rounded px-3 py-2 text-sm focus:ring-1 focus:ring-[#3498db] outline-none"
+                      className="w-full max-w-[150px] bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 rounded-none px-2 py-1 text-sm text-neutral-900 dark:text-neutral-100 focus:outline-none font-mono"
                     />
                   </div>
-                )}
-              </div>
+                </div>
+              )}
             </div>
           </div>
 
           {/* Serialized Items Table */}
           {product.product_type === 'serialized' && (
-            <div className="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden">
-              <div className="p-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center">
-                <h3 className="font-bold text-slate-700 flex items-center gap-2 uppercase text-xs tracking-wider">
-                  <Smartphone size={16} className="text-[#3498db]" />
-                  Serialized Items (IMEI/Serial)
+            <div className="bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 font-mono text-[14px]">
+              <div className="p-3 bg-neutral-200 dark:bg-neutral-900 border-b border-neutral-300 dark:border-neutral-800 flex justify-between items-center rounded-none">
+                <h3 className="text-base font-bold text-black dark:text-white uppercase flex items-center gap-2">
+                  <Smartphone size={16} className="text-[#0285b5]" />
+                  Serialized Items
                 </h3>
                 <button 
                   type="button"
                   onClick={handleAddItem}
-                  className="text-[#3498db] hover:text-[#2980b9] text-xs font-bold flex items-center gap-1"
+                  className="bg-[#0285b5] hover:bg-blue-600 text-white font-bold py-1 px-3 rounded-none text-xs flex items-center gap-1 transition-all cursor-pointer border border-[#0285b5]"
                 >
-                  <Plus size={14} />
-                  Add Another Row
+                  <Plus size={12} />
+                  Add Row
                 </button>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-left border-collapse">
                   <thead>
-                    <tr className="bg-slate-50 border-b border-slate-200 text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                      <th className="px-4 py-2 w-10">#</th>
-                      <th className="px-4 py-2">IMEI / Serial Number</th>
-                      <th className="px-4 py-2">Color</th>
-                      <th className="px-4 py-2">GB</th>
-                      <th className="px-4 py-2">Condition</th>
-                      <th className="px-4 py-2 w-10"></th>
+                    <tr className="bg-neutral-100 dark:bg-neutral-955 border-b border-neutral-300 dark:border-neutral-800 text-[11px] font-bold text-black dark:text-white uppercase tracking-wider">
+                      <th className="px-3 py-2 border-r border-neutral-300 dark:border-neutral-800 w-12 text-center">#</th>
+                      <th className="px-3 py-2 border-r border-neutral-300 dark:border-neutral-800">IMEI / Serial Number</th>
+                      <th className="px-3 py-2 border-r border-neutral-300 dark:border-neutral-800">Color</th>
+                      <th className="px-3 py-2 border-r border-neutral-300 dark:border-neutral-800">GB</th>
+                      <th className="px-3 py-2 border-r border-neutral-300 dark:border-neutral-800">Condition</th>
+                      <th className="px-3 py-2 w-12 text-center"></th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-100">
+                  <tbody className="divide-y divide-neutral-200 dark:divide-neutral-850">
                     {items.map((item, idx) => (
-                      <tr key={idx} className="hover:bg-slate-50">
-                        <td className="px-4 py-2 text-xs text-slate-400 font-mono">{idx + 1}</td>
-                        <td className="px-4 py-2">
+                      <tr key={idx} className="hover:bg-neutral-50 dark:hover:bg-neutral-900 text-sm bg-white dark:bg-black text-neutral-900 dark:text-neutral-100">
+                        <td className="px-3 py-2 border-r border-neutral-200 dark:border-neutral-800 text-center text-neutral-500 font-mono">{idx + 1}</td>
+                        <td className="px-3 py-2 border-r border-neutral-200 dark:border-neutral-800">
                           <input 
                             type="text"
                             required
                             value={item.imei}
                             onChange={(e) => handleItemChange(idx, 'imei', e.target.value)}
                             placeholder="Scan IMEI..."
-                            className="w-full bg-transparent border-none p-0 text-sm focus:ring-0 outline-none font-mono"
+                            className="w-full bg-transparent border-none p-0 text-sm focus:ring-0 focus:outline-none outline-none font-mono text-neutral-900 dark:text-neutral-100 placeholder:text-neutral-400"
                           />
                         </td>
-                        <td className="px-4 py-2">
+                        <td className="px-3 py-2 border-r border-neutral-200 dark:border-neutral-800">
                           <input 
                             type="text"
                             value={item.color}
                             onChange={(e) => handleItemChange(idx, 'color', e.target.value)}
                             placeholder="Color"
-                            className="w-full bg-transparent border-none p-0 text-sm focus:ring-0 outline-none"
+                            className="w-full bg-transparent border-none p-0 text-sm focus:ring-0 focus:outline-none outline-none text-neutral-900 dark:text-neutral-100 placeholder:text-neutral-400"
                           />
                         </td>
-                        <td className="px-4 py-2">
+                        <td className="px-3 py-2 border-r border-neutral-200 dark:border-neutral-800">
                           <input 
                             type="text"
                             value={item.gb}
                             onChange={(e) => handleItemChange(idx, 'gb', e.target.value)}
                             placeholder="GB"
-                            className="w-full bg-transparent border-none p-0 text-sm focus:ring-0 outline-none"
+                            className="w-full bg-transparent border-none p-0 text-sm focus:ring-0 focus:outline-none outline-none text-neutral-900 dark:text-neutral-100 placeholder:text-neutral-400"
                           />
                         </td>
-                        <td className="px-4 py-2">
+                        <td className="px-3 py-2 border-r border-neutral-200 dark:border-neutral-800">
                           <select 
                             value={item.condition}
                             onChange={(e) => handleItemChange(idx, 'condition', e.target.value)}
-                            className="bg-transparent border-none p-0 text-sm focus:ring-0 outline-none"
+                            className="bg-transparent border-none p-0 text-sm focus:ring-0 focus:outline-none outline-none text-neutral-900 dark:text-neutral-100 cursor-pointer"
                           >
-                            <option>New</option>
-                            <option>A</option>
-                            <option>B</option>
-                            <option>C</option>
-                            <option>Faulty</option>
+                            <option className="bg-white dark:bg-black text-black dark:text-white">New</option>
+                            <option className="bg-white dark:bg-black text-black dark:text-white">A</option>
+                            <option className="bg-white dark:bg-black text-black dark:text-white">B</option>
+                            <option className="bg-white dark:bg-black text-black dark:text-white">C</option>
+                            <option className="bg-white dark:bg-black text-black dark:text-white">Faulty</option>
                           </select>
                         </td>
-                        <td className="px-4 py-2 text-right">
+                        <td className="px-3 py-2 text-center">
                           {items.length > 1 && (
                             <button 
                               type="button"
                               onClick={() => handleRemoveItem(idx)}
-                              className="text-slate-300 hover:text-red-500 transition-colors"
+                              className="text-neutral-400 hover:text-red-500 transition-colors cursor-pointer bg-transparent border-none p-0"
                             >
                               <Trash2 size={14} />
                             </button>
@@ -345,57 +382,60 @@ export default function AddInventory({
                   </tbody>
                 </table>
               </div>
-              <div className="p-4 bg-slate-50 border-t border-slate-200 text-right">
-                <span className="text-xs font-bold text-slate-500 uppercase mr-4">Total Items:</span>
-                <span className="text-sm font-bold text-slate-900">{items.length}</span>
+              <div className="p-3 bg-neutral-50 dark:bg-neutral-950 border-t border-neutral-300 dark:border-neutral-800 text-right text-xs">
+                <span className="font-bold text-neutral-500 uppercase mr-2">Total Rows:</span>
+                <span className="font-bold text-neutral-900 dark:text-neutral-100">{items.length}</span>
               </div>
             </div>
           )}
-        </div>
-      </form>
+        </form>
+      </div>
 
       {/* Quick Add Supplier Modal */}
       {showNewSupplierModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-md overflow-hidden">
-            <div className="px-6 py-4 border-b border-slate-200 bg-slate-50">
-              <h3 className="font-bold text-slate-800">Add New Supplier</h3>
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 font-mono text-base">
+          <div className="bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 w-full max-w-md overflow-hidden flex flex-col rounded-none shadow-none">
+            <div className="bg-neutral-100 dark:bg-neutral-900 px-4 py-2.5 border-b border-neutral-300 dark:border-neutral-800">
+              <h3 className="font-bold text-black dark:text-white uppercase text-sm">Add New Supplier</h3>
             </div>
-            <div className="p-6 space-y-4">
+            
+            <div className="p-4 space-y-4">
               {supplierStatus && (
-                <div className={`p-3 rounded text-sm font-bold ${
-                  supplierStatus.type === 'success' ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'
+                <div className={`p-2 border text-sm font-bold rounded-none ${
+                  supplierStatus.type === 'success' ? 'bg-green-50 text-green-700 border-green-200' : 'bg-red-50 text-red-700 border-red-200'
                 }`}>
                   {supplierStatus.msg}
                 </div>
               )}
+              
               <div className="space-y-1">
-                <label className="text-sm font-medium text-slate-700">Supplier Name *</label>
+                <label className="text-xs font-bold text-neutral-500 uppercase">Supplier Name *</label>
                 <input
                   type="text"
-                  className="w-full p-2 border border-slate-300 rounded focus:outline-none focus:ring-1 focus:ring-[#3498db]"
+                  className="w-full bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 rounded-none px-2 py-1.5 text-sm text-neutral-900 dark:text-neutral-100 focus:outline-none focus:ring-0"
                   placeholder="e.g. Apple Wholesale"
                   value={newSupplierData.name}
                   onChange={(e) => setNewSupplierData({ ...newSupplierData, name: e.target.value })}
                   autoFocus
                 />
               </div>
+              
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1">
-                  <label className="text-sm font-medium text-slate-700">Phone</label>
+                  <label className="text-xs font-bold text-neutral-500 uppercase">Phone</label>
                   <input
                     type="text"
-                    className="w-full p-2 border border-slate-300 rounded focus:outline-none focus:ring-1 focus:ring-[#3498db]"
+                    className="w-full bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 rounded-none px-2 py-1.5 text-sm text-neutral-900 dark:text-neutral-100 focus:outline-none focus:ring-0"
                     placeholder="Phone number"
                     value={newSupplierData.phone}
                     onChange={(e) => setNewSupplierData({ ...newSupplierData, phone: e.target.value })}
                   />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-sm font-medium text-slate-700">Email</label>
+                  <label className="text-xs font-bold text-neutral-500 uppercase">Email</label>
                   <input
                     type="email"
-                    className="w-full p-2 border border-slate-300 rounded focus:outline-none focus:ring-1 focus:ring-[#3498db]"
+                    className="w-full bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 rounded-none px-2 py-1.5 text-sm text-neutral-900 dark:text-neutral-100 focus:outline-none focus:ring-0"
                     placeholder="Email address"
                     value={newSupplierData.email}
                     onChange={(e) => setNewSupplierData({ ...newSupplierData, email: e.target.value })}
@@ -403,21 +443,24 @@ export default function AddInventory({
                 </div>
               </div>
             </div>
-            <div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex justify-end gap-3">
+
+            <div className="bg-neutral-50 dark:bg-neutral-950 px-4 py-3 border-t border-neutral-300 dark:border-neutral-800 flex justify-end gap-2 shrink-0">
               <button
+                type="button"
+                onClick={handleQuickAddSupplier}
+                className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-1 px-4 rounded-none text-xs cursor-pointer transition-colors border border-blue-600 uppercase"
+              >
+                Add Supplier
+              </button>
+              <button
+                type="button"
                 onClick={() => {
                   setShowNewSupplierModal(false);
                   setNewSupplierData({ name: '', phone: '', email: '' });
                 }}
-                className="px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded"
+                className="bg-white dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-800 text-neutral-800 dark:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-800 font-bold py-1 px-4 rounded-none text-xs cursor-pointer transition-colors uppercase"
               >
                 Cancel
-              </button>
-              <button
-                onClick={handleQuickAddSupplier}
-                className="px-4 py-2 text-sm font-medium bg-[#3498db] text-white rounded hover:bg-[#2980b9]"
-              >
-                Add Supplier
               </button>
             </div>
           </div>

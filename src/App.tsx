@@ -263,10 +263,22 @@ function AppInner() {
   const [searchParams] = useSearchParams();
   
   const [showAdminPortal, setShowAdminPortal] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchError, setSearchError] = useState('');
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [suggestions, setSuggestions] = useState<any[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(() => {
     const saved = localStorage.getItem('theme');
     return saved === 'dark' || (!saved && window.matchMedia('(prefers-color-scheme: dark)').matches);
   });
+
+  useEffect(() => {
+    if (searchError) {
+      const timer = setTimeout(() => setSearchError(''), 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [searchError]);
 
   useEffect(() => {
     if (isDarkMode) {
@@ -277,6 +289,34 @@ function AppInner() {
       localStorage.setItem('theme', 'light');
     }
   }, [isDarkMode]);
+
+  useEffect(() => {
+    const q = searchQuery.trim();
+    if (q.length < 1) {
+      setSuggestions([]);
+      return;
+    }
+
+    const timer = setTimeout(async () => {
+      try {
+        const headers: Record<string, string> = {
+          'Content-Type': 'application/json'
+        };
+        const token = localStorage.getItem('token');
+        if (token) {
+          headers['Authorization'] = `Bearer ${token}`;
+        }
+        const res = await fetch(`/api/invoices/suggestions?q=${encodeURIComponent(q)}`, { headers });
+        if (res.ok) {
+          setSuggestions(await res.json());
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    }, 200);
+
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
 
   if (loading) {
     return (
@@ -322,6 +362,40 @@ function AppInner() {
     return <Navigate to={`/${branchSlug}/home`} replace />;
   }
 
+  const handleSearch = async (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key !== 'Enter') return;
+    const query = searchQuery.trim();
+    if (!query) return;
+
+    setSearchLoading(true);
+    setSearchError('');
+    try {
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json'
+      };
+      const token = localStorage.getItem('token');
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+      const res = await fetch(`/api/invoices/by-number/${encodeURIComponent(query)}`, { headers });
+      if (!res.ok) {
+        throw new Error('Search failed');
+      }
+      const data = await res.json();
+      if (data && data.id) {
+        setSearchQuery('');
+        navigate(`/${branchSlug}/invoices/${data.id}`);
+      } else {
+        setSearchError(`Invoice "${query}" not found`);
+      }
+    } catch (err) {
+      console.error(err);
+      setSearchError('Error performing search');
+    } finally {
+      setSearchLoading(false);
+    }
+  };
+
   const handleSidebarNavigate = (view: string) => {
     navigate(`/${branchSlug}/${view}`);
   };
@@ -345,10 +419,10 @@ function AppInner() {
       {/* Header */}
       <header className="h-14 bg-[var(--bg-header)] flex items-center justify-between z-30 transition-colors duration-300">
         <div className="flex h-full items-center">
-          <div className="w-28 flex items-center justify-center h-full">
+          <div className="w-16 flex items-center justify-center h-full">
             <button 
               onClick={() => navigate(`/${branchSlug}/home`)}
-              className="transition-all hover:scale-115 p-2 bg-[rgb(2,133,181)] text-white rounded-md shadow-sm flex items-center justify-center"
+              className="transition-all hover:scale-115 p-2 text-[var(--brand-primary)] flex items-center justify-center"
               title="Home Menu"
             >
               <LayoutGrid size={24} />
@@ -357,7 +431,7 @@ function AppInner() {
           
           <button 
             onClick={() => navigate(`/${branchSlug}/home`)} 
-            className="pl-6 flex flex-col items-start font-sans cursor-pointer hover:opacity-85 transition-opacity"
+            className="pl-2 flex flex-col items-start font-sans cursor-pointer hover:opacity-85 transition-opacity"
             title="Home Menu"
           >
             <h1 className="text-[20px] font-bold text-[var(--brand-primary)] font-sans tracking-tight leading-none uppercase">
@@ -366,14 +440,62 @@ function AppInner() {
           </button>
         </div>
 
-        <div className="flex-1 max-w-xl px-12">
+        <div className="flex-1 max-w-xl px-12 z-[9999]">
           <div className="relative">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" size={16} />
+            <Search className={`absolute left-4 top-1/2 -translate-y-1/2 transition-colors ${searchLoading ? 'text-blue-500 animate-pulse' : 'text-[var(--text-muted)]'}`} size={16} />
             <input 
               type="text" 
-              placeholder="Search here" 
-              className="w-full bg-[var(--bg-card)] border border-[var(--border-base)] rounded-full py-1.5 pl-11 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all placeholder:text-[var(--text-muted)] text-[var(--text-main)]"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onKeyDown={handleSearch}
+              onFocus={() => setShowSuggestions(true)}
+              onBlur={() => setTimeout(() => setShowSuggestions(false), 250)}
+              placeholder="Search invoices by number (e.g. SA-001)..." 
+              disabled={searchLoading}
+              className="w-full bg-[var(--bg-card)] border border-[var(--border-base)] rounded-full py-1.5 pl-11 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all placeholder:text-[var(--text-muted)] text-[var(--text-main)] disabled:opacity-75"
             />
+            
+            {showSuggestions && suggestions.length > 0 && (
+              <div className="absolute top-full left-0 right-0 mt-2 bg-[var(--bg-card)] border border-[var(--border-base)] rounded-xl shadow-lg z-[9999] overflow-hidden py-1.5 max-h-60 overflow-y-auto">
+                <div className="px-3 py-1 text-[10px] uppercase tracking-wider text-[var(--text-muted)] font-semibold">Suggested Invoices</div>
+                {suggestions.map((inv) => (
+                  <button
+                    key={inv.id}
+                    type="button"
+                    onClick={() => {
+                      setSearchQuery('');
+                      setShowSuggestions(false);
+                      navigate(`/${branchSlug}/invoices/${inv.id}`);
+                    }}
+                    className="w-full text-left px-3 py-2 hover:bg-[var(--bg-app)] flex items-center justify-between text-xs transition-colors group cursor-pointer"
+                  >
+                    <div className="flex flex-col">
+                      <span className="font-semibold text-[var(--text-main)] group-hover:text-[var(--brand-primary)] transition-colors">
+                        {inv.invoice_number}
+                      </span>
+                      <span className="text-[10px] text-[var(--text-muted)] mt-0.5">
+                        {inv.customer_name || 'Walk-in Customer'}
+                      </span>
+                    </div>
+                    <div className="text-right flex flex-col items-end">
+                      <span className="font-bold text-[var(--text-main)]">
+                        €{(parseFloat(inv.grand_total) || 0).toFixed(2)}
+                      </span>
+                      <span className="text-[9px] text-[var(--text-muted)] mt-0.5">
+                        {new Date(inv.created_at).toLocaleDateString()}
+                      </span>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {searchError && (
+              <div className="absolute top-full left-4 right-4 mt-2 bg-red-500/10 border border-red-500/20 text-red-500 text-[11px] py-1.5 px-3 rounded-lg flex items-center gap-2 z-50 animate-in fade-in slide-in-from-top-1 duration-200">
+                <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-ping" />
+                <span>{searchError}</span>
+              </div>
+            )}
           </div>
         </div>
 
@@ -429,14 +551,18 @@ function AppInner() {
               <button
                 key={item.id}
                 onClick={() => handleSidebarNavigate(item.id)}
-                className={`w-full flex flex-col items-center justify-center py-5 px-1 transition-all duration-200 border-l-4 ${
+                className={`group w-full flex flex-col items-center justify-center py-5 px-1 transition-all duration-200 border-l-4 ${
                   currentView === item.id 
                     ? 'bg-white/10 border-[var(--brand-primary)] text-white' 
-                    : 'border-transparent text-[var(--text-muted-more)] hover:bg-white/5 hover:text-white'
+                    : 'border-transparent text-white/60 hover:bg-white/5 hover:text-white'
                 }`}
               >
-                <item.icon size={24} />
-                <span className="text-[11px] mt-2 text-center font-normal leading-tight uppercase tracking-wide">{item.label}</span>
+                <item.icon size={30} className="transition-transform duration-200 group-hover:scale-110" />
+                <span className={`text-[11px] uppercase tracking-wider mt-2.5 text-center select-none font-bold transition-colors ${
+                  currentView === item.id ? 'text-white' : 'text-white/60 group-hover:text-white'
+                }`}>
+                  {item.label}
+                </span>
               </button>
             ))}
           </nav>

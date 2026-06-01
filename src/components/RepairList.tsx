@@ -13,6 +13,7 @@ export default function RepairList({ preSelectedCustomerId }: RepairListProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedRepair, setSelectedRepair] = useState<any | null>(null);
+  const [printRepair, setPrintRepair] = useState<Repair | null>(null);
 
   const fetchRepairs = async () => {
     try {
@@ -30,6 +31,16 @@ export default function RepairList({ preSelectedCustomerId }: RepairListProps) {
       setIsModalOpen(true);
     }
   }, [preSelectedCustomerId]);
+
+  useEffect(() => {
+    if (printRepair) {
+      const timer = setTimeout(() => {
+        window.print();
+        setPrintRepair(null);
+      }, 150);
+      return () => clearTimeout(timer);
+    }
+  }, [printRepair]);
 
   const filtered = Array.isArray(repairs) ? repairs.filter(r =>
     String(r.id).includes(searchTerm) ||
@@ -95,8 +106,15 @@ export default function RepairList({ preSelectedCustomerId }: RepairListProps) {
           <tbody>
             {filtered.map(repair => (
               <tr key={repair.id} className="border-b border-[var(--border-base)] hover:bg-[var(--bg-hover)] transition-colors text-sm bg-[var(--bg-card)]">
-                <td className="px-4 py-2 border-r border-[var(--border-base)] font-mono text-[var(--text-muted)] text-xs font-bold">
-                  #{repair.id}
+                <td className="px-4 py-2 border-r border-[var(--border-base)] font-mono text-xs font-bold">
+                  <button
+                    type="button"
+                    title="Print short repair ticket"
+                    onClick={() => setPrintRepair(repair)}
+                    className="text-[var(--brand-primary)] hover:underline cursor-pointer flex items-center gap-1 font-bold"
+                  >
+                    #{repair.id}
+                  </button>
                 </td>
                 <td className="px-4 py-2 border-r border-[var(--border-base)] font-bold text-[var(--text-main)]">
                   {repair.customer_name || '—'}
@@ -165,6 +183,93 @@ export default function RepairList({ preSelectedCustomerId }: RepairListProps) {
             fetchRepairs();
           }}
         />
+      )}
+
+      {/* Hidden Print Container for Short Repair Ticket */}
+      {printRepair && (
+        <div id="repair-thermal-receipt" className="hidden print:block fixed inset-0 bg-white z-[9999] p-4 text-black font-mono w-[72mm] leading-tight">
+          <style>{`
+            @media print {
+              @page {
+                margin: 0;
+                size: 80mm auto;
+              }
+              body * {
+                visibility: hidden;
+              }
+              #repair-thermal-receipt, #repair-thermal-receipt * {
+                visibility: visible;
+              }
+              #repair-thermal-receipt {
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 72mm;
+                max-width: 72mm;
+                padding: 4mm;
+                box-sizing: border-box;
+                background: white !important;
+                color: black !important;
+              }
+            }
+          `}</style>
+          <div className="flex flex-col text-xs space-y-1">
+            <div className="text-center font-black uppercase text-sm border-b border-dashed border-black pb-1.5 mb-1.5">
+              Repair Job Ticket
+            </div>
+            <div className="flex justify-between">
+              <span className="font-bold">Job #:</span>
+              <span>#{printRepair.id}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="font-bold">Date:</span>
+              <span>{new Date(printRepair.created_at || '').toLocaleDateString()}</span>
+            </div>
+            <div className="border-b border-dashed border-black my-1" />
+            
+            <div className="flex justify-between gap-2">
+              <span className="font-bold shrink-0">Device:</span>
+              <span className="text-right font-medium truncate">{printRepair.device_model}</span>
+            </div>
+            <div className="flex justify-between gap-2">
+              <span className="font-bold shrink-0">Name:</span>
+              <span className="text-right font-medium truncate">{printRepair.customer_name || 'Walk-in Customer'}</span>
+            </div>
+            {printRepair.phone && (
+              <div className="flex justify-between gap-2">
+                <span className="font-bold shrink-0">Mobile:</span>
+                <span className="text-right font-medium">{printRepair.phone}</span>
+              </div>
+            )}
+            
+            <div className="border-b border-dashed border-black my-1" />
+            <div className="flex flex-col">
+              <span className="font-bold">Fault Description:</span>
+              <span className="pl-1 mt-0.5 whitespace-pre-wrap">{printRepair.issue}</span>
+            </div>
+            
+            <div className="border-b border-dashed border-black my-1" />
+            <div className="flex justify-between font-bold text-sm mt-1">
+              <span>Price:</span>
+              <span>€{Number(printRepair.total_quote || 0).toFixed(2)}</span>
+            </div>
+            {Number(printRepair.deposit_paid || 0) > 0 && (
+              <div className="flex justify-between text-xs">
+                <span>Deposit Paid:</span>
+                <span>€{Number(printRepair.deposit_paid).toFixed(2)}</span>
+              </div>
+            )}
+            {Number(printRepair.remaining_balance || 0) > 0 && (
+              <div className="flex justify-between text-xs font-bold">
+                <span>Remaining:</span>
+                <span>€{Number(printRepair.remaining_balance).toFixed(2)}</span>
+              </div>
+            )}
+            <div className="border-t border-dashed border-black pt-2 mt-4 text-center text-[10px] text-neutral-500">
+              Thank you for choosing Mobigo!
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

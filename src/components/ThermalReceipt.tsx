@@ -193,11 +193,6 @@ export default function ThermalReceipt({ invoice, settings, company }: Props) {
             FROM THE EXECUTED INVOICE DATE.
           </>
         )}
-        {settings.show_powered_by && (
-          <div className="text-center" style={{ fontSize: '10px', marginTop: '16px', opacity: 0.7, paddingTop: '10px' }}>
-            Powered by iCover EPOS
-          </div>
-        )}
       </div>
     </div>
   );

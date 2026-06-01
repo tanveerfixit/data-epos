@@ -120,35 +120,65 @@ const EndOfDayThermal: React.FC<PrintProps> = ({
         <span>€{totalSales.toFixed(2)}</span>
       </div>
 
-      <div className="eod-divider"></div>
+      {settings.eod_show_cash_summary && (
+        <>
+          <div className="eod-divider"></div>
+          <div className="eod-row font-bold">
+            <span>CASH SUMMARY</span>
+          </div>
+          <div className="eod-row">
+            <span>Calculated:</span>
+            <span>€{calculatedCash.toFixed(2)}</span>
+          </div>
+          <div className="eod-row">
+            <span>Counted:</span>
+            <span>€{cashCounted.toFixed(2)}</span>
+          </div>
+          <div className="eod-row font-bold">
+            <span>Difference:</span>
+            <span>€{difference.toFixed(2)}</span>
+          </div>
+        </>
+      )}
 
-      <div className="eod-row font-bold">
-        <span>CASH SUMMARY</span>
-      </div>
-      <div className="eod-row">
-        <span>Calculated:</span>
-        <span>€{calculatedCash.toFixed(2)}</span>
-      </div>
-      <div className="eod-row">
-        <span>Counted:</span>
-        <span>€{cashCounted.toFixed(2)}</span>
-      </div>
-      <div className="eod-row font-bold">
-        <span>Difference:</span>
-        <span>€{difference.toFixed(2)}</span>
-      </div>
+      {settings.eod_show_payment_type && (
+        <>
+          <div className="eod-divider"></div>
+          <div className="eod-row font-bold">
+            <span>PAYMENT TYPES</span>
+          </div>
+          {summaries.map((s, idx) => (
+            <div key={idx} className="eod-row">
+              <span>{s.payment_type}:</span>
+              <span>€{s.calculated.toFixed(2)}</span>
+            </div>
+          ))}
+        </>
+      )}
 
-      <div className="eod-divider"></div>
-
-      <div className="eod-row font-bold">
-        <span>PAYMENT TYPES</span>
-      </div>
-      {summaries.map((s, idx) => (
-        <div key={idx} className="eod-row">
-          <span>{s.payment_type}:</span>
-          <span>€{s.calculated.toFixed(2)}</span>
-        </div>
-      ))}
+      {(settings.eod_show_total_cash || settings.eod_show_total_card_sale || settings.eod_show_total) && (
+        <>
+          <div className="eod-divider"></div>
+          {settings.eod_show_total_cash && (
+            <div className="eod-row font-bold">
+              <span>Total Cash:</span>
+              <span>€{allPayments.filter(p => p.method.toLowerCase().includes('cash')).reduce((sum, p) => sum + p.amount, 0).toFixed(2)}</span>
+            </div>
+          )}
+          {settings.eod_show_total_card_sale && (
+            <div className="eod-row font-bold">
+              <span>Total Card Sale:</span>
+              <span>€{allPayments.filter(p => p.method.toLowerCase().includes('card')).reduce((sum, p) => sum + p.amount, 0).toFixed(2)}</span>
+            </div>
+          )}
+          {settings.eod_show_total && (
+            <div className="eod-row font-bold text-[13px]">
+              <span>Total:</span>
+              <span>€{totalSales.toFixed(2)}</span>
+            </div>
+          )}
+        </>
+      )}
 
       {comments && (
         <>
@@ -160,9 +190,12 @@ const EndOfDayThermal: React.FC<PrintProps> = ({
 
       <div className="eod-divider"></div>
 
-      <div className="text-center text-[10px] italic">
-        Powered by iCover EPOS
+      <div className="text-center text-[10px] italic mb-1 font-bold">
+        {settings.eod_footer_type === 'custom' 
+          ? settings.eod_footer_custom_text 
+          : company.name}
       </div>
+
     </div>
   );
 };
@@ -178,10 +211,10 @@ const EndOfDayA4: React.FC<PrintProps> = ({
   allPayments,
   comments
 }) => {
-  const { company } = useThermalSettings();
+  const { settings, company } = useThermalSettings();
   const now = new Date();
 
-  if (!company) return null;
+  if (!settings || !company) return null;
 
   return (
     <div 
@@ -331,43 +364,49 @@ const EndOfDayA4: React.FC<PrintProps> = ({
         </div>
       </div>
 
-      <div className="summary-grid">
-        <div className="summary-box">
-          <h3>Reconciliation</h3>
-          <div className="stat-row">
-            <span>Starting Balance</span>
-            <span className="font-semibold text-gray-500">€{startingBalance.toFixed(2)}</span>
-          </div>
-          <div className="stat-row">
-            <span>Calculated Sales</span>
-            <span className="font-semibold text-blue-600">€{totalSales.toFixed(2)}</span>
-          </div>
-          <div className="stat-row">
-            <span>Calculated Cash in Drawer</span>
-            <span className="font-semibold text-blue-600">€{calculatedCash.toFixed(2)}</span>
-          </div>
-          <div className="stat-row">
-            <span>Actual Cash Counted</span>
-            <span className="font-semibold text-amber-600">€{cashCounted.toFixed(2)}</span>
-          </div>
-          <div className={`stat-row total ${difference >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-            <span>Difference</span>
-            <span>€{difference.toFixed(2)}</span>
-          </div>
-        </div>
-
-        <div className="summary-box">
-          <h3>Payments by Type</h3>
-          <div className="space-y-1">
-            {summaries.map((s, idx) => (
-              <div key={idx} className="stat-row">
-                <span className="font-medium text-gray-700">{s.payment_type}</span>
-                <span className="font-bold">€{s.calculated.toFixed(2)}</span>
+      {(settings.eod_show_cash_summary || settings.eod_show_payment_type) && (
+        <div className="summary-grid">
+          {settings.eod_show_cash_summary && (
+            <div className="summary-box">
+              <h3>Reconciliation</h3>
+              <div className="stat-row">
+                <span>Starting Balance</span>
+                <span className="font-semibold text-gray-500">€{startingBalance.toFixed(2)}</span>
               </div>
-            ))}
-          </div>
+              <div className="stat-row">
+                <span>Calculated Sales</span>
+                <span className="font-semibold text-blue-600">€{totalSales.toFixed(2)}</span>
+              </div>
+              <div className="stat-row">
+                <span>Calculated Cash in Drawer</span>
+                <span className="font-semibold text-blue-600">€{calculatedCash.toFixed(2)}</span>
+              </div>
+              <div className="stat-row">
+                <span>Actual Cash Counted</span>
+                <span className="font-semibold text-amber-600">€{cashCounted.toFixed(2)}</span>
+              </div>
+              <div className={`stat-row total ${difference >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                <span>Difference</span>
+                <span>€{difference.toFixed(2)}</span>
+              </div>
+            </div>
+          )}
+
+          {settings.eod_show_payment_type && (
+            <div className="summary-box">
+              <h3>Payments by Type</h3>
+              <div className="space-y-1">
+                {summaries.map((s, idx) => (
+                  <div key={idx} className="stat-row">
+                    <span className="font-medium text-gray-700">{s.payment_type}</span>
+                    <span className="font-bold">€{s.calculated.toFixed(2)}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
-      </div>
+      )}
 
       <div>
         <h3 className="text-[12px] font-extrabold mb-4 uppercase tracking-[0.2em] text-gray-400">Transaction Breakdown</h3>
@@ -403,10 +442,24 @@ const EndOfDayA4: React.FC<PrintProps> = ({
             )}
           </tbody>
           <tfoot>
-            <tr className="bg-gray-900 text-white font-bold">
-              <td colSpan={5} className="text-right py-3 uppercase text-[10px] tracking-widest">Total Sales for Period</td>
-              <td className="text-right py-3 text-lg">€{totalSales.toFixed(2)}</td>
-            </tr>
+            {settings.eod_show_total_cash && (
+              <tr className="bg-gray-100 text-gray-900 font-bold border-t border-gray-300">
+                <td colSpan={5} className="text-right py-2 uppercase text-[10px] tracking-widest">Total Cash</td>
+                <td className="text-right py-2 text-md">€{allPayments.filter(p => p.method.toLowerCase().includes('cash')).reduce((sum, p) => sum + p.amount, 0).toFixed(2)}</td>
+              </tr>
+            )}
+            {settings.eod_show_total_card_sale && (
+              <tr className="bg-gray-100 text-gray-900 font-bold border-t border-gray-300">
+                <td colSpan={5} className="text-right py-2 uppercase text-[10px] tracking-widest">Total Card Sale</td>
+                <td className="text-right py-2 text-md">€{allPayments.filter(p => p.method.toLowerCase().includes('card')).reduce((sum, p) => sum + p.amount, 0).toFixed(2)}</td>
+              </tr>
+            )}
+            {settings.eod_show_total && (
+              <tr className="bg-gray-900 text-white font-bold">
+                <td colSpan={5} className="text-right py-3 uppercase text-[10px] tracking-widest">Total Sales for Period</td>
+                <td className="text-right py-3 text-lg">€{totalSales.toFixed(2)}</td>
+              </tr>
+            )}
           </tfoot>
         </table>
       </div>
@@ -427,7 +480,9 @@ const EndOfDayA4: React.FC<PrintProps> = ({
           <div className="text-[9px] text-gray-400 italic">Signature / Timestamp</div>
         </div>
         <div className="text-right">
-          <div className="text-[10px] font-bold text-gray-900 mb-1 tracking-tighter uppercase italic">iCover EPOS System</div>
+          <div className="text-[10px] font-bold text-gray-900 mb-1 tracking-tighter uppercase italic">
+            {settings.eod_footer_type === 'custom' ? settings.eod_footer_custom_text : (company.name || 'iCover EPOS System')}
+          </div>
           <div className="text-[9px] text-gray-400 tracking-widest uppercase">Certified Report • {now.toLocaleDateString()}</div>
         </div>
       </div>
@@ -953,15 +1008,15 @@ export default function EndOfDay() {
                     </tr>
                   ))}
                   {/* Total Row */}
-                  <tr className="bg-neutral-200 dark:bg-neutral-900 text-neutral-800 dark:text-neutral-200 border-t border-neutral-300 dark:border-neutral-800 font-normal">
-                    <td className="py-2 px-3 text-right uppercase tracking-wider">TOTAL SYSTEM REVENUE :</td>
-                    <td className="py-2 px-3 text-right text-sm">
+                  <tr className="bg-neutral-200 dark:bg-neutral-900 text-neutral-800 dark:text-neutral-200 border-t border-neutral-300 dark:border-neutral-800 font-bold text-[18px]">
+                    <td className="py-2 px-3 text-right uppercase tracking-wider font-bold text-[18px]">TOTAL SYSTEM REVENUE :</td>
+                    <td className="py-2 px-3 text-right font-bold text-[18px]">
                       €{totalSales.toFixed(2)}
                     </td>
-                    <td className="py-2 px-3 text-right text-sm">
+                    <td className="py-2 px-3 text-right font-bold text-[18px]">
                       €{( (cashCounted - startingBalance) + summaries.filter(s => s.payment_type !== 'Cash').reduce((sum, s) => sum + s.counted, 0) ).toFixed(2)}
                     </td>
-                    <td className="py-2 px-3 w-48 bg-neutral-300/20 dark:bg-neutral-950 text-right text-sm border-l border-neutral-300 dark:border-neutral-800 text-neutral-850 dark:text-neutral-200">
+                    <td className="py-2 px-3 w-48 bg-neutral-300/20 dark:bg-neutral-950 text-right font-bold text-[18px] border-l border-neutral-300 dark:border-neutral-800 text-neutral-850 dark:text-neutral-200">
                       {(( (cashCounted - startingBalance) + summaries.filter(s => s.payment_type !== 'Cash').reduce((sum, s) => sum + s.counted, 0) ) - totalSales) >= 0 ? '+' : ''}
                       €{(( (cashCounted - startingBalance) + summaries.filter(s => s.payment_type !== 'Cash').reduce((sum, s) => sum + s.counted, 0) ) - totalSales).toFixed(2)}
                     </td>
@@ -1051,11 +1106,11 @@ export default function EndOfDay() {
                         </tr>
                       ))}
                       {/* Total Footer for Payment Information */}
-                      <tr className="bg-neutral-200 dark:bg-neutral-900 border-t border-neutral-300 dark:border-neutral-800 font-normal text-neutral-850 dark:text-neutral-200">
-                        <td colSpan={5} className="py-1.5 px-3 text-right text-xs uppercase tracking-widest border-r border-neutral-300 dark:border-neutral-800">
+                      <tr className="bg-neutral-200 dark:bg-neutral-900 border-t border-neutral-300 dark:border-neutral-800 font-bold text-neutral-855 dark:text-neutral-200 text-[18px]">
+                        <td colSpan={5} className="py-2 px-3 text-right text-[16px] uppercase tracking-widest border-r border-neutral-300 dark:border-neutral-800 font-bold">
                           TOTAL REGISTERED PAYMENTS :
                         </td>
-                        <td className="py-1.5 px-3 text-right text-blue-600 dark:text-blue-400 font-normal">
+                        <td className="py-2 px-3 text-right text-blue-600 dark:text-blue-400 font-bold text-[18px]">
                           €{allPayments.reduce((sum, p) => sum + p.amount, 0).toFixed(2)}
                         </td>
                       </tr>

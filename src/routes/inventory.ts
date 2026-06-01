@@ -454,7 +454,7 @@ router.get('/repairs', async (req: any, res, next) => {
 });
 
 const createRepairSchema = z.object({
-  customer_id: z.number().optional(),
+  customer_id: z.number().nullable().optional(),
   customer_name: z.string().optional(),
   first_name: z.string().optional(),
   last_name: z.string().optional(),
@@ -470,24 +470,24 @@ const createRepairSchema = z.object({
 
 // POST /api/repairs
 router.post('/repairs', async (req: any, res, next) => {
-  const data = createRepairSchema.parse(req.body);
-  const { 
-    customer_id, 
-    customer_name, 
-    phone, 
-    device_model, 
-    issue, 
-    status,
-    total_quote,
-    deposit_paid,
-    remaining_balance,
-    payment_method,
-    first_name,
-    last_name
-  } = data;
-  
   const conn = await pool.getConnection();
   try {
+    const data = createRepairSchema.parse(req.body);
+    const { 
+      customer_id, 
+      customer_name, 
+      phone, 
+      device_model, 
+      issue, 
+      status,
+      total_quote,
+      deposit_paid,
+      remaining_balance,
+      payment_method,
+      first_name,
+      last_name
+    } = data;
+    
     await conn.beginTransaction();
     
     let finalCustomerId = customer_id;

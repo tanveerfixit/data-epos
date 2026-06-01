@@ -21,7 +21,7 @@ const HomeMenu: React.FC<HomeMenuProps> = ({ onNavigate }) => {
   const menuTiles = [
     { id: 'stock-take', label: 'Stock Take', icon: FolderOpen },
     { id: 'expenses', label: 'Expenses', icon: Banknote },
-    { id: 'inventory-transfer', label: 'Inventory Transfer', icon: Truck },
+    { id: 'transfers', label: 'Inventory Transfer', icon: Truck },
     { id: 'dashboard', label: 'Dashboard', icon: LineChart },
     { id: 'end-of-day', label: 'End of Day', icon: Banknote },
     { id: 'appointment-calendar', label: 'Appointment Calendar', icon: CalendarPlus },

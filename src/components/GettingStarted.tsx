@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Settings, Building2, Percent, CreditCard, Users, Package, Printer, Save, Plus, X, ArrowUp, Upload, RotateCcw } from 'lucide-react';
+import { Settings, Building2, Percent, CreditCard, Users, Package, Printer, Save, Plus, X, ArrowUp, Upload, RotateCcw, FileText } from 'lucide-react';
 import { useRef } from 'react';
 
 interface SettingsData {
@@ -54,6 +54,13 @@ interface ThermalPrinterSettingsData {
   show_totals: boolean;
   show_footer: boolean;
   show_powered_by: boolean;
+  eod_show_cash_summary: boolean;
+  eod_show_payment_type: boolean;
+  eod_show_total_cash: boolean;
+  eod_show_total_card_sale: boolean;
+  eod_show_total: boolean;
+  eod_footer_type: string;
+  eod_footer_custom_text: string;
   footer_text: string;
 }
 
@@ -108,6 +115,13 @@ const GettingStarted: React.FC<GettingStartedProps> = ({ initialTab }) => {
     show_totals: true,
     show_footer: true,
     show_powered_by: true,
+    eod_show_cash_summary: true,
+    eod_show_payment_type: true,
+    eod_show_total_cash: true,
+    eod_show_total_card_sale: true,
+    eod_show_total: true,
+    eod_footer_type: 'branch',
+    eod_footer_custom_text: '',
     footer_text: 'Thank you for your business!'
   });
   const [csvText, setCsvText] = useState('');
@@ -265,7 +279,7 @@ const GettingStarted: React.FC<GettingStartedProps> = ({ initialTab }) => {
           if (data) setPrinterSettings(data);
         })
         .catch(err => console.error('Error fetching printer settings:', err));
-    } else if (activeTab === 'manage-thermal-printer') {
+    } else if (activeTab === 'manage-thermal-printer' || activeTab === 'manage-eod-report') {
       fetch('/api/thermal-printer-settings')
         .then(res => {
           if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
@@ -287,10 +301,17 @@ const GettingStarted: React.FC<GettingStartedProps> = ({ initialTab }) => {
               show_totals: !!data.show_totals,
               show_footer: !!data.show_footer,
               show_powered_by: !!data.show_powered_by,
+              eod_show_cash_summary: data.eod_show_cash_summary !== undefined ? !!data.eod_show_cash_summary : true,
+              eod_show_payment_type: data.eod_show_payment_type !== undefined ? !!data.eod_show_payment_type : true,
+              eod_show_total_cash: data.eod_show_total_cash !== undefined ? !!data.eod_show_total_cash : true,
+              eod_show_total_card_sale: data.eod_show_total_card_sale !== undefined ? !!data.eod_show_total_card_sale : true,
+              eod_show_total: data.eod_show_total !== undefined ? !!data.eod_show_total : true,
+              eod_footer_type: data.eod_footer_type || 'branch',
+              eod_footer_custom_text: data.eod_footer_custom_text || '',
             });
           }
         })
-        .catch(err => console.error('Error fetching thermal printer settings:', err));
+        .catch(err => console.error('Error fetching thermal printer/EOD settings:', err));
     }
   }, [activeTab]);
 
@@ -412,7 +433,7 @@ const GettingStarted: React.FC<GettingStartedProps> = ({ initialTab }) => {
   };
 
   const handleResetThermalSettings = () => {
-    if (window.confirm('Are you sure you want to reset thermal printer settings to default?')) {
+    if (window.confirm('Are you sure you want to reset settings to default?')) {
       setThermalSettings({
         font_family: 'Arial',
         font_size: '12px',
@@ -428,6 +449,13 @@ const GettingStarted: React.FC<GettingStartedProps> = ({ initialTab }) => {
         show_totals: true,
         show_footer: true,
         show_powered_by: true,
+        eod_show_cash_summary: true,
+        eod_show_payment_type: true,
+        eod_show_total_cash: true,
+        eod_show_total_card_sale: true,
+        eod_show_total: true,
+        eod_footer_type: 'branch',
+        eod_footer_custom_text: '',
         footer_text: 'Thank you for your business!'
       });
     }
@@ -525,11 +553,7 @@ const GettingStarted: React.FC<GettingStartedProps> = ({ initialTab }) => {
               </div>
             ` : ''}
 
-            ${thermalSettings.show_powered_by ? `
-              <div class="text-center mt-4 text-[0.7em] text-slate-400">
-                Powered by iCover EPOS
-              </div>
-            ` : ''}
+
           </div>
           <script>
             window.onload = () => {
@@ -683,6 +707,7 @@ const GettingStarted: React.FC<GettingStartedProps> = ({ initialTab }) => {
 
   const tabs = [
     { id: 'manage-thermal-printer', label: 'Manage Thermal Printer', icon: Printer },
+    { id: 'manage-eod-report', label: 'End of Day Report', icon: FileText },
     { id: 'account-setup', label: 'Account Setup', icon: Settings },
     { id: 'company-info', label: 'Company Information', icon: Building2 },
     { id: 'manage-label-printer', label: 'Manage Label Printer', icon: Printer },
@@ -1027,6 +1052,222 @@ const GettingStarted: React.FC<GettingStartedProps> = ({ initialTab }) => {
                 )}
               </div>
             </div>
+          ) : activeTab === 'manage-eod-report' ? (
+            <div className="max-w-4xl">
+              <h3 className="text-2xl font-bold text-slate-800 mb-2">End of Day Report Customization</h3>
+              <p className="text-sm text-slate-500 mb-8">
+                Customize your End of Day (EOD) Report layout. Toggle major sections like the Cash Summary and Payment Types breakdowns, or customize the bottom totals to include specific metrics.
+              </p>
+
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <div className="space-y-6">
+                  <div className="bg-white border border-slate-200 rounded p-6 space-y-6">
+                    <div className="space-y-4">
+                      <h4 className="text-sm font-bold text-slate-800 border-b border-slate-100 pb-2">Visible Report Sections</h4>
+                      <div className="space-y-3">
+                        <label className="flex items-center gap-3 cursor-pointer group">
+                          <input 
+                            type="checkbox"
+                            checked={thermalSettings.eod_show_cash_summary}
+                            onChange={(e) => setThermalSettings({ ...thermalSettings, eod_show_cash_summary: e.target.checked })}
+                            className="w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"
+                          />
+                          <span className="text-sm text-slate-700 group-hover:text-blue-600 transition-colors">Show Cash Summary</span>
+                        </label>
+                        <p className="text-xs text-slate-400 pl-7 -mt-2">Shows the calculated vs counted cash reconciliation in drawer.</p>
+
+                        <label className="flex items-center gap-3 cursor-pointer group">
+                          <input 
+                            type="checkbox"
+                            checked={thermalSettings.eod_show_payment_type}
+                            onChange={(e) => setThermalSettings({ ...thermalSettings, eod_show_payment_type: e.target.checked })}
+                            className="w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"
+                          />
+                          <span className="text-sm text-slate-700 group-hover:text-blue-600 transition-colors">Show Payment Types</span>
+                        </label>
+                        <p className="text-xs text-slate-400 pl-7 -mt-2">Shows a breakdown of calculated sales per payment method.</p>
+                      </div>
+                    </div>
+
+                    <div className="space-y-4 pt-2">
+                      <h4 className="text-sm font-bold text-slate-800 border-b border-slate-100 pb-2">Customized Bottom Totals</h4>
+                      <div className="space-y-3">
+                        <label className="flex items-center gap-3 cursor-pointer group">
+                          <input 
+                            type="checkbox"
+                            checked={thermalSettings.eod_show_total_cash}
+                            onChange={(e) => setThermalSettings({ ...thermalSettings, eod_show_total_cash: e.target.checked })}
+                            className="w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"
+                          />
+                          <span className="text-sm text-slate-700 group-hover:text-blue-600 transition-colors">Total Cash Row</span>
+                        </label>
+
+                        <label className="flex items-center gap-3 cursor-pointer group">
+                          <input 
+                            type="checkbox"
+                            checked={thermalSettings.eod_show_total_card_sale}
+                            onChange={(e) => setThermalSettings({ ...thermalSettings, eod_show_total_card_sale: e.target.checked })}
+                            className="w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"
+                          />
+                          <span className="text-sm text-slate-700 group-hover:text-blue-600 transition-colors">Total Card Sale Row</span>
+                        </label>
+
+                        <label className="flex items-center gap-3 cursor-pointer group">
+                          <input 
+                            type="checkbox"
+                            checked={thermalSettings.eod_show_total}
+                            onChange={(e) => setThermalSettings({ ...thermalSettings, eod_show_total: e.target.checked })}
+                            className="w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"
+                          />
+                          <span className="text-sm text-slate-700 group-hover:text-blue-600 transition-colors">Grand Total Row</span>
+                        </label>
+                      </div>
+                    </div>
+
+                    <div className="space-y-4 pt-2">
+                      <h4 className="text-sm font-bold text-slate-800 border-b border-slate-100 pb-2">Footer Customization</h4>
+                      <div className="space-y-3">
+                        <div className="space-y-1">
+                          <label className="text-xs font-bold text-slate-500 uppercase">Footer Content</label>
+                          <select 
+                            value={thermalSettings.eod_footer_type}
+                            onChange={(e) => setThermalSettings({ ...thermalSettings, eod_footer_type: e.target.value })}
+                            className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                          >
+                            <option value="branch">Branch Name (Default)</option>
+                            <option value="custom">Custom Text</option>
+                          </select>
+                        </div>
+
+                        {thermalSettings.eod_footer_type === 'custom' && (
+                          <div className="space-y-1">
+                            <label className="text-xs font-bold text-slate-500 uppercase">Custom Footer Text</label>
+                            <textarea 
+                              value={thermalSettings.eod_footer_custom_text}
+                              onChange={(e) => setThermalSettings({ ...thermalSettings, eod_footer_custom_text: e.target.value })}
+                              className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 h-20 resize-none font-mono text-xs"
+                              placeholder="Enter customized footer text here..."
+                            />
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="flex justify-between items-center pt-6 border-t border-slate-100 mt-4">
+                      <button
+                        onClick={handleResetThermalSettings}
+                        className="text-slate-400 hover:text-red-500 font-bold py-2 px-3 rounded-md text-xs transition-all flex items-center gap-1.5 border border-transparent hover:border-red-100 hover:bg-red-50/50"
+                      >
+                        <RotateCcw size={14} />
+                        Reset Defaults
+                      </button>
+                      <button
+                        onClick={handleSaveThermalPrinterSettings}
+                        disabled={isSaving}
+                        className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded text-sm shadow-sm transition-all flex items-center gap-2 disabled:opacity-50"
+                      >
+                        <Save size={16} />
+                        {isSaving ? 'Saving...' : 'Save Settings'}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <h4 className="text-sm font-bold text-slate-800">Report Live Preview</h4>
+                  <div className="bg-slate-100 rounded-lg p-6 flex justify-center border border-slate-200 min-h-[450px]">
+                    <div 
+                      className="bg-white shadow-xl p-4 w-[280px] h-fit font-mono text-[11px] leading-tight text-neutral-900 border border-neutral-200"
+                    >
+                      <div className="text-center mb-3">
+                        <div className="font-bold text-xs uppercase tracking-wider">End of Day Report</div>
+                        <div className="text-[10px] text-slate-500">{company.name || 'Your Business Name'}</div>
+                        <div className="text-[9px] text-slate-400">Date: {new Date().toLocaleDateString()}</div>
+                      </div>
+
+                      <div className="border-t border-dashed border-slate-400 my-2"></div>
+
+                      <div className="flex justify-between mb-1">
+                        <span>Starting Bal:</span>
+                        <span>€150.00</span>
+                      </div>
+                      <div className="flex justify-between mb-1">
+                        <span>Total Sales:</span>
+                        <span>€385.00</span>
+                      </div>
+
+                      {thermalSettings.eod_show_cash_summary && (
+                        <>
+                          <div className="border-t border-dashed border-slate-400 my-2"></div>
+                          <div className="font-bold mb-1">CASH SUMMARY</div>
+                          <div className="flex justify-between text-slate-600">
+                            <span>Calculated:</span>
+                            <span>€250.00</span>
+                          </div>
+                          <div className="flex justify-between text-slate-600">
+                            <span>Counted:</span>
+                            <span>€250.00</span>
+                          </div>
+                          <div className="flex justify-between font-bold">
+                            <span>Difference:</span>
+                            <span>€0.00</span>
+                          </div>
+                        </>
+                      )}
+
+                      {thermalSettings.eod_show_payment_type && (
+                        <>
+                          <div className="border-t border-dashed border-slate-400 my-2"></div>
+                          <div className="font-bold mb-1">PAYMENT TYPES</div>
+                          <div className="flex justify-between text-slate-600">
+                            <span>Cash:</span>
+                            <span>€100.00</span>
+                          </div>
+                          <div className="flex justify-between text-slate-600">
+                            <span>Card:</span>
+                            <span>€285.00</span>
+                          </div>
+                        </>
+                      )}
+
+                      {(thermalSettings.eod_show_total_cash || thermalSettings.eod_show_total_card_sale || thermalSettings.eod_show_total) && (
+                        <>
+                          <div className="border-t border-dashed border-slate-400 my-2"></div>
+                          <div className="space-y-0.5">
+                            {thermalSettings.eod_show_total_cash && (
+                              <div className="flex justify-between font-bold">
+                                <span>Total Cash:</span>
+                                <span>€100.00</span>
+                              </div>
+                            )}
+                            {thermalSettings.eod_show_total_card_sale && (
+                              <div className="flex justify-between font-bold">
+                                <span>Total Card Sale:</span>
+                                <span>€285.00</span>
+                              </div>
+                            )}
+                            {thermalSettings.eod_show_total && (
+                              <div className="flex justify-between font-extrabold text-blue-600">
+                                <span>Total:</span>
+                                <span>€385.00</span>
+                              </div>
+                            )}
+                          </div>
+                        </>
+                      )}
+
+                      <div className="border-t border-dashed border-slate-400 my-2"></div>
+                      <div className="text-center text-[10px] italic mb-1 font-bold">
+                        {thermalSettings.eod_footer_type === 'custom' 
+                          ? (thermalSettings.eod_footer_custom_text || 'Custom Footer Text') 
+                          : (company.name || 'Branch Name')}
+                      </div>
+
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
           ) : activeTab === 'manage-thermal-printer' ? (
             <div className="max-w-4xl">
               <h3 className="text-2xl font-bold text-slate-800 mb-2">Manage Thermal Printer</h3>
@@ -1209,11 +1450,7 @@ const GettingStarted: React.FC<GettingStartedProps> = ({ initialTab }) => {
                         </div>
                       )}
                       
-                      {thermalSettings.show_powered_by && (
-                        <div className="text-center mt-4 text-[0.7em] text-slate-400">
-                          Powered by iCover EPOS
-                        </div>
-                      )}
+
                     </div>
                   </div>
                 </div>

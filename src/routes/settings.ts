@@ -194,6 +194,13 @@ const thermalPrinterSettingsSchema = z.object({
   show_totals: z.boolean().optional(),
   show_footer: z.boolean().optional(),
   show_powered_by: z.boolean().optional(),
+  eod_show_cash_summary: z.boolean().optional(),
+  eod_show_payment_type: z.boolean().optional(),
+  eod_show_total_cash: z.boolean().optional(),
+  eod_show_total_card_sale: z.boolean().optional(),
+  eod_show_total: z.boolean().optional(),
+  eod_footer_type: z.string().optional(),
+  eod_footer_custom_text: z.string().optional(),
   footer_text: z.string().optional()
 });
 
@@ -206,8 +213,11 @@ router.post('/thermal-printer-settings', async (req: any, res, next) => {
       INSERT INTO thermal_printer_settings
         (business_id,branch_id,font_family,font_size,show_logo,show_business_name,show_business_address,
          show_business_phone,show_business_email,show_customer_info,show_invoice_number,show_date,
-         show_items_table,show_totals,show_footer,show_powered_by,footer_text)
-      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+         show_items_table,show_totals,show_footer,show_powered_by,
+         eod_show_cash_summary,eod_show_payment_type,eod_show_total_cash,eod_show_total_card_sale,eod_show_total,
+         eod_footer_type,eod_footer_custom_text,
+         footer_text)
+      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
       ON DUPLICATE KEY UPDATE
         branch_id=VALUES(branch_id),font_family=VALUES(font_family),font_size=VALUES(font_size),
         show_logo=VALUES(show_logo),show_business_name=VALUES(show_business_name),
@@ -215,12 +225,21 @@ router.post('/thermal-printer-settings', async (req: any, res, next) => {
         show_business_email=VALUES(show_business_email),show_customer_info=VALUES(show_customer_info),
         show_invoice_number=VALUES(show_invoice_number),show_date=VALUES(show_date),
         show_items_table=VALUES(show_items_table),show_totals=VALUES(show_totals),
-        show_footer=VALUES(show_footer),show_powered_by=VALUES(show_powered_by),footer_text=VALUES(footer_text)`,
+        show_footer=VALUES(show_footer),show_powered_by=VALUES(show_powered_by),
+        eod_show_cash_summary=VALUES(eod_show_cash_summary),eod_show_payment_type=VALUES(eod_show_payment_type),
+        eod_show_total_cash=VALUES(eod_show_total_cash),eod_show_total_card_sale=VALUES(eod_show_total_card_sale),
+        eod_show_total=VALUES(eod_show_total),
+        eod_footer_type=VALUES(eod_footer_type),eod_footer_custom_text=VALUES(eod_footer_custom_text),
+        footer_text=VALUES(footer_text)`,
       [req.user.business_id, branchId, m.font_family||'Arial', m.font_size||'12px', m.show_logo?1:0,
        m.show_business_name?1:0, m.show_business_address?1:0, m.show_business_phone?1:0,
        m.show_business_email?1:0, m.show_customer_info?1:0, m.show_invoice_number?1:0,
        m.show_date?1:0, m.show_items_table?1:0, m.show_totals?1:0, m.show_footer?1:0,
-       m.show_powered_by?1:0, m.footer_text||'Thank you for your business!']
+       m.show_powered_by?1:0,
+       m.eod_show_cash_summary?1:0, m.eod_show_payment_type?1:0, m.eod_show_total_cash?1:0,
+       m.eod_show_total_card_sale?1:0, m.eod_show_total?1:0,
+       m.eod_footer_type||'branch', m.eod_footer_custom_text||'',
+       m.footer_text||'Thank you for your business!']
     );
     res.json({ success: true });
   } catch (e: any) { next(e); }

@@ -504,6 +504,13 @@ export async function initSchema() {
         show_totals TINYINT(1) DEFAULT 1,
         show_footer TINYINT(1) DEFAULT 1,
         show_powered_by TINYINT(1) DEFAULT 1,
+        eod_show_cash_summary TINYINT(1) DEFAULT 1,
+        eod_show_payment_type TINYINT(1) DEFAULT 1,
+        eod_show_total_cash TINYINT(1) DEFAULT 1,
+        eod_show_total_card_sale TINYINT(1) DEFAULT 1,
+        eod_show_total TINYINT(1) DEFAULT 1,
+        eod_footer_type VARCHAR(50) DEFAULT 'branch',
+        eod_footer_custom_text TEXT,
         footer_text TEXT,
         FOREIGN KEY (business_id) REFERENCES businesses(id) ON DELETE CASCADE,
         FOREIGN KEY (branch_id) REFERENCES branches(id) ON DELETE CASCADE,
@@ -515,6 +522,44 @@ export async function initSchema() {
     try {
       await conn.query('ALTER TABLE thermal_printer_settings ADD COLUMN show_powered_by TINYINT(1) DEFAULT 1 AFTER show_footer');
       console.log('[MySQL] Migration: added show_powered_by to thermal_printer_settings');
+    } catch (e: any) {
+      if (!e.message?.includes('Duplicate column')) throw e;
+    }
+
+    // Migration: add EOD customization columns to thermal_printer_settings if missing
+    try {
+      await conn.query('ALTER TABLE thermal_printer_settings ADD COLUMN eod_show_cash_summary TINYINT(1) DEFAULT 1 AFTER show_powered_by');
+    } catch (e: any) {
+      if (!e.message?.includes('Duplicate column')) throw e;
+    }
+    try {
+      await conn.query('ALTER TABLE thermal_printer_settings ADD COLUMN eod_show_payment_type TINYINT(1) DEFAULT 1 AFTER eod_show_cash_summary');
+    } catch (e: any) {
+      if (!e.message?.includes('Duplicate column')) throw e;
+    }
+    try {
+      await conn.query('ALTER TABLE thermal_printer_settings ADD COLUMN eod_show_total_cash TINYINT(1) DEFAULT 1 AFTER eod_show_payment_type');
+    } catch (e: any) {
+      if (!e.message?.includes('Duplicate column')) throw e;
+    }
+    try {
+      await conn.query('ALTER TABLE thermal_printer_settings ADD COLUMN eod_show_total_card_sale TINYINT(1) DEFAULT 1 AFTER eod_show_total_cash');
+    } catch (e: any) {
+      if (!e.message?.includes('Duplicate column')) throw e;
+    }
+    try {
+      await conn.query('ALTER TABLE thermal_printer_settings ADD COLUMN eod_show_total TINYINT(1) DEFAULT 1 AFTER eod_show_total_card_sale');
+    } catch (e: any) {
+      if (!e.message?.includes('Duplicate column')) throw e;
+    }
+    try {
+      await conn.query('ALTER TABLE thermal_printer_settings ADD COLUMN eod_footer_type VARCHAR(50) DEFAULT \'branch\' AFTER eod_show_total');
+    } catch (e: any) {
+      if (!e.message?.includes('Duplicate column')) throw e;
+    }
+    try {
+      await conn.query('ALTER TABLE thermal_printer_settings ADD COLUMN eod_footer_custom_text TEXT AFTER eod_footer_type');
+      console.log('[MySQL] Migration: added EOD customization columns to thermal_printer_settings');
     } catch (e: any) {
       if (!e.message?.includes('Duplicate column')) throw e;
     }

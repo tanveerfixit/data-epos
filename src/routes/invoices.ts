@@ -4,6 +4,117 @@ import { z } from 'zod';
 
 const router = Router();
 
+router.get('/suggestions', async (req: any, res, next) => {
+  try {
+    const { q } = req.query;
+    if (!q || q.trim().length < 1) return res.json([]);
+    const isDeveloper = req.user.role === 'developer';
+    const branchId = req.user.branch_id;
+    const searchTerm = q.trim();
+    
+    // Parse prefix (letters) and number (digits)
+    const match = searchTerm.match(/^([a-zA-Z]*)[^0-9]*(\d*)$/);
+    let sql = '';
+    let params: any[] = [];
+    
+    if (match && match[2]) {
+      const prefix = match[1].toUpperCase();
+      const num = parseInt(match[2], 10);
+      sql = `
+        SELECT i.id, i.invoice_number, c.name as customer_name, i.grand_total, i.created_at
+        FROM invoices i
+        LEFT JOIN customers c ON i.customer_id=c.id
+        WHERE i.business_id=?
+        AND CAST(SUBSTRING_INDEX(i.invoice_number, '-', -1) AS UNSIGNED) LIKE ?
+        ${prefix ? "AND i.invoice_number LIKE ?" : ""}
+        ${(!isDeveloper && branchId) ? 'AND i.branch_id=?' : ''}
+        ORDER BY i.created_at DESC
+        LIMIT 5
+      `;
+      params.push(req.user.business_id);
+      params.push(`${num}%`);
+      if (prefix) {
+        params.push(`${prefix}-%`);
+      }
+      if (!isDeveloper && branchId) {
+        params.push(branchId);
+      }
+    } else {
+      sql = `
+        SELECT i.id, i.invoice_number, c.name as customer_name, i.grand_total, i.created_at
+        FROM invoices i
+        LEFT JOIN customers c ON i.customer_id=c.id
+        WHERE i.business_id=?
+        AND (i.invoice_number LIKE ? OR c.name LIKE ?)
+        ${(!isDeveloper && branchId) ? 'AND i.branch_id=?' : ''}
+        ORDER BY i.created_at DESC
+        LIMIT 5
+      `;
+      params.push(req.user.business_id);
+      params.push(`%${searchTerm}%`);
+      params.push(`%${searchTerm}%`);
+      if (!isDeveloper && branchId) {
+        params.push(branchId);
+      }
+    }
+    
+    const rows = await query(sql, params);
+    res.json(rows);
+  } catch (e: any) { next(e); }
+});
+
+router.get('/by-number/:invoiceNumber', async (req: any, res, next) => {
+  try {
+    const isDeveloper = req.user.role === 'developer';
+    const branchId = req.user.branch_id;
+    const searchTerm = req.params.invoiceNumber.trim();
+    
+    // Parse prefix (letters) and number (digits)
+    const match = searchTerm.match(/^([a-zA-Z]*)[^0-9]*(\d+)$/);
+    
+    let sql = '';
+    let params: any[] = [];
+    
+    if (match) {
+      const prefix = match[1].toUpperCase();
+      const num = parseInt(match[2], 10);
+      
+      sql = `
+        SELECT id FROM invoices 
+        WHERE CAST(SUBSTRING_INDEX(invoice_number, '-', -1) AS UNSIGNED) = ? 
+        AND business_id=? 
+        ${prefix ? "AND invoice_number LIKE ?" : ""}
+        ${(!isDeveloper && branchId) ? 'AND branch_id=?' : ''}
+        ORDER BY id DESC
+        LIMIT 1
+      `;
+      params.push(num);
+      params.push(req.user.business_id);
+      if (prefix) {
+        params.push(`${prefix}-%`);
+      }
+      if (!isDeveloper && branchId) {
+        params.push(branchId);
+      }
+    } else {
+      sql = `
+        SELECT id FROM invoices 
+        WHERE invoice_number LIKE ? AND business_id=? 
+        ${(!isDeveloper && branchId) ? 'AND branch_id=?' : ''}
+        ORDER BY id DESC
+        LIMIT 1
+      `;
+      params = [`%${searchTerm}%`, req.user.business_id];
+      if (!isDeveloper && branchId) {
+        params.push(branchId);
+      }
+    }
+    
+    const inv = await queryOne(sql, params) as any;
+    res.json(inv || {});
+  } catch (e: any) { next(e); }
+});
+
 router.get('/', async (req: any, res, next) => {
   try {
     const { startDate, endDate } = req.query;
